@@ -319,6 +319,13 @@ def _schema41(db):
         required = json.loads(descriptor)
     except (OSError, ValueError) as exc:
         raise SnapshotError('required schema descriptor is unavailable') from exc
+    try:
+        semantic_data = (Path(__file__).parent / 'io_schema41_semantics.json').read_bytes()
+        if hashlib.sha256(semantic_data).hexdigest() != '9b47bf70bbbe8e6b56d4f6d19bc8bdc0bdd6f2a2e50b148dfde175a0c43db647':
+            raise SnapshotError('required schema descriptor is invalid')
+        semantics = json.loads(semantic_data)
+    except (OSError, ValueError) as exc:
+        raise SnapshotError('required schema descriptor is unavailable') from exc
     tables = {row[0].casefold(): row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     for name, columns in required.items():
         actual = tables.get(name.casefold())
@@ -329,6 +336,103 @@ def _schema41(db):
         missing = sorted(c for c in columns if c.casefold() not in present)
         if missing:
             raise SnapshotError('required schema column missing: ' + name + '.' + missing[0])
+        current = _table_semantics(db, actual)
+        expected = semantics[name]
+        if current['primary_key'] != expected['primary_key']:
+            raise SnapshotError('required schema invariant missing: ' + name + ' primary key')
+        for kind in ('not_null', 'unique', 'foreign_keys', 'checks'):
+            if not all(value in current[kind] for value in expected[kind]):
+                raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
+
+
+_SQL_TOKEN = re.compile(r'''\s+|--[^\r\n]*|/\*.*?\*/|'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]|[A-Za-z_][A-Za-z_0-9$]*|\d+(?:\.\d+)?|<=|>=|<>|!=|==|\|\||.''', re.S)
+
+
+def _sql_tokens(sql):
+    return [token for token in _SQL_TOKEN.findall(sql or '')
+            if not token.isspace() and not token.startswith(('--', '/*'))]
+
+
+def _normalized_expression(tokens):
+    while len(tokens) >= 2 and tokens[0] == '(' and tokens[-1] == ')':
+        depth = 0
+        for index, token in enumerate(tokens):
+            depth += (token == '(') - (token == ')')
+            if depth == 0 and index != len(tokens) - 1:
+                return _normalized_expression_tokens(tokens)
+        tokens = tokens[1:-1]
+    return _normalized_expression_tokens(tokens)
+
+
+def _normalized_expression_tokens(tokens):
+    result = []
+    for token in tokens:
+        if token.startswith("'"):
+            result.append(token)
+        elif token.startswith(('"', '`', '[')):
+            result.append(token[1:-1].replace('""', '"').replace('``', '`').casefold())
+        else:
+            result.append(token.casefold())
+    return result
+
+
+def _checks(sql):
+    tokens = _sql_tokens(sql)
+    result = []
+    for index, token in enumerate(tokens[:-1]):
+        if token.casefold() != 'check' or tokens[index + 1] != '(':
+            continue
+        depth = 1
+        end = index + 2
+        while end < len(tokens) and depth:
+            depth += (tokens[end] == '(') - (tokens[end] == ')')
+            end += 1
+        if depth:
+            raise SnapshotError('required schema invariant malformed')
+        result.append(_normalized_expression(tokens[index + 2:end - 1]))
+    return sorted(result)
+
+
+def _table_semantics(db, name):
+    quoted = '"' + name.replace('"', '""') + '"'
+    columns = db.execute(f'PRAGMA table_xinfo({quoted})').fetchall()
+    primary = sorted(row[1].casefold() for row in columns if row[5])
+    not_null = sorted(row[1].casefold() for row in columns if row[3])
+    unique = []
+    for index in db.execute(f'PRAGMA index_list({quoted})'):
+        if not index[2]:
+            continue
+        index_name = index[1]
+        index_quoted = '"' + index_name.replace('"', '""') + '"'
+        index_keys = [row for row in db.execute(f'PRAGMA index_xinfo({index_quoted})') if row[5]]
+        if not index_keys or any(row[2] is None for row in index_keys):
+            continue
+        keys = [(row[2].casefold(), (row[4] or '').casefold()) for row in index_keys]
+        predicate = None
+        if index[4]:
+            row = db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name=?", (index_name,)).fetchone()
+            tokens = _sql_tokens(row[0] if row else '')
+            depth = 0
+            where = None
+            for position, token in enumerate(tokens):
+                depth += (token == '(') - (token == ')')
+                if depth == 0 and token.casefold() == 'where':
+                    where = position
+                    break
+            if where is None:
+                raise SnapshotError('required schema invariant malformed')
+            predicate = _normalized_expression(tokens[where + 1:])
+        unique.append([sorted([list(key) for key in keys]), predicate])
+    groups = {}
+    for row in db.execute(f'PRAGMA foreign_key_list({quoted})'):
+        group = groups.setdefault(row[0], {'table': row[2].casefold(), 'update': row[5].casefold(), 'delete': row[6].casefold(), 'match': row[7].casefold(), 'columns': []})
+        group['columns'].append([row[3].casefold(), row[4].casefold() if row[4] is not None else None])
+    foreign = []
+    for group in groups.values():
+        group['columns'].sort(key=lambda pair: (pair[0], pair[1] or ''))
+        foreign.append(group)
+    sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
+    return {'primary_key': primary, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
 
 
 def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):

@@ -15,6 +15,52 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_schema_semantic_constraints_are_required_for_snapshot_and_verify(self):
+        for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null') for op in ('snapshot', 'verify')):
+            with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = self.make_simple(root)
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'good')
+                for database, destination in ((root / 'source.sqlite', root / 'bad'),) if operation == 'snapshot' else ((root / 'good/database.sqlite', None),):
+                    with closing(sqlite3.connect(database)) as db, db:
+                        if defect in ('missing-index', 'wrong-index', 'wrong-expression-index'):
+                            db.execute('DROP INDEX media_document_one_pending')
+                            if defect == 'wrong-index':
+                                db.execute("CREATE UNIQUE INDEX media_document_one_pending ON media_document_generations(item_id) WHERE state='committed'")
+                            elif defect == 'wrong-expression-index':
+                                db.execute("CREATE UNIQUE INDEX media_document_one_pending ON media_document_generations(item_id, lower(generation)) WHERE state='pending'")
+                        elif defect == 'missing-check':
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='media_document_generations'").fetchone()[0]
+                            index_ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='media_document_one_pending'").fetchone()[0]
+                            self.assertIn("CHECK(state IN ('pending','committed'))", ddl)
+                            db.execute('DROP TABLE media_document_generations')
+                            db.execute(ddl.replace("CHECK(state IN ('pending','committed'))", ''))
+                            db.execute(index_ddl)
+                        elif defect == 'missing-primary-key':
+                            db.execute('DROP TABLE app_settings')
+                            db.execute('CREATE TABLE app_settings(key TEXT, value TEXT NOT NULL, updated_at TEXT NOT NULL)')
+                        elif defect == 'missing-not-null':
+                            db.execute('DROP TABLE app_settings')
+                            db.execute('CREATE TABLE app_settings(key TEXT PRIMARY KEY, value TEXT, updated_at TEXT NOT NULL)')
+                        elif defect == 'missing-foreign-key':
+                            db.execute('DROP TABLE body_texts')
+                            db.execute('CREATE TABLE body_texts(snapshot_id INTEGER PRIMARY KEY, text TEXT NOT NULL)')
+                        else:
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='media_pending'").fetchone()[0]
+                            self.assertIn('UNIQUE(owner_kind, owner_id, source_ref)', ddl)
+                            db.execute('DROP TABLE media_pending')
+                            db.execute(ddl.replace(',\n        UNIQUE(owner_kind, owner_id, source_ref)', ''))
+                    if destination:
+                        with self.assertRaisesRegex(SnapshotError, 'required schema invariant'):
+                            snapshot(database, {'vault': vault}, destination)
+                    else:
+                        manifest_file = root / 'good/manifest.json'
+                        manifest = json.loads(manifest_file.read_text())
+                        manifest['database_sha256'] = hashlib.sha256(database.read_bytes()).hexdigest()
+                        manifest_file.write_text(json.dumps(manifest))
+                        with self.assertRaisesRegex(SnapshotError, 'required schema invariant'):
+                            verify(root / 'good')
+
     @staticmethod
     def init_schema(db):
         db.executescript((Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text())
@@ -94,6 +140,16 @@ class SnapshotTests(unittest.TestCase):
                 db.execute('DROP TABLE app_settings')
                 db.execute('CREATE TABLE app_settings (updated_at TEXT NOT NULL, value TEXT NOT NULL, key TEXT PRIMARY KEY, extra TEXT)')
                 db.execute("INSERT INTO app_settings (key,value,updated_at,extra) VALUES ('key','synthetic','now','extra')")
+                ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='media_document_generations'").fetchone()[0]
+                self.assertIn("CHECK(state IN ('pending','committed'))", ddl)
+                self.assertIn('PRIMARY KEY(item_id, generation)', ddl)
+                db.execute('DROP TABLE media_document_generations')
+                ddl = ddl.replace("CHECK(state IN ('pending','committed'))", 'CHECK ( ( "state" IN ( \'pending\' , \'committed\' ) ) )')
+                db.execute(ddl.replace('PRIMARY KEY(item_id, generation)', 'PRIMARY KEY(generation, item_id)'))
+                db.execute('CREATE UNIQUE INDEX replacement_pending ON media_document_generations ("item_id" COLLATE BINARY) WHERE ( "state" = \'pending\' )')
+                db.execute('CREATE INDEX extra_lookup ON app_settings(value)')
+                db.execute('CREATE UNIQUE INDEX extra_unique ON app_settings(extra)')
+                db.execute('CREATE UNIQUE INDEX extra_expression ON app_settings(lower(value))')
                 db.execute('CREATE TABLE "future table" (id TEXT, value BLOB)')
                 db.execute("INSERT INTO \"future table\" VALUES ('new',X'00FF')")
             snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
@@ -128,6 +184,14 @@ class SnapshotTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('required schema descriptor is invalid', result.stdout)
             self.assertFalse((root / 'snap').exists())
+            shutil.copyfile(source_scripts / 'io_schema41.json', isolated / 'io_schema41.json')
+            result = subprocess.run([sys.executable, str(isolated / 'io_snapshot.py'), 'snapshot', str(root / 'source.sqlite'), str(root / 'snap'), '--root', f'vault={vault}'], cwd=isolated, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('required schema descriptor is unavailable', result.stdout)
+            (isolated / 'io_schema41_semantics.json').write_text('{}')
+            result = subprocess.run([sys.executable, str(isolated / 'io_snapshot.py'), 'snapshot', str(root / 'source.sqlite'), str(root / 'snap'), '--root', f'vault={vault}'], cwd=isolated, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('required schema descriptor is invalid', result.stdout)
 
     def test_corrupt_deflate_is_refused_without_a_cli_traceback(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -885,6 +949,7 @@ class SnapshotTests(unittest.TestCase):
                     quoted = '"' + name.replace('"', '""') + '"'
                     self.assertCountEqual(db.execute('SELECT * FROM ' + quoted).fetchall(), result.execute('SELECT * FROM ' + quoted).fetchall(), name)
                 self.assertEqual(result.execute('SELECT authority FROM body_versions').fetchone(), ('imported',))
+                self.assertEqual(result.execute('SELECT artifact_hash FROM editor_drafts').fetchone(), (None,))
                 self.assertEqual(result.execute('SELECT identity_value FROM item_identities').fetchone(), ('synthetic-doi',))
                 self.assertEqual(result.execute('SELECT intent_json FROM processing_jobs').fetchone(), ('{"synthetic":true}',))
                 self.assertEqual(result.execute('SELECT payload FROM media_upload_intents').fetchone(), (b'\x00\x01\xff',))
