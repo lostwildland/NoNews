@@ -113,3 +113,17 @@ class JobStreamTest(unittest.TestCase):
             for size in (1, 7, 16384):
                 with self.subTest(text=text[:60], size=size):
                     self.assertEqual(aggregate_failed_stages(text[i:i+size] for i in range(0,len(text),size)), expected)
+
+    def test_deep_nesting_uses_bounded_projection_memory(self):
+        import tracemalloc
+        from backend.job_stream import aggregate_failed_stages
+        for opening, closing in (('[', ']'), ('{"x":', '}')):
+            text = '{"ignored":' + opening*70000 + '0' + closing*70000 + ',"stages":{"curator":{"status":"failed"}}}'
+            tracemalloc.start()
+            try:
+                stages = aggregate_failed_stages(text[i:i+16384] for i in range(0,len(text),16384))
+                peak = tracemalloc.get_traced_memory()[1]
+            finally:
+                tracemalloc.stop()
+            self.assertEqual(stages, ('curator',))
+            self.assertLess(peak, 4*1024*1024, (opening, peak))

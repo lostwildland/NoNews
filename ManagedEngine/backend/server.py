@@ -139,7 +139,7 @@ class Application:
                     elif stage == 'auto':
                         if kinds['result_json'] == 'text':
                             with closing(text_chunks(db.db, 'processing_jobs', 'result_json', row_id)) as chunks:
-                                failed_stages = aggregate_failed_stages(chunks)
+                                failed_stages = aggregate_failed_stages(chunks, self.database.parent)
                         else:
                             failed_stages = ()
                         resolved = bool(failed_stages) and all(self._resolved_job(db.db, row_id, part) for part in failed_stages)

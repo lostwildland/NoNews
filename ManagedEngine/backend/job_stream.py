@@ -2,6 +2,7 @@
 import codecs
 import json
 import re
+import tempfile
 
 CHUNK_BYTES = 16384
 
@@ -68,7 +69,8 @@ class _AggregateJSON:
     _special = re.compile(r'["\\\\\x00-\x1f]')
     _stages = frozenset(('scoring', 'acquisition', 'curator', 'editor'))
 
-    def __init__(self, chunks):
+    def __init__(self, chunks, directory=None):
+        self.directory = directory
         self.chunks = iter(chunks)
         self.buffer = ''
         self.pos = 0
@@ -135,51 +137,12 @@ class _AggregateJSON:
                     raw = None
         raise ValueError('unterminated JSON string')
 
-    def value(self, role='skip', depth=0):
+    def scalar(self, role):
         self.whitespace()
         char = self.peek()
-        if char == '{':
-            self.take()
-            result = {} if role in ('root', 'stages', 'entry') else None
-            self.whitespace()
-            if self.peek() == '}':
-                self.take()
-                return result
-            while True:
-                self.whitespace()
-                key = self.string(result is not None)
-                self.whitespace()
-                if self.take() != ':':
-                    raise ValueError('invalid JSON object')
-                child_role = ('stages' if role == 'root' and key == 'stages' else
-                              'entry' if role == 'stages' and key in self._stages else
-                              'status' if role == 'entry' and key == 'status' else 'skip')
-                value = self.value(child_role, depth + 1)
-                if result is not None and child_role != 'skip':
-                    result[key] = value
-                self.whitespace()
-                separator = self.take()
-                if separator == '}':
-                    return result
-                if separator != ',':
-                    raise ValueError('invalid JSON object separator')
-        if char == '[':
-            self.take()
-            self.whitespace()
-            if self.peek() == ']':
-                self.take()
-                return None
-            while True:
-                self.value('skip', depth + 1)
-                self.whitespace()
-                separator = self.take()
-                if separator == ']':
-                    return None
-                if separator != ',':
-                    raise ValueError('invalid JSON array separator')
         if char == '"':
-            value = self.string(role == 'status')
-            return value if role == 'status' else None
+            value = self.string(role == 3)
+            return value if role == 3 else None
         for literal in ('true', 'false', 'null', 'NaN', 'Infinity'):
             if char == literal[0]:
                 if ''.join(self.take() for _ in literal) != literal:
@@ -218,13 +181,122 @@ class _AggregateJSON:
                 self.take()
 
     def failed_stages(self):
-        try:
-            root = self.value('root')
-            self.whitespace()
-            if self.peek():
-                raise ValueError('trailing JSON')
-        except ValueError:
-            return ()
+        # Container state uses one byte per nesting level and spills beyond 64 KiB.
+        with tempfile.SpooledTemporaryFile(max_size=65536, mode='w+b', dir=self.directory) as stack:
+            depth = 0
+            results = {}
+            keys = {}
+            root = None
+            complete = False
+
+            def get_state():
+                stack.seek(depth - 1)
+                value = stack.read(1)[0]
+                return value & 7, value >> 3
+
+            def set_state(state, role):
+                stack.seek(depth - 1)
+                stack.write(bytes((state | (role << 3),)))
+
+            def push(state, role):
+                nonlocal depth
+                stack.seek(depth)
+                stack.write(bytes((state | (role << 3),)))
+                depth += 1
+                if state == 0 and role in (0, 1, 2):
+                    results[depth] = {}
+
+            def deliver(value):
+                nonlocal root, complete
+                if depth == 0:
+                    root = value
+                    complete = True
+                    return
+                state, role = get_state()
+                if state == 3:
+                    key = keys.pop(depth, None)
+                    if depth in results and ((role == 0 and key == 'stages') or
+                                             (role == 1 and key in self._stages) or
+                                             (role == 2 and key == 'status')):
+                        results[depth][key] = value
+                    set_state(4, role)
+                elif state in (5, 6):
+                    set_state(7, role)
+                else:
+                    raise ValueError('invalid JSON value position')
+
+            def close_container():
+                nonlocal depth
+                value = results.pop(depth, None)
+                keys.pop(depth, None)
+                depth -= 1
+                deliver(value)
+
+            def begin_value(role):
+                self.whitespace()
+                char = self.peek()
+                if char == '{':
+                    self.take()
+                    push(0, role)
+                elif char == '[':
+                    self.take()
+                    push(5, 4)
+                else:
+                    deliver(self.scalar(role))
+
+            try:
+                begin_value(0)
+                while not complete:
+                    state, role = get_state()
+                    self.whitespace()
+                    char = self.peek()
+                    if state in (0, 1):
+                        if state == 0 and char == '}':
+                            self.take()
+                            close_container()
+                        else:
+                            if role in (0, 1, 2):
+                                keys[depth] = self.string(True)
+                            else:
+                                self.string(False)
+                            set_state(2, role)
+                    elif state == 2:
+                        if self.take() != ':':
+                            raise ValueError('invalid JSON object')
+                        set_state(3, role)
+                    elif state == 3:
+                        key = keys.get(depth)
+                        child_role = (1 if role == 0 and key == 'stages' else
+                                      2 if role == 1 and key in self._stages else
+                                      3 if role == 2 and key == 'status' else 4)
+                        begin_value(child_role)
+                    elif state == 4:
+                        separator = self.take()
+                        if separator == '}':
+                            close_container()
+                        elif separator == ',':
+                            set_state(1, role)
+                        else:
+                            raise ValueError('invalid JSON object separator')
+                    elif state in (5, 6):
+                        if state == 5 and char == ']':
+                            self.take()
+                            close_container()
+                        else:
+                            begin_value(4)
+                    else:
+                        separator = self.take()
+                        if separator == ']':
+                            close_container()
+                        elif separator == ',':
+                            set_state(6, role)
+                        else:
+                            raise ValueError('invalid JSON array separator')
+                self.whitespace()
+                if self.peek():
+                    raise ValueError('trailing JSON')
+            except ValueError:
+                return ()
         stages = root.get('stages') if isinstance(root, dict) else None
         if not isinstance(stages, dict):
             return ()
@@ -232,5 +304,5 @@ class _AggregateJSON:
                      if isinstance(detail, dict) and detail.get('status') == 'failed')
 
 
-def aggregate_failed_stages(chunks):
-    return _AggregateJSON(chunks).failed_stages()
+def aggregate_failed_stages(chunks, directory=None):
+    return _AggregateJSON(chunks, directory).failed_stages()
