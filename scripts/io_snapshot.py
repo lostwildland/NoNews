@@ -16,6 +16,11 @@ from pathlib import Path
 from urllib.parse import quote
 from urllib.parse import unquote, urlsplit
 
+if __package__:
+    from .io_image_inventory import inventory_markdown_images
+else:
+    from io_image_inventory import inventory_markdown_images
+
 
 class SnapshotError(Exception):
     """Snapshot cannot be proven safe or complete."""
@@ -167,9 +172,10 @@ def _database(path):
                 'application_id': db.execute('PRAGMA application_id').fetchone()[0]}
 
 
-def _asset_bindings(path, assets, roots, asset_dirs):
+def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
     """Bind recognized operational file references without rewriting source rows."""
     bindings = []
+    matched_aliases = set()
     def bind(table, column, identity, value, expected=None, size=None, relative_root=None, allow_reserved=False):
         if not isinstance(value, str) or not value or '\x00' in value or '\\' in value:
             raise SnapshotError('invalid required asset reference')
@@ -197,43 +203,80 @@ def _asset_bindings(path, assets, roots, asset_dirs):
             raise SnapshotError('required asset size mismatch')
         bindings.append({'table': table, 'column': column, 'id': identity, 'root': root, 'path': relative, 'sha256': evidence['sha256']})
     def markup(table, column, identity, text, document=None):
-        if re.search(r'!\[\[|!\[[^\]\n]*\]\s*\[|\bsrcset\s*=', text, re.I):
-            raise SnapshotError('unsupported image markup requires review')
-        pattern = r'''!\[[^\]\n]*\]\(\s*<?([^\s)>]+)>?[^)]*\)|<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>'''
-        remaining = re.sub(pattern, '', text, flags=re.I)
-        if re.search(r'!\[|<img\b|<picture\b|<source\b', remaining, re.I):
-            raise SnapshotError('unsupported image markup requires review')
-        for match in re.finditer(pattern, text, re.I):
-            target = match.group(1) or match.group(2)
+        inventory = inventory_markdown_images(text)
+        if inventory.review:
+            raise SnapshotError('image inventory requires review: ' + inventory.review[0].kind)
+        for occurrence in inventory.occurrences:
+            target = occurrence.target
             parsed = urlsplit(target)
-            if parsed.scheme in ('http', 'https', 'data') or target.startswith('//'):
+            if parsed.scheme.lower() in ('http', 'https', 'data') or target.startswith('//'):
                 continue
             if parsed.scheme or parsed.netloc:
                 raise SnapshotError('unsupported image reference scheme')
             target = unquote(parsed.path)
-            if re.fullmatch(r'(?:\./)?images/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,179}\.(?:png|jpe?g|gif|webp)', target, re.I):
-                root = 'paper_images'
-                relative = target.removeprefix('./').removeprefix('images/')
-                if document:
-                    vault_relative = posixpath.normpath(posixpath.join(posixpath.dirname(document), target))
-                    vault_col = column + '.vault:' + target
-                    if not any(b['table'] == table and b['column'] == vault_col and b['id'] == identity for b in bindings):
-                        bind(table, vault_col, identity, vault_relative, relative_root='vault')
-            elif document:
+            if document:
                 root = 'vault'
                 relative = posixpath.normpath(posixpath.join(posixpath.dirname(document), target)) if not target.startswith('/') else posixpath.normpath(target.lstrip('/'))
-                if relative == '..' or relative.startswith('../'):
+                if relative in ('', '.', '..') or relative.startswith('../') or '\\' in target:
                     raise SnapshotError('image path escapes vault')
+                matching = [(i, a) for i, a in enumerate(image_aliases) if isinstance(a, dict) and a.get('owner_document_relative_path') == document and
+                            (a.get('target') or a.get('occurrence_index') is not None) and
+                            (not a.get('target') or (isinstance(a.get('target'), str) and a['target'].strip() == occurrence.target)) and
+                            (a.get('occurrence_index') is None or a.get('occurrence_index') == occurrence.index)]
+                matched_aliases.update(i for i, _ in matching)
+                if relative not in assets.get('vault', {}):
+                    alias_fields = ('document_source_hash', 'target', 'occurrence_index', 'shared_relative_path', 'expected_source_sha256', 'owner_evidence', 'owner_document_relative_path')
+                    candidates = [a for _, a in matching]
+                    if not candidates or any(tuple(a.get(k) for k in alias_fields) != tuple(candidates[0].get(k) for k in alias_fields) for a in candidates[1:]):
+                        raise SnapshotError('local image missing or reviewed alias ambiguous')
+                    alias = candidates[0]
+                    shared = alias.get('shared_relative_path')
+                    expected = alias.get('expected_source_sha256')
+                    shared = posixpath.normpath(shared.strip()) if isinstance(shared, str) and shared.strip() and '\\' not in shared and '\x00' not in shared and not shared.startswith('/') else ''
+                    expected = expected.strip() if isinstance(expected, str) else ''
+                    doc_hash = alias.get('document_source_hash')
+                    if ((doc_hash.strip() if isinstance(doc_hash, str) else '') != hashlib.sha256(text.encode()).hexdigest() or
+                        not isinstance(alias.get('owner_evidence'), str) or not alias['owner_evidence'].strip() or
+                        not document.startswith('raw/') or not document.lower().endswith('.md') or document.startswith('raw/images/') or
+                        not shared.startswith('raw/images/') or
+                        any(part in ('', '.', '..') for part in shared.split('/')) or
+                        not re.fullmatch(r'[0-9a-f]{64}', expected)):
+                        raise SnapshotError('reviewed image alias evidence invalid')
+                    relative = shared
+                    alias_hash = expected
+                else:
+                    alias_hash = None
+            elif re.fullmatch(r'(?:\./)?images/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,179}\.(?:png|jpe?g|gif|webp)', target, re.I):
+                root = 'paper_images'
+                relative = target.removeprefix('./').removeprefix('images/')
+                alias_hash = None
             else:
                 raise SnapshotError('image reference has no document root')
             col = column + '.' + target
-            if not any(b['table'] == table and b['column'] == col and b['id'] == identity for b in bindings):
-                bind(table, col, identity, relative, relative_root=root)
+            previous = next((b for b in bindings if b['table'] == table and b['column'] == col and b['id'] == identity), None)
+            if previous and (previous['root'], previous['path']) != (root, relative):
+                col += f'#occurrence={occurrence.index}'
+                previous = None
+            if not previous:
+                bind(table, col, identity, relative, alias_hash, relative_root=root)
                 if root == 'paper_images':
                     image = _read_file(asset_dirs[root], relative)
                     if (len(image) > 4 * 1024 * 1024 or
                         not (image.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'GIF87a', b'GIF89a')) or
                              (image[:4] == b'RIFF' and image[8:12] == b'WEBP'))):
+                        raise SnapshotError('unsupported reader image')
+            # Service.raw_asset resolves direct Markdown and HTML src references
+            # through its separately configured paper image root.
+            reader_name = target.removeprefix('./')
+            if document and table in ('body_texts', 'literature_raws', 'raw_snapshots', 'private_raw_sources') and re.fullmatch(r'images/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,179}\.(?:png|jpe?g|gif|webp)', reader_name, re.I):
+                pattern = r'''(?:!\[[^\]\n]*\]\(\s*<?|\bsrc\s*=\s*["'])(?:\./)?''' + re.escape(reader_name) + r'''(?=[>\s)"'])'''
+                reader_col = column + '.raw_asset:' + reader_name
+                if re.search(pattern, text) and not any(b['table'] == table and b['column'] == reader_col and b['id'] == identity for b in bindings):
+                    bind(table, reader_col, identity, reader_name.removeprefix('images/'), relative_root='paper_images')
+                    reader_image = _read_file(asset_dirs['paper_images'], reader_name.removeprefix('images/'))
+                    if (len(reader_image) > 4 * 1024 * 1024 or
+                        not (reader_image.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'GIF87a', b'GIF89a')) or
+                             (reader_image[:4] == b'RIFF' and reader_image[8:12] == b'WEBP'))):
                         raise SnapshotError('unsupported reader image')
     with closing(_db(path)) as db:
         tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -341,7 +384,13 @@ def _asset_bindings(path, assets, roots, asset_dirs):
         for table, key in (('body_texts', 'snapshot_id'), ('draft_bodies', 'draft_id')):
             if table in tables:
                 for ident, text in db.execute(f'SELECT "{key}", text FROM "{table}"'):
-                    markup(table, 'text', ident, text)
+                    versions = 'body_versions' if table == 'body_texts' else 'draft_versions'
+                    mappings = 'literature_raws' if table == 'body_texts' else 'literature_drafts'
+                    document = None
+                    if versions in tables and mappings in tables:
+                        row = db.execute(f'SELECT m.path FROM "{versions}" v JOIN "{mappings}" m ON m."{key}"=v."{key}" WHERE v."{key}"=? AND v.authority=\'imported\'', (ident,)).fetchone()
+                        document = row[0] if row else None
+                    markup(table, 'text', ident, text, document)
         for binding in list(bindings):
             if binding['table'] in ('literature_raws', 'literature_drafts', 'raw_snapshots', 'private_raw_sources'):
                 try:
@@ -387,6 +436,8 @@ def _asset_bindings(path, assets, roots, asset_dirs):
                                 for index, nested in enumerate(obj):
                                     visit(nested, trail + f'[{index}]')
                         visit(value, name)
+    if len(matched_aliases) != len(image_aliases):
+        raise SnapshotError('reviewed image alias does not match a local document reference')
     ordered = sorted(bindings, key=lambda x: (x['table'], x['column'], str(x['id'])))
     identities = [(b['table'], b['column'], b['id']) for b in ordered]
     if len(set(identities)) != len(identities):
@@ -396,6 +447,16 @@ def _asset_bindings(path, assets, roots, asset_dirs):
 
 def _coverage(path):
     fields = []
+    explicit = {
+        ('body_texts', 'text'): 'source_image_inventory',
+        ('draft_bodies', 'text'): 'source_image_inventory',
+        ('literature_assets', 'metadata_json'): 'retained_image_archive_metadata',
+        ('media_objects', 'public_url'): 'remote_reference_not_verified',
+        ('media_objects', 'stored_sha256'): 'remote_expected_hash',
+        ('media_upload_intents', 'payload'): 'database_blob',
+        ('media_pending', 'source_ref'): 'source_reference_with_staged_payload',
+        ('media_usages', 'source_ref'): 'remote_usage_reference',
+    }
     with closing(_db(path)) as db:
         for (table,) in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
             ident = '"' + table.replace('"', '""') + '"'
@@ -407,6 +468,8 @@ def _coverage(path):
                     fields.append([table, name, classification])
                 if name.lower().endswith('_json'):
                     fields.append([table, name, 'recursive_path_keys'])
+                if (table, name) in explicit:
+                    fields.append([table, name, explicit[(table, name)]])
     return fields
 
 
@@ -514,13 +577,17 @@ def _check_destination(destination, sources):
     return destination
 
 
-def snapshot(database, roots, destination):
+def snapshot(database, roots, destination, *, image_aliases=None):
     database = Path(database)
     if database.is_symlink() or not database.is_file():
         raise SnapshotError('source database is missing or unsafe')
     if not roots or any(not re.fullmatch(r'[a-z][a-z0-9_]*', name) for name in roots):
         raise SnapshotError('explicit named asset roots required')
     roots = {name: Path(path) for name, path in roots.items()}
+    if image_aliases is None:
+        image_aliases = []
+    if not isinstance(image_aliases, list) or any(not isinstance(a, dict) for a in image_aliases):
+        raise SnapshotError('invalid reviewed image aliases')
     if any(database.resolve().is_relative_to(p.resolve()) or p.resolve().is_relative_to(database.resolve()) for p in roots.values()):
         raise SnapshotError('database overlaps asset roots')
     resolved = {name: p.resolve() for name, p in roots.items()}
@@ -541,7 +608,7 @@ def snapshot(database, roots, destination):
             safe_version = version if isinstance(version, str) and re.fullmatch(r'[0-9]{1,4}', version) else 'unknown'
             raise SnapshotError('unsupported IO schema version ' + safe_version)
         root_bindings = {name: str(path.absolute()) for name, path in roots.items()}
-        bindings = _asset_bindings(stage / 'database.sqlite', first, {name: Path(path) for name, path in root_bindings.items()}, roots)
+        bindings = _asset_bindings(stage / 'database.sqlite', first, {name: Path(path) for name, path in root_bindings.items()}, roots, image_aliases)
         references = _references(stage / 'database.sqlite', first, bindings)
         for name, path in physical.items():
             _inventory(path, stage / 'assets' / name)
@@ -552,7 +619,7 @@ def snapshot(database, roots, destination):
         if first != copied or first != second or evidence != _database(stage / 'check.sqlite'):
             raise SnapshotError('source changed during snapshot; retry after writers pause')
         (stage / 'check.sqlite').unlink()
-        manifest = {'format': 3, 'database_sha256': _hash(stage / 'database.sqlite'), 'database': evidence, 'assets': first, 'remote_reference_counts': references, 'source_roots': root_bindings, 'asset_bindings': bindings, 'reference_coverage': _coverage(stage / 'database.sqlite'), 'asset_storage': storage}
+        manifest = {'format': 4, 'database_sha256': _hash(stage / 'database.sqlite'), 'database': evidence, 'assets': first, 'remote_reference_counts': references, 'source_roots': root_bindings, 'asset_bindings': bindings, 'reference_coverage': _coverage(stage / 'database.sqlite'), 'asset_storage': storage, 'image_aliases': image_aliases}
         (stage / 'manifest.json').write_text(json.dumps(manifest, sort_keys=True), encoding='utf-8')
         verify(stage)
         _publish(stage, destination)
@@ -579,7 +646,7 @@ def verify(directory):
         if set(p.split('/')[0] for p in inventory) != {'database.sqlite', 'manifest.json', 'assets'}:
             raise SnapshotError('unexpected snapshot contents')
         manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-        if set(manifest) != {'format', 'database_sha256', 'database', 'assets', 'remote_reference_counts', 'source_roots', 'asset_bindings', 'reference_coverage', 'asset_storage'} or manifest['format'] != 3:
+        if set(manifest) != {'format', 'database_sha256', 'database', 'assets', 'remote_reference_counts', 'source_roots', 'asset_bindings', 'reference_coverage', 'asset_storage', 'image_aliases'} or manifest['format'] != 4:
             raise SnapshotError('invalid manifest')
         if not isinstance(manifest['assets'], dict) or not manifest['assets']:
             raise SnapshotError('invalid asset roots')
@@ -600,7 +667,9 @@ def verify(directory):
             raise SnapshotError('unsupported IO schema version')
         if assets != manifest['assets'] or _hash(root / 'database.sqlite') != manifest['database_sha256'] or _database(root / 'database.sqlite') != manifest['database']:
             raise SnapshotError('snapshot integrity mismatch')
-        bindings = _asset_bindings(root / 'database.sqlite', assets, {n: Path(p) for n, p in source_roots.items()}, dirs)
+        if not isinstance(manifest['image_aliases'], list) or any(not isinstance(a, dict) for a in manifest['image_aliases']):
+            raise SnapshotError('invalid reviewed image aliases')
+        bindings = _asset_bindings(root / 'database.sqlite', assets, {n: Path(p) for n, p in source_roots.items()}, dirs, manifest['image_aliases'])
         if bindings != manifest['asset_bindings'] or _coverage(root / 'database.sqlite') != manifest['reference_coverage'] or _references(root / 'database.sqlite', assets, bindings) != manifest['remote_reference_counts']:
             raise SnapshotError('reference evidence mismatch')
     except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as exc:
@@ -688,6 +757,7 @@ def main():
     make.add_argument('database')
     make.add_argument('destination')
     make.add_argument('--root', action='append', required=True, metavar='NAME=PATH')
+    make.add_argument('--image-aliases', metavar='JSON_FILE')
     check = sub.add_parser('verify')
     check.add_argument('snapshot')
     recover = sub.add_parser('restore')
@@ -702,14 +772,15 @@ def main():
                 if not sep or name in roots or not path:
                     raise SnapshotError('invalid or duplicate root')
                 roots[name] = path
-            snapshot(args.database, roots, args.destination)
+            aliases = json.loads(Path(args.image_aliases).read_text(encoding='utf-8')) if args.image_aliases else None
+            snapshot(args.database, roots, args.destination, image_aliases=aliases)
         elif args.command == 'verify':
             print(json.dumps(verify(args.snapshot), sort_keys=True))
             return 0
         else:
             restore(args.snapshot, args.destination)
         print('OK (limited coverage; see T01 acceptance notes)')
-    except (SnapshotError, OSError, sqlite3.Error) as exc:
+    except (SnapshotError, OSError, sqlite3.Error, ValueError) as exc:
         print('Snapshot refused: ' + (str(exc) if isinstance(exc, SnapshotError) else 'filesystem or database error'))
         return 1
     return 0

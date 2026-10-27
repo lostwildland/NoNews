@@ -15,6 +15,90 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_reviewed_alias_is_bound_to_document_owner_and_hash(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            raw = vault / 'raw/paper'
+            raw.mkdir(parents=True)
+            shared = vault / 'raw/images'
+            shared.mkdir()
+            reader = root / 'reader-images'
+            reader.mkdir()
+            (reader / 'legacy.png').write_bytes(b'\x89PNG\r\n\x1a\nreader')
+            body = '![figure](images/legacy.png)'
+            image = b'synthetic-shared'
+            (raw / 'body.md').write_text(body)
+            (shared / 'approved.png').write_bytes(image)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript('CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT, path TEXT); CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, citekey TEXT, path TEXT, file_sha256 TEXT, bound_at TEXT); CREATE TABLE body_versions (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER PRIMARY KEY, text TEXT);')
+                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
+                db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
+                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(body.encode()).hexdigest(), 'imported'))
+                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
+            alias = {'target':'images/legacy.png', 'occurrence_index':0, 'document_source_hash':hashlib.sha256(body.encode()).hexdigest(), 'shared_relative_path':'raw/images/approved.png', 'expected_source_sha256':hashlib.sha256(image).hexdigest(), 'owner_evidence':'synthetic review', 'owner_document_relative_path':'raw/paper/body.md'}
+            with self.assertRaisesRegex(SnapshotError, 'alias'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'missing')
+            with self.assertRaisesRegex(SnapshotError, 'evidence invalid'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'stale', image_aliases=[{**alias, 'document_source_hash':'0' * 64}])
+            with self.assertRaisesRegex(SnapshotError, 'evidence invalid'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'no-owner', image_aliases=[{**alias, 'owner_evidence':''}])
+            with self.assertRaisesRegex(SnapshotError, 'hash mismatch'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'wrong-hash', image_aliases=[{**alias, 'expected_source_sha256':'0' * 64}])
+            with self.assertRaisesRegex(SnapshotError, 'alias ambiguous'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'wrong-owner', image_aliases=[{**alias, 'owner_document_relative_path':'raw/other/body.md'}])
+            with self.assertRaisesRegex(SnapshotError, 'alias ambiguous'):
+                snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'conflict', image_aliases=[alias, {**alias, 'owner_evidence':'other review'}])
+            snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'snap', image_aliases=[alias])
+            alias_file = root / 'aliases.json'
+            alias_file.write_text(json.dumps([alias]))
+            cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
+            result = subprocess.run([sys.executable, str(cli), 'snapshot', str(root / 'source.sqlite'), str(root / 'cli-snap'), '--root', f'vault={vault}', '--root', f'paper_images={reader}', '--image-aliases', str(alias_file)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            (raw / 'images').mkdir()
+            (raw / 'images/legacy.png').write_bytes(b'direct-file')
+            snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'direct', image_aliases=[alias])
+            self.assertEqual(read_asset(root / 'direct', 'literature_raws', 'path.images/legacy.png', 1), b'direct-file')
+            restore(root / 'snap', root / 'out')
+            os.rename(vault, root / 'old-vault')
+            self.assertEqual(read_asset(root / 'out', 'literature_raws', 'path.images/legacy.png', 1), image)
+            self.assertEqual(read_asset(root / 'out', 'literature_raws', 'path.raw_asset:images/legacy.png', 1), b'\x89PNG\r\n\x1a\nreader')
+
+    def test_mapped_document_images_follow_source_inventory_after_relocation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            raw = vault / 'raw' / 'paper'
+            (raw / 'images').mkdir(parents=True)
+            body = '''![reference][figure]
+[figure]: images/ref.png
+![[images/embed.png|300]]
+<img src="images/main.png" srcset="images/small.png 1x, images/large.png 2x">
+`![example](images/ignored.png)`
+```
+![example](images/ignored2.png)
+```
+
+    ![indented](images/ignored3.png)
+
+<!-- ![comment](images/ignored4.png) -->
+'''
+            (raw / 'body.md').write_text(body)
+            for name in ('ref.png', 'embed.png', 'main.png', 'small.png', 'large.png'):
+                (raw / 'images' / name).write_bytes(b'\x89PNG\r\n\x1a\n' + ('synthetic-' + name).encode())
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript('CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT, path TEXT); CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, citekey TEXT, path TEXT, file_sha256 TEXT, bound_at TEXT); CREATE TABLE body_versions (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER PRIMARY KEY, text TEXT);')
+                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
+                db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
+                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(body.encode()).hexdigest(), 'imported'))
+                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
+            snapshot(root / 'source.sqlite', {'vault': vault, 'paper_images': raw / 'images'}, root / 'snap')
+            restore(root / 'snap', root / 'out')
+            os.rename(vault, root / 'old-vault')
+            for name in ('ref.png', 'embed.png', 'main.png', 'small.png', 'large.png'):
+                self.assertEqual(read_asset(root / 'out', 'literature_raws', 'path.images/' + name, 1), b'\x89PNG\r\n\x1a\n' + ('synthetic-' + name).encode())
+                self.assertEqual(read_asset(root / 'out', 'body_texts', 'text.images/' + name, 1), b'\x89PNG\r\n\x1a\n' + ('synthetic-' + name).encode())
+
     def test_compressed_source_and_nested_retained_image_hashes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -92,7 +176,7 @@ class SnapshotTests(unittest.TestCase):
             os.rename(images, root / 'old-images')
             self.assertEqual(read_asset(root / 'out', 'body_texts', 'text.images/fig.png', 1), b'\x89PNG\r\n\x1a\nsynthetic')
 
-    def test_unsupported_image_markup_is_not_silently_accepted(self):
+    def test_obsidian_image_without_document_root_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             vault = self.make_simple(root)
@@ -100,7 +184,7 @@ class SnapshotTests(unittest.TestCase):
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
                 db.execute('CREATE TABLE draft_bodies (draft_id TEXT, text TEXT)')
                 db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft', text))
-            with self.assertRaisesRegex(SnapshotError, 'unsupported image markup'):
+            with self.assertRaisesRegex(SnapshotError, 'image reference has no document root'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
 
     def test_recovery_binding_rejects_same_bytes_replaced_inode(self):
