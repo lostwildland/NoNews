@@ -1,0 +1,35 @@
+# T00: Native clean-profile build and launch
+
+Ticket: https://github.com/lostwildland/NoNews/issues/2. Starting commit: `775500c5b007c5917d46f2461544eb4ace8e21ae`.
+
+## Reproduce on macOS
+
+Install Xcode with its command-line tools selected, Python 3, and network access to the pinned Swift packages and Sparkle binary. From the repository root:
+
+```sh
+python3 buildscripts/test_acceptance.py
+buildscripts/acceptance.sh build
+buildscripts/acceptance.sh verify
+open -n "$PWD/.build/acceptance/Build/Products/Debug/NetNewsWire.app"
+buildscripts/acceptance.sh test
+```
+
+Always run `verify` immediately before opening the build. It verifies the code signature, bundle and app-group identifiers, and the sandbox entitlements of the app and embedded extensions. It rejects an unsigned, modified, differently identified or over-entitled app. The build uses Debug, an ad-hoc signature, and a separate sandbox and identity; it does not require `setup.sh`, a team ID, developer certificates, private API keys, or `xcbeautify`. The script clears upstream API key environment variables before the scheme generates its ignored `SecretKey.swift`, so provider features requiring those keys are unavailable. Other account services and the first-run default feeds may use the network.
+
+The app identity is `org.nonews.acceptance.NetNewsWire-Evergreen-DEBUG`. Its app-group Info.plist value is separately named, but no app-group entitlement is granted; Debug also skips app-group access. Accounts are under `~/Library/Containers/org.nonews.acceptance.NetNewsWire-Evergreen-DEBUG/Data/Library/Application Support/NetNewsWire/Accounts`. There is no automatic import from an installed NNW container. Do not grant the app access to an existing profile through a file picker. The app uses the normal native reader and can create its own persistent acceptance data; this command does not reset it.
+
+The test action uses `.build/acceptance-tests` for derived data, separate from the launch artifact at `.build/acceptance`; both use the same package checkout under `.build/acceptance/SourcePackages`. Xcode adds test-runner exceptions, including a read-only `/` exception, to the test host. Do not launch the test product as the acceptance app. The verifier deliberately rejects it. These tests are not an isolation proof. Build outputs and generated secrets are ignored and remain local; no cleanup command is run.
+
+This local ad-hoc profile is not a signed CloudKit acceptance: it has no CloudKit, push or app-group entitlement and does not validate extensions, sync, production signing or release behavior. The release entitlement file and signing settings are unchanged. A real signed run requires the developer's own Apple team, matching bundle/app-group and iCloud capabilities, provisioned entitlements and account, configured outside the repository. iOS verification additionally needs an installed compatible iOS simulator runtime and device (or a provisioned physical device); it is outside this macOS entry. No team ID or signing identity is supplied here.
+
+## Evidence, 2026-10-27
+
+- Host: macOS 27.0.1, Xcode 27.1 (27A9275), arm64; installed compiler reports Apple Swift 6.4, while the project declares Swift 6.2. Approximately 25 GiB free before the build.
+- `python3 buildscripts/test_acceptance.py`: three tests passed; synthetic signed bundles demonstrate acceptance of the isolated entitlement set and rejection of the production-style identity, absent sandbox, test-runner file exception and unsandboxed extension. Before implementation the `verify` action was absent; the first synthetic positive case also failed until the fixture used an actual signed Mach-O.
+- `buildscripts/acceptance.sh build`: first attempt failed because a relative entitlement file was resolved under a Swift package directory. After changing it to an absolute path, the build passed. This was a new entry-point issue, not a proven pre-existing failure.
+- No full build or test was run on the untouched baseline; there is no basis to attribute any other failure to the original revision. The initial `xcodebuild -list -project NetNewsWire.xcodeproj` was interrupted while resolving packages and is not a build result.
+- `buildscripts/acceptance.sh verify`: passed on the build artifact. `codesign` showed sandbox, network client, user-selected read/write and Debug `get-task-allow` only; no application-groups or iCloud entitlement. The bundle and group values matched the identities above. The acceptance container was absent before launch.
+- `open -n "$PWD/.build/acceptance/Build/Products/Debug/NetNewsWire.app"`: the process appeared and CoreGraphics reported an on-screen layer-zero window. `lsof -Fn -p <pid>` showed its open `Accounts/OnMyMac/DB.sqlite3` beneath the acceptance container. No account or article content was inspected. A first lookup immediately after launch preceded container creation; the subsequent live readback confirmed the path.
+- `buildscripts/acceptance.sh test`: the final, separate-derived-data run passed the default Xcode test plan. `xcrun xcresulttool get test-results summary --path .build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.27_23-47-36-+0800.xcresult --format json` reported 753 passed, zero failed or skipped. An earlier run also passed 753 but put Xcode's test-host entitlements in the build directory; separation was added afterward.
+- A final `buildscripts/acceptance.sh build` and `buildscripts/acceptance.sh verify` both passed. `python3 buildscripts/verify_acceptance.py .build/acceptance-tests/Build/Products/Debug/NetNewsWire.app` returned 1 as expected because the test host has additional entitlements. `bash -n buildscripts/acceptance.sh` and `git diff --cached --check` passed. The resulting launch artifact is `.build/acceptance/Build/Products/Debug/NetNewsWire.app` relative to this worktree.
+- This is a launch/window and local-account-path check, not a full manual reading, Settings, extension, CloudKit or iOS journey. The installed profile was not read for a before/after comparison; isolation evidence is the signed sandbox, distinct identities and the observed acceptance database path.
