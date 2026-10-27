@@ -25,9 +25,9 @@
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
-      "last_reported_head": "1af6f75",
-      "implementation_state": "review fixes; WAL nonmutating-source correction pending",
-      "review_evidence": "docs/acceptance/t01-review-r1.md"
+      "last_reported_head": "f5e5c15775988c9ec899441c986459f816c386e6",
+      "implementation_state": "round-2 fixes; canonical schema gate and fixtures pending",
+      "review_evidence": "docs/acceptance/t01-review-r2.md"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -39,8 +39,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "c0dbb3018f23376e776dff5863e7cb968777a268",
-      "implementation_state": "native lifecycle built; portable real-service payload continuation"
+      "last_reported_head": "825ec68c54265cdd815dce4a45ad51a945bc5044",
+      "implementation_state": "round-1 fixes; lifecycle, readiness, error and rebuild pending",
+      "review_evidence": "docs/acceptance/t02-review-r1.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",

@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00 is integrated and closed. T01 round-1 review found Standards 1 P2 and Spec 2 P1; the coordinator fixed the two narrow asset-validation defects at 1af6f75 (28 tests), while the original owner corrects WAL source-sidecar mutation before fresh review. T02 implemented and built native lifecycle/Settings at c0dbb30; its original owner now assembles the portable real-service payload and verifies the installed bundle. T03 native configuration/timing contract is prepared from actual IO source, but its T02 dependency remains unaccepted. T02 owns the serialized full Xcode resource. Thirty tickets and the full goal remain open.
+T00 is integrated and closed. T01 fixed the WAL source boundary; round 2 found incomplete-schema acceptance, imported-Raw authority and corrupt-gzip handling. The coordinator fixed the two narrow Raw/gzip defects (37 tests); the original owner implements canonical structure checks and complete fixtures. T02 has a relocated bundled real schema/service slice; round 1 found historical-data retirement, child ownership, readiness overflow and opaque errors. The coordinator guarded historical startup (7 passing tests, 1 optional skip after refreshing a stale stage); the original owner fixes lifecycle/readiness/errors and rebuilds. Both tickets remain unaccepted. T03 remains blocked. T02 owns the serialized full Xcode resource. Thirty tickets and the full goal remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

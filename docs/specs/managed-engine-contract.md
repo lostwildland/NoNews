@@ -8,6 +8,8 @@ The installed NoNews app owns its processing component and data directories. It 
 
 Starting creates or opens a NoNews-owned database using real IO schema/service contracts. Existing source IO databases, runtime processes and installed NNW containers are never auto-discovered as writable destinations. New empty data must work without an Obsidian vault or FreshRSS server. Legacy imported file authority is preserved rather than reassigned by the clean-install default.
 
+Ordinary startup must not run destructive historical retirement against an imported library. Unsupported populated historical/newer databases are retained and surfaced for verified migration before journal/schema mutation. A current version marker alone does not prove that required schema structure is present; malformed current data must not be reported Ready because only the settings subset happens to work. Additional unknown tables/columns remain preserved.
+
 The controller exposes stopped, starting, ready, stopping and failed states, meaningful errors, a bounded startup timeout and idempotent stop. Ordinary NNW reading remains usable if processing fails. Shutdown preserves durable work and never labels running work cancelled merely because the app window closes.
 
 ## Private command/read boundary

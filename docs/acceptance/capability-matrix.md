@@ -2,6 +2,8 @@
 
 2026-10-27. Baseline: existing 41-entry inventory; current source must be rechecked and new active capabilities added. No row below is accepted merely because a ticket exists. A retired capability is tracked but cannot be presented as active implementation.
 
+The [command-to-ticket audit](../research/io-command-ticket-coverage.md) classifies all 54 current `Application.handle` route fragments into implemented operations, aliases, guards and refused legacy surfaces. Use it with this matrix during implementation and T30 acceptance; it is source traceability, not runtime proof or a requirement to expose legacy HTTP routes.
+
 | ID | Existing capability | Owning tickets | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | A1 | 接入持续更新的订阅 | [T02](https://github.com/lostwildland/NoNews/issues/4), [T04](https://github.com/lostwildland/NoNews/issues/6) | not implemented in NoNews | source inventory only; native verification pending |
