@@ -85,7 +85,7 @@ connection.close()
             self.assertNotEqual(rejected.returncode, 0)
             self.assertEqual(unknown.read_bytes(), before)
 
-    def test_probe_rolls_back_existing_and_absent_settings_and_rejects_write(self):
+    def test_probe_rolls_back_settings_and_refuses_unverified_write_blocker(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp) / 'data'
@@ -106,6 +106,6 @@ connection.close()
                 db.execute("CREATE TRIGGER reject_setting BEFORE UPDATE ON app_settings BEGIN SELECT RAISE(ABORT,'private'); END")
             result = start()
             self.assertNotEqual(result.returncode,0)
-            self.assertEqual(json.loads(result.stdout), {'status':'error','code':'data_unavailable'})
+            self.assertEqual(json.loads(result.stdout), {'status':'error','code':'schema_migration_required'})
             with closing(sqlite3.connect(database)) as db, db:
                 self.assertEqual(db.execute('SELECT * FROM app_settings ORDER BY key').fetchall(), [('other','keep','timestamp'),('processors','3','original')])

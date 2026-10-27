@@ -23,10 +23,15 @@ class JobsPagingTest(unittest.TestCase):
                 if orphan_only:
                     values = [values[1]]
                 original_result = json.dumps({'retained': 'Missing item result 😀' * 3000}, ensure_ascii=False)
+                original_error = 'Processing stage failed: original detail'
                 with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                     db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','now','now','now','now')")
-                    db.executemany("INSERT INTO processing_jobs(rowid,id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error,result_json) VALUES (?,?,?,'curator',?,'failed','now','now','now','Retained failure',?)",
-                                   [(rowid, name, item, name, original_result) for rowid, name, item in values])
+                    db.executemany("INSERT INTO processing_jobs(rowid,id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error,result_json) VALUES (?,?,?,'curator',?,'failed','now','now','now',?,?)",
+                                   [(rowid, name, item, name, original_error, original_result) for rowid, name, item in values])
+                    for item in ('item', 'missing'):
+                        db.executemany("INSERT INTO stage_state(item_id,stage,status,error,updated_at) VALUES (?,?,'failed',?,?)",
+                                       [(item, 'curator', 'Current curator detail', '2026-10-28T01:00:00+00:00'),
+                                        (item, 'editor', 'Unrelated newer stage error', '2026-10-28T02:00:00+00:00')])
                 process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)
                 def send(message):
                     process.stdin.write(json.dumps(message)+'\n'); process.stdin.flush()
@@ -53,8 +58,9 @@ class JobsPagingTest(unittest.TestCase):
                     self.assertTrue(missing['itemUnavailable'])
                     self.assertFalse(missing['retryable'])
                     self.assertIn('unavailable', missing['retryBlocked'])
-                    self.assertTrue(all(record['error'] == 'Retained failure' and
+                    self.assertTrue(all(record['error'] == original_error and
                                         record['result_json'] == original_result for record in records))
+                    self.assertTrue(all(record['stage_error'] == 'Current curator detail' for record in records))
                     self.assertTrue(all(not record['itemUnavailable'] for record in records if record['id'] != 'orphan'))
                 finally:
                     process.stdin.close()

@@ -174,7 +174,7 @@ import Darwin
 			let blocked = ProcessingEngine(testRuntime: runtime, entry: root.appendingPathComponent("ManagedEngine/.prepared/stdio_service.py"), dataRoot: URL(fileURLWithPath: CommandLine.arguments[3]), timeout: 4)
 			blocked.start()
 			try await wait(blocked) { if case .failed = $0 { return true }; return false }
-			guard case .failed(let message) = blocked.state, message.contains("unavailable") else { fatalError("Write refusal was not reported") }
+			guard case .failed(let message) = blocked.state, message.contains("verified migration") else { fatalError("Unverified trigger was not reported") }
 		}
 		let missing = ProcessingEngine(testRuntime: dir.appendingPathComponent("missing"), entry: fixture, dataRoot: data)
 		missing.start()

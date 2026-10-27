@@ -14,13 +14,6 @@ from .core import InformationDB, utcnow
 from .jobs import JobQueue
 
 
-def _job_reason(row):
-    recorded = str(row['error'] or '')
-    if recorded and not recorded.startswith('Processing stage failed'):
-        return recorded
-    return str(row['stage_error'] or '') or recorded
-
-
 class Application:
     def __init__(self, database: Path, raw: Path, artifacts: Path, *, token: str, write_scope: str):
         if not token or len(token) < 24 or write_scope != 'settings':
@@ -87,6 +80,7 @@ class Application:
                            i.title,i.media_type,i.id IS NULL AS item_unavailable,
                            (SELECT s.error FROM stage_state s
                              WHERE s.item_id=j.item_id AND s.status='failed'
+                               AND s.stage=j.stage
                                AND s.error IS NOT NULL AND s.error<>''
                              ORDER BY s.updated_at DESC LIMIT 1) AS stage_error,
                            CASE WHEN d.id IS NULL THEN 0 ELSE 1 END AS dismissed
@@ -116,9 +110,9 @@ class Application:
                         else:
                             retryable = False
                             retry_blocked = 'Settings-write server only accepts settings mutations'
-                    job.update(error=_job_reason(row), dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
+                    job.update(dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
                                resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
-                               cause=causes.classify(_job_reason(row)))
+                               cause=causes.classify(str(row['error'] or '')))
                     jobs.append(job)
                 self._clear_snapshot()
                 encoded = json.dumps(jobs[0], ensure_ascii=False, separators=(',', ':')).encode('utf-8')

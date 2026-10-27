@@ -10,6 +10,39 @@ import unittest
 
 
 class StartupStatusTest(unittest.TestCase):
+    def test_canonical_triggers_are_refused_before_settings_writes(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        for event in ('AFTER INSERT ON "APP_SETTINGS"', 'AFTER UPDATE ON app_settings',
+                      'BEFORE INSERT ON items'):
+            with self.subTest(event=event), tempfile.TemporaryDirectory() as temp:
+                data = Path(temp) / 'data'
+                token = 'a' * 32
+                bootstrap = json.dumps({'token':token})+'\n'
+                command = [sys.executable, str(script), str(data)]
+                env = {'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'}
+                initial = subprocess.run(command, input=bootstrap, text=True, capture_output=True,
+                                         timeout=10, env=env, check=True)
+                self.assertEqual(json.loads(initial.stdout), {'status':'ready'})
+                database = data / 'information.sqlite'
+                with closing(sqlite3.connect(database)) as db, db:
+                    db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Preserved','now','now','now','now')")
+                    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES ('job','item','curator','retained','failed','now','now','now')")
+                    db.execute('CREATE TRIGGER unverified '+event+' BEGIN DELETE FROM processing_jobs; END')
+                    definition = db.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name='unverified'").fetchone()[0]
+                before = database.read_bytes()
+                write = {'id':1,'token':token,'method':'PUT','path':'/api/settings/processing',
+                         'body':{'processors':3}}
+                result = subprocess.run(command, input=bootstrap+json.dumps(write)+'\n', text=True,
+                                        capture_output=True, timeout=10, env=env)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual([json.loads(line) for line in result.stdout.splitlines()],
+                                 [{'status':'error','code':'schema_migration_required'}])
+                self.assertEqual(result.stderr, '')
+                self.assertEqual(database.read_bytes(), before)
+                with closing(sqlite3.connect(database)) as db:
+                    self.assertEqual(db.execute('SELECT id,item_id FROM processing_jobs').fetchall(), [('job','item')])
+                    self.assertEqual(db.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name='unverified'").fetchone()[0], definition)
+
     def test_required_schema_semantics_are_checked_before_ready(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         changes = {

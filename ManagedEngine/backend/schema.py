@@ -75,6 +75,10 @@ def validate_structure(db: sqlite3.Connection) -> None:
             ensure(reference)
             names = [row[0] for row in reference.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+            canonical = {name.casefold() for name in names}
+            if any(table.casefold() in canonical for table, in db.execute(
+                    "SELECT tbl_name FROM sqlite_master WHERE type='trigger'")):
+                raise UnsupportedSchemaError('schema_migration_required')
             existing = {row[0].casefold(): row[0] for row in db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}
             for name in names:
@@ -104,6 +108,8 @@ def validate_structure(db: sqlite3.Connection) -> None:
                         continue
                     if predicate is not None or any(column in expected['affinities'] or column in current['not_null'] or current['defaults'].get(column) not in (None, ['null']) for column, _ in keys):
                         raise ValueError('unsupported additional uniqueness constraint')
+    except UnsupportedSchemaError:
+        raise
     except ValueError as exc:
         raise UnsupportedSchemaError('schema_incomplete') from exc
 
