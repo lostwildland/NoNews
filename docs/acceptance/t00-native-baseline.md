@@ -4,16 +4,20 @@ Ticket: https://github.com/lostwildland/NoNews/issues/2. Starting commit: `77550
 
 ## Reproduce on macOS
 
-Install Xcode with its command-line tools selected, Python 3, and network access to the pinned Swift packages, Sparkle binary, Python runtime and Python dependencies. The T02 engine embed phase requires an explicitly prepared runtime. On a fresh checkout, prepare it once from the repository root before building:
+Install Xcode with its command-line tools selected, Python 3, and network access to the pinned dependencies. Engine-enabled branches also download the pinned Python runtime and dependencies. From the repository root:
 
 ```sh
-./ManagedEngine/prepare_runtime.sh
+# Engine-enabled branches require explicit runtime preparation before building.
+if [ -f ManagedEngine/prepare_runtime.sh ]; then
+  ./ManagedEngine/prepare_runtime.sh
+fi
 python3 buildscripts/test_acceptance.py
 buildscripts/acceptance.sh build
 buildscripts/acceptance.sh verify
 open -n "$PWD/.build/acceptance/Build/Products/Debug/NetNewsWire.app"
-buildscripts/acceptance.sh test
 ```
+
+Run the full `buildscripts/acceptance.sh test` plan only on branches with the T30 exact-current-host scripting correction and its acceptance compile flag. Older name-addressed scripting fixtures do not establish recipient isolation; use the `NetNewsWire-CI` plan, which excludes scripting, until that correction is integrated. The full-plan commands and counts below are historical evidence for their stated commits.
 
 Always run `verify` immediately before opening the build. It verifies the code signature, bundle and app-group identifiers, and the sandbox entitlements of the app and embedded extensions. It rejects an unsigned, modified, differently identified or over-entitled app. The build uses Debug, an ad-hoc signature, and a separate sandbox and identity; it does not require `setup.sh`, a team ID, developer certificates, private API keys, or `xcbeautify`. The script copies the current source into a per-invocation private build tree, excluding generated SecretKey.swift and environment files, then clears upstream key variables before scheme generation. The original worktree is never rewritten, even during overlapping or ordinary builds. Provider features requiring those keys are unavailable. Other account services and the first-run default feeds may use the network.
 
