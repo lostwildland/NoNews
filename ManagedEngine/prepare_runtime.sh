@@ -26,5 +26,8 @@ mkdir "$tmp/payload"
 tar -xzf "$tmp/runtime.tar.gz" -C "$tmp/payload"
 tar -xf "$tmp/notices.tar.zst" -C "$tmp/payload" python/licenses python/PYTHON.json
 test -x "$tmp/payload/python/bin/python3"
+env -i PATH=/usr/bin:/bin HOME="$tmp" "$tmp/payload/python/bin/python3" -I -m pip --isolated install \
+  --disable-pip-version-check --no-cache-dir --only-binary=:all: --require-hashes \
+  --index-url https://pypi.org/simple -r "$root/requirements.lock"
 mv "$tmp/payload" "$destination"
 printf '%s\n' "Prepared Python 3.13.18 ($arch) in $destination"

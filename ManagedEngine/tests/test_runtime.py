@@ -14,7 +14,7 @@ class RuntimeTest(unittest.TestCase):
             moved = Path(root) / 'moved runtime'
             shutil.copytree(source, moved, symlinks=True)
             process = subprocess.run([str(moved / 'bin' / 'python3'), '-I', '-c',
-                                      'import sqlite3, ssl; print(sqlite3.sqlite_version)'],
+                                      'import sqlite3, ssl, requests, bs4, yaml, pypdf, PIL, markdown_it; print(sqlite3.sqlite_version)'],
                                      env={'PATH': '/usr/bin:/bin'}, capture_output=True,
                                      text=True, timeout=15, check=True)
             self.assertTrue(process.stdout.strip())
