@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00 and same-owner T01 continuation remain delegated. Start independent T02 managed engine after removing speculative T00 code dependency; heavyweight Xcode builds remain serialized. Review returned implementations independently before integration.
+Await T00 actual native validation of e47d0a0 isolated-source fix, then independent round-3 Standards/Spec review and integration if passed. T01 and T02 continue original owners toward full ticket scope; only T00 may run full Xcode until validation returns.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
