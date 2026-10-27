@@ -10,6 +10,30 @@ import unittest
 
 
 class InitializationProbeTest(unittest.TestCase):
+    def test_public_transactions_commit_and_rollback(self):
+        engine = str(Path(__file__).resolve().parents[1])
+        if engine not in sys.path:
+            sys.path.insert(0, engine)
+        from backend.core import InformationDB
+        with InformationDB(':memory:') as state:
+            with state.transaction() as db:
+                db.execute("INSERT INTO app_settings VALUES ('outer','committed','stamp')")
+                try:
+                    with state.transaction() as nested:
+                        nested.execute("INSERT INTO app_settings VALUES ('nested','discarded','stamp')")
+                        raise RuntimeError('rollback nested work')
+                except RuntimeError:
+                    pass
+                self.assertEqual(db.execute("SELECT value FROM app_settings WHERE key='outer'").fetchone()[0], 'committed')
+                self.assertIsNone(db.execute("SELECT value FROM app_settings WHERE key='nested'").fetchone())
+            with self.assertRaises(KeyboardInterrupt):
+                with state.transaction() as db:
+                    db.execute("INSERT INTO app_settings VALUES ('interrupted','discarded','stamp')")
+                    raise KeyboardInterrupt()
+            self.assertFalse(state.db.in_transaction)
+            self.assertEqual([tuple(row) for row in state.db.execute('SELECT * FROM app_settings')],
+                             [('outer', 'committed', 'stamp')])
+
     def test_initialization_waits_for_a_reader_during_wal_conversion(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp:

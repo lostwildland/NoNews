@@ -257,6 +257,7 @@ def ensure_schema(db: sqlite3.Connection) -> None:
     # decided items only; this keeps that lookup off a full table scan.
     db.execute("CREATE INDEX IF NOT EXISTS items_decision ON items(human_review_status, human_decision)")
 
+@contextmanager
 def transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     """One write transaction: commit on a clean exit, roll back on any other.
 
