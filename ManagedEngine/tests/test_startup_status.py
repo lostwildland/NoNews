@@ -25,6 +25,14 @@ class StartupStatusTest(unittest.TestCase):
                 with closing(sqlite3.connect(database)) as db, db:
                     db.execute('ALTER TABLE items ADD COLUMN future TEXT COLLATE ' + spelling)
                     db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at,future) VALUES ('item','news','Preserved','now','now','now','now','retained')")
+                    definition = db.execute("SELECT sql FROM sqlite_master WHERE name='items'").fetchone()[0]
+                    indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL")]
+                    rows = db.execute('SELECT * FROM items').fetchall()
+                    db.execute('DROP TABLE items')
+                    db.execute(definition.replace('CHECK(media_type IN', 'CHECK(media_type COLLATE ' + spelling + ' IN'))
+                    for index in indexes:
+                        db.execute(index)
+                    db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)
                     expected_schema = db.execute("SELECT sql FROM sqlite_master WHERE name='items'").fetchone()
                 result = launch()
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -91,6 +99,7 @@ class StartupStatusTest(unittest.TestCase):
             'null_replace': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0'),
             'collation': ('items', 'media_type TEXT NOT NULL', 'media_type TEXT COLLATE NOCASE NOT NULL'),
             'quoted_collation': ('items', 'media_type TEXT NOT NULL', "media_type TEXT COLLATE 'NOCASE' NOT NULL"),
+            'check_literal': ('items', "'news','paper'", "'NEWS','paper'"),
             'rowid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, rowid TEXT'),
             'oid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, oid TEXT'),
             'rowid_alias_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, _rowid_ TEXT'),

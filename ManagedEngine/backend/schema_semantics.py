@@ -22,7 +22,14 @@ def _normalized_expression(tokens):
 
 def _normalized_expression_tokens(tokens):
     result = []
-    for token in tokens:
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token.casefold() == 'collate' and index + 1 < len(tokens) and tokens[index + 1].casefold() in (
+                'binary', "'binary'", '"binary"', '`binary`', '[binary]'):
+            index += 2
+            continue
+        index += 1
         if token.startswith("'"):
             result.append(token)
         elif token.startswith(('"', '`', '[')):

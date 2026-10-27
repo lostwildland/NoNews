@@ -10,6 +10,26 @@ import unittest
 
 
 class InitializationProbeTest(unittest.TestCase):
+    def test_commit_failure_rolls_back_before_a_later_transaction(self):
+        engine = str(Path(__file__).resolve().parents[1])
+        if engine not in sys.path:
+            sys.path.insert(0, engine)
+        from backend.core import InformationDB
+        with InformationDB(':memory:') as state:
+            state.db.execute('PRAGMA foreign_keys=ON')
+            state.db.execute('CREATE TABLE parent(id INTEGER PRIMARY KEY)')
+            state.db.execute('CREATE TABLE child(parent_id REFERENCES parent(id) DEFERRABLE INITIALLY DEFERRED)')
+            with self.assertRaises(sqlite3.IntegrityError):
+                with state.transaction() as db:
+                    db.execute('INSERT INTO child VALUES (1)')
+            self.assertFalse(state.db.in_transaction)
+            self.assertEqual(state.db.execute('SELECT count(*) FROM child').fetchone()[0], 0)
+            with state.transaction() as db:
+                db.execute('INSERT INTO parent VALUES (2)')
+                db.execute('INSERT INTO child VALUES (2)')
+            self.assertFalse(state.db.in_transaction)
+            self.assertEqual([tuple(row) for row in state.db.execute('SELECT * FROM child')], [(2,)])
+
     def test_public_transactions_commit_and_rollback(self):
         engine = str(Path(__file__).resolve().parents[1])
         if engine not in sys.path:

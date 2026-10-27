@@ -270,6 +270,7 @@ def transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
     db.execute("SAVEPOINT " + savepoint if savepoint else "BEGIN IMMEDIATE")
     try:
         yield db
+        db.execute("RELEASE " + savepoint if savepoint else "COMMIT")
     except BaseException:
         try:
             db.execute("ROLLBACK TO " + savepoint if savepoint else "ROLLBACK")
@@ -278,8 +279,6 @@ def transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
         except sqlite3.Error:
             pass
         raise
-    else:
-        db.execute("RELEASE " + savepoint if savepoint else "COMMIT")
 
 class InformationDB:
 
