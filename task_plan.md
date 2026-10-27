@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 accepted;2of31closed. T02 R4 found Standards0/Spec1P2; canonical structural invariants are corrected at032f258 with19Python tests(18pass1skip) and native controller checks passing. Original owner needs current native packaging/installed refusal check, then fresh R5 reviews. Native visual Ready remains unavailable. T30's same eventual owner starts an independent native fixture lifetime fix from accepted NNW code; whole T30 acceptance remains blocked by feature tickets. Full Xcode resource first belongs to T02 packaging; T30 may investigate/edit without heavyweight builds until release. T03 still depends on accepted engine APIs. Full migration, sync, UX and all29remainingtickets stay open.
+T00/T01 accepted;2of31closed. T02 constraint fix032f258 is packaged and smoke-tested; c3741bf records evidence and92554d7 normalizes helper EOF only. Parent verified r6 artifact signature/isolation/running processes, code scope and current prepared source/manifest. Fresh R5 two-axis reviews next. Native visualReady remains unavailable. T30 R1 was investigation-only; same owner now implements deterministic lifecycle cleanup with the serialized full-Xcode resource released byT02. No T30 fix/test pass is yet claimed. T03 awaits accepted engine APIs. All29remainingtickets and full migration/sync/UI acceptance stay open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

@@ -41,8 +41,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "032f258483f52500c8267c5f733babf4b09d3fad",
-      "implementation_state": "R4 Standards0/Spec1P2; semantic schema guard corrected,19Python tests18pass1skip and controller pass; current packaging then R5 pending",
+      "last_reported_head": "92554d7",
+      "implementation_state": "R4 constraint fix packaged at032f258; evidencec3741bf and EOF-only92554d7; current payload/source verified, fresh R5 review pending",
       "review_evidence": "docs/acceptance/t02-review-r4.md"
     },
     "03": {
@@ -414,7 +414,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "claimed for independent native fixture-lifetime repair; final parity acceptance still blocked by feature tickets"
+      "implementation_state": "R1 investigation only, no fix/tests; same owner continued implementation and now has serialized full-Xcode resource",
+      "implementation_branch": "t3/native-fixture-lifetime",
+      "last_reported_head": "0c45a2f0b445aba137199f333d43926e95827086"
     }
   },
   "spec": {
