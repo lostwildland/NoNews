@@ -23,6 +23,8 @@ Preserve existing nonthrowing native API signatures where possible. On a closing
 
 Implement rejection at real owner/database boundaries and inspect all callers. Add behavioral during-close and after-close checks, retain the existing red admission regression until green, preserve pre-close writes and the actual descriptor/inode checks. No test skips, sleeps, console suppression or broad directory cleanup. This repair does not claim to change or validate production AccountManager deletion; full T30 still requires the rest of its original acceptance.
 
+- [ ] Scripting fixtures bind application-targeting commands to the exact current isolated test host and fail without a usable bound source; no app-name or retail-identifier fallback. Existing script assertions remain exercised before full native acceptance. See [test-target isolation evidence](../acceptance/t30-fixture-review-r4.md).
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/7
