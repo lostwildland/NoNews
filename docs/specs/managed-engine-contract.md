@@ -10,6 +10,8 @@ Starting creates or opens a NoNews-owned database using real IO schema/service c
 
 Ordinary startup must not run destructive historical retirement against an imported library. Unsupported populated historical/newer databases are retained and surfaced for verified migration before journal/schema mutation. A current version marker alone does not prove that required schema structure is present; malformed current data must not be reported Ready because only the settings subset happens to work. Additional unknown tables/columns remain preserved.
 
+Canonical IO v41 defines no triggers. An additional trigger on a canonical table requires verified migration before writable startup, retaining its definition/data unchanged; a successful rollback probe cannot certify its later effects. Existing noncanonical legacy structures remain preserved. Job history retains recorded errors/results rather than substituting mutable current-stage observations for original failure evidence.
+
 The controller exposes stopped, starting, ready, stopping and failed states, meaningful errors, a bounded startup timeout and idempotent stop. Ordinary NNW reading remains usable if processing fails. Shutdown preserves durable work and never labels running work cancelled merely because the app window closes.
 
 ## Private command/read boundary

@@ -20,6 +20,7 @@ Implementation may start only from independently reviewed, accepted and integrat
 
 - [ ] Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.
 - [ ] Saving instructions and their service/target binding is coherent: a failed save leaves the prior configuration intact. Unchanged text does not grow history; Restore Text retains the visibly selected execution binding and never rewrites historical runs.
+- [ ] Existing Magpie legacy-routing preview, pause/drain/apply and unresolved pending-work behavior remain accessible through explicit configured actions; no inference, historical requeue, completed-provenance rewrite or queued Editor target substitution occurs on save/migration.
 
 ## Blocked by
 
