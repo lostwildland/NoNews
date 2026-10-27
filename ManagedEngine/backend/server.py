@@ -3,9 +3,12 @@ from pathlib import Path
 from contextlib import closing
 import sqlite3
 import base64
-import hashlib
 import json
 import re
+import secrets
+import tempfile
+import time
+import threading
 from . import causes, settings, schema
 from .core import InformationDB, utcnow
 from .jobs import JobQueue
@@ -24,6 +27,9 @@ class Application:
             raise ValueError('Invalid managed service configuration')
         self.database = database
         self.processors_default = 1
+        self.snapshot = None
+        self.snapshot_lock = threading.RLock()
+        self.snapshot_timer = None
         database.parent.mkdir(parents=True, exist_ok=True)
         if database.exists():
             with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True)) as db:
@@ -34,9 +40,26 @@ class Application:
             pass
 
     def handle(self, method: str, path: str, query: dict, body: dict):
+        cursor = query.get('cursor') if path == '/api/jobs' else None
+        if cursor and cursor.startswith('s:'):
+            match = re.fullmatch(r's:([0-9a-f]{32}):([0-9]{1,12})', cursor)
+            if not match:
+                raise ValueError('invalid cursor')
+            return self._frame(int(match[2]), match[1])
         with InformationDB(self.database) as db:
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
+            if path == '/api/settings/processing/probe' and method == 'POST':
+                db.db.execute('BEGIN IMMEDIATE')
+                try:
+                    original = settings.processors(db.db, fallback=self.processors_default)
+                    probe = 2 if original == 1 else 1
+                    settings.save_processors(db.db, probe, at=utcnow())
+                    if settings.processors(db.db, fallback=self.processors_default) != probe:
+                        raise RuntimeError('settings probe failed')
+                finally:
+                    db.db.execute('ROLLBACK')
+                return {'writable': True}
             if path == '/api/settings/processing':
                 if method == 'GET':
                     return {'processors': settings.processors(db.db, fallback=self.processors_default),
@@ -94,17 +117,52 @@ class Application:
                                resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
                                cause=causes.classify(_job_reason(row)))
                     jobs.append(job)
+                self._clear_snapshot()
                 encoded = json.dumps(jobs[0], ensure_ascii=False, separators=(',', ':')).encode('utf-8')
-                actual = hashlib.sha256(encoded).hexdigest()
-                if (offset and digest != actual) or offset >= len(encoded):
-                    raise ValueError('stale cursor')
-                end = min(len(encoded), offset + 24000)
-                complete = end == len(encoded)
-                if complete:
-                    following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
-                    next_cursor = f'{following[0]}:0:-' if following else None
-                else:
-                    next_cursor = f'{row_id}:{end}:{actual}'
-                return {'chunk': base64.b64encode(encoded[offset:end]).decode('ascii'),
-                        'recordComplete': complete, 'next': next_cursor}
+                if len(encoded) > 512 * 1024 * 1024:
+                    raise ValueError('record exceeds snapshot capacity')
+                following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
+                next_cursor = f'{following[0]}:0:-' if following else None
+                spool = tempfile.TemporaryFile(dir=self.database.parent)
+                spool.write(encoded)
+                token = secrets.token_hex(16)
+                with self.snapshot_lock:
+                    self.snapshot = (token, spool, len(encoded), next_cursor, time.monotonic() + 120)
+                    self.snapshot_timer = threading.Timer(120, self._expire_snapshot, args=(token,))
+                    self.snapshot_timer.daemon = True
+                    self.snapshot_timer.start()
+                return self._frame(0, token)
             raise ValueError('Unsupported operation')
+
+    def _expire_snapshot(self, token):
+        with self.snapshot_lock:
+            if self.snapshot and self.snapshot[0] == token:
+                self._clear_snapshot()
+
+    def _clear_snapshot(self):
+        with self.snapshot_lock:
+            if self.snapshot_timer:
+                self.snapshot_timer.cancel()
+                self.snapshot_timer = None
+            if self.snapshot:
+                self.snapshot[1].close()
+                self.snapshot = None
+
+    def _frame(self, offset, expected):
+        with self.snapshot_lock:
+            if not self.snapshot or self.snapshot[0] != expected or time.monotonic() > self.snapshot[4]:
+                if self.snapshot and self.snapshot[0] == expected:
+                    self._clear_snapshot()
+                raise ValueError('expired cursor')
+            token, spool, size, following, deadline = self.snapshot
+            if offset < 0 or offset >= size or offset % 24000:
+                raise ValueError('invalid cursor')
+            spool.seek(offset)
+            chunk = spool.read(24000)
+            end = offset + len(chunk)
+            complete = end == size
+            next_cursor = following if complete else f's:{token}:{end}'
+            if complete:
+                self._clear_snapshot()
+            return {'chunk': base64.b64encode(chunk).decode('ascii'),
+                    'recordComplete': complete, 'next': next_cursor}

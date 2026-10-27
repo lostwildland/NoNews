@@ -170,7 +170,7 @@ final class ProcessingEngine {
 
 	func request(method: String, path: String, query: [String: Any] = [:], body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		guard state == .ready || state == .starting, process?.isRunning == true, pending.count < 32,
-			  [("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			  [("POST", "/api/settings/processing/probe"), ("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
@@ -223,8 +223,11 @@ final class ProcessingEngine {
 					guard let self, case .success(let status) = result, status["schemaVersion"] is Int else { self?.fail("Processing readiness check failed."); return }
 					self.request(method: "GET", path: "/api/settings/processing") { [weak self] result in
 						guard let self, case .success(let settings) = result, settings["processors"] is Int else { self?.fail("Processing readiness check failed."); return }
-						self.startupTimer?.invalidate()
-						self.state = .ready
+						self.request(method: "POST", path: "/api/settings/processing/probe") { [weak self] result in
+							guard let self, case .success(let probe) = result, probe["writable"] as? Bool == true else { self?.fail("Processing data is unavailable. Check access and try again."); return }
+							self.startupTimer?.invalidate()
+							self.state = .ready
+						}
 					}
 				}
 			} else if let id = value["id"] as? Int, let completion = pending[id] {

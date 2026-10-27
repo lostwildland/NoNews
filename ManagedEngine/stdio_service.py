@@ -8,7 +8,7 @@ import sys
 
 MAX_MESSAGE = 65536
 ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
-           ('PUT', '/api/settings/processing')}
+           ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe')}
 
 
 def read_message():
@@ -57,6 +57,7 @@ def main():
                               token=token, write_scope='settings')
             app.handle('GET', '/api/status', {}, {})
             app.handle('GET', '/api/settings/processing', {}, {})
+            app.handle('POST', '/api/settings/processing/probe', {}, {})
         except UnsupportedSchemaError as error:
             send({'status': 'error', 'code': error.code})
             return 1

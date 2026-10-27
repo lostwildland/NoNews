@@ -307,8 +307,12 @@ class InformationDB:
             self.db.execute('PRAGMA temp_store=MEMORY')
             self.db.execute('PRAGMA journal_size_limit=67108864')
         if not read_only:
-            from . import schema as schema_pass
-            schema_pass.ensure(self.db)
+            try:
+                from . import schema as schema_pass
+                schema_pass.ensure(self.db)
+            except BaseException:
+                self.db.close()
+                raise
 
     def transaction(self):
         """See :func:`transaction`. Reads better at the call site."""

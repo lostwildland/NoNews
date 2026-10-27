@@ -84,8 +84,37 @@ def validate_structure(db: sqlite3.Connection) -> None:
                 raise UnsupportedSchemaError('schema_incomplete')
 
 
+class _TransactionalScripts:
+    def __init__(self, db):
+        self.db = db
+
+    def __getattr__(self, name):
+        return getattr(self.db, name)
+
+    def executescript(self, script):
+        statement = ''
+        for line in script.splitlines(keepends=True):
+            statement += line
+            if sqlite3.complete_statement(statement):
+                self.db.execute(statement)
+                statement = ''
+        if statement.strip():
+            raise ValueError('Incomplete schema statement')
+
+
 def ensure(db: sqlite3.Connection, *, artifacts=None) -> bool:
-    """Initialize empty data or open the supported schema without destructive legacy migration."""
+    """Initialize empty data atomically, retaining unknown historical schemas."""
+    db.execute('BEGIN IMMEDIATE')
+    try:
+        changed = _ensure(_TransactionalScripts(db), artifacts=artifacts)
+        db.execute('COMMIT')
+        return changed
+    except BaseException:
+        db.execute('ROLLBACK')
+        raise
+
+
+def _ensure(db, *, artifacts=None) -> bool:
     require_supported_database(db)
     from . import (content_store, core, delivery, feed_settings, folders, jobs,
                    legacy_content_migration, literature, media_jobs, media_raw_activation,

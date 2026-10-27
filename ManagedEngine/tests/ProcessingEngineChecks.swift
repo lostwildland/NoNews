@@ -170,6 +170,12 @@ import Darwin
 			real.stop()
 			try await wait(real) { $0 == .stopped }
 		}
+		if CommandLine.arguments.count > 3 {
+			let blocked = ProcessingEngine(testRuntime: runtime, entry: root.appendingPathComponent("ManagedEngine/.prepared/stdio_service.py"), dataRoot: URL(fileURLWithPath: CommandLine.arguments[3]), timeout: 4)
+			blocked.start()
+			try await wait(blocked) { if case .failed = $0 { return true }; return false }
+			guard case .failed(let message) = blocked.state, message.contains("unavailable") else { fatalError("Write refusal was not reported") }
+		}
 		let missing = ProcessingEngine(testRuntime: dir.appendingPathComponent("missing"), entry: fixture, dataRoot: data)
 		missing.start()
 		guard case .failed = missing.state else { fatalError("Missing runtime did not fail") }

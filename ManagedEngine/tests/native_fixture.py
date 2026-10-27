@@ -52,7 +52,9 @@ for line in sys.stdin:
     if request['method'] == 'PUT' and mode == 'badreply':
         print(json.dumps({'id': request['id']}), flush=True)
         continue
-    if path == '/api/status':
+    if path == '/api/settings/processing/probe':
+        result = {'writable': True}
+    elif path == '/api/status':
         result = {'schemaVersion': 41}
     elif path == '/api/jobs':
         result = {'jobs': []}

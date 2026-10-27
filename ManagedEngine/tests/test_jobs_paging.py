@@ -88,7 +88,15 @@ class JobsPagingTest(unittest.TestCase):
             self.assertIsNotNone(saved)
             with sqlite3.connect(data / 'information.sqlite') as db:
                 db.execute("UPDATE items SET title='changed' WHERE id='item'")
-            self.assertEqual(send({'id':4,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':saved}})['error'], 'invalid query')
+            old = bytearray(base64.b64decode(first_frame['chunk']))
+            while saved:
+                frame = send({'id':4,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':saved}})['result']
+                old.extend(base64.b64decode(frame['chunk']))
+                if frame['recordComplete']: break
+                saved = frame['next']
+            self.assertEqual(json.loads(old)['title'], title)
+            fresh = send({'id':5,'token':token,'method':'GET','path':'/api/jobs','query':{}})['result']
+            self.assertEqual(json.loads(base64.b64decode(fresh['chunk']))['title'], 'changed')
             process.stdin.close(); self.assertEqual(process.wait(timeout=10),0)
             process.stdout.close()
             with sqlite3.connect(data/'information.sqlite') as db:

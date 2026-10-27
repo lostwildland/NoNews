@@ -32,3 +32,5 @@ Source file SHA-256 (working-tree bytes):
 - `service.py`: `3a10cce67aeac1181848cbf19cc0c256a1d35a769ede8c2eac5651a424346dec`
 - `settings.py`: `b94fd7cda56d61893a631380af8bf105fe42b1dd3c18100267fb956516a3c1b6`
 - `zotero.py`: `2caac0f26ed53d5827ea63034e9aa6f96c85697264cf1dead34120a24780cf27`
+
+Fresh schema creation uses a single SQLite transaction with statement-by-statement scripts to avoid implicit commits. Startup probes the actual processing setting inside a rollback-only transaction.
