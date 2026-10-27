@@ -1,5 +1,13 @@
 # T01 snapshot investigation (incomplete)
 
+## Independent review round 5 coordinator corrections
+
+Review of `596408d` reproduced two P2 defects using temporary synthetic data: a BLOB binding identity caused manifest JSON serialization to raise TypeError, and removal of items.starred's default admitted a restored schema that could not perform the current IO item insert. The common binding boundary now refuses identities outside text/integer before manifest construction; unknown binary data in ordinary tables remains preserved. Its CLI regression checks the safe refusal, no traceback/publication and unchanged database/asset.
+
+The canonical descriptor now includes 90 required defaults and 592 column affinities as well as the prior rowid/safety constraints. Required defaults use the existing conservative token normalization. Affinity normalization follows [SQLite's documented rules](https://www.sqlite.org/datatype3.html#determination_of_column_affinity); harmless TEXT/VARCHAR spelling remains accepted. New snapshot/verify regressions reject missing/wrong starred defaults and wrong column affinity, retaining original rows and indexes. The initial default fixture also removed a required unique index and could therefore pass for the wrong reason; it was corrected to recreate all indexes and assert the precise default/affinity failure before implementation. Those corrected tests first reproduced acceptance or only a generic integrity mismatch. The restored-write test now uses the current IO item-insert shape and verifies its default state before checking generated Raw IDs.
+
+Regenerated descriptor SHA-256 `fb13502decfdeeb838bc33d3337855bd579c59feaac67e0e3c5593004d4fa78b` supersedes the hashes below. Final `PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest discover -s Tests -p 'test_io_snapshot.py' -q` passed 46 tests. Descriptor regeneration disabled bytecode writes and removed only the prior generated module cache before testing. No production data, native build or remote operation was used. Fresh original-base review remains required.
+
 ## Independent review round 4 coordinator corrections
 
 Reviewed `4e561e8`: Standards found one P2 cleanup-backup BLOB path reaching Path before validation; Spec found one P2 INTEGER PRIMARY KEY rowid-alias semantics missing from the schema gate. The coordinator first reproduced a public CLI traceback for the backup path, and snapshot acceptance of TEXT PRIMARY KEY and INTEGER PRIMARY KEY DESC alterations (verify only reported a generic integrity mismatch). A common path validator now precedes both binding and backup-directory construction. Non-text document input now has an explicit refusal instead of a generic CLI error; originals and publication absence are checked.

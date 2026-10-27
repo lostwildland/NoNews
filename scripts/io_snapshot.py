@@ -321,7 +321,7 @@ def _schema41(db):
         raise SnapshotError('required schema descriptor is unavailable') from exc
     try:
         semantic_data = (Path(__file__).parent / 'io_schema41_semantics.json').read_bytes()
-        if hashlib.sha256(semantic_data).hexdigest() != '2760b4b85282087cb742749084e0a886daf5fe60560312cb376c723d64d8540c':
+        if hashlib.sha256(semantic_data).hexdigest() != 'fb13502decfdeeb838bc33d3337855bd579c59feaac67e0e3c5593004d4fa78b':
             raise SnapshotError('required schema descriptor is invalid')
         semantics = json.loads(semantic_data)
     except (OSError, ValueError) as exc:
@@ -342,6 +342,9 @@ def _schema41(db):
             raise SnapshotError('required schema invariant missing: ' + name + ' primary key')
         if current['rowid_alias'] != expected['rowid_alias']:
             raise SnapshotError('required schema invariant missing: ' + name + ' rowid alias')
+        for kind in ('affinities', 'defaults'):
+            if any(current[kind].get(column) != value for column, value in expected[kind].items()):
+                raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
         for kind in ('not_null', 'unique', 'foreign_keys', 'checks'):
             if not all(value in current[kind] for value in expected[kind]):
                 raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
@@ -395,9 +398,24 @@ def _checks(sql):
     return sorted(result)
 
 
+def _affinity(declaration):
+    value = declaration.upper()
+    if 'INT' in value:
+        return 'INTEGER'
+    if any(part in value for part in ('CHAR', 'CLOB', 'TEXT')):
+        return 'TEXT'
+    if not value or 'BLOB' in value:
+        return 'BLOB'
+    if any(part in value for part in ('REAL', 'FLOA', 'DOUB')):
+        return 'REAL'
+    return 'NUMERIC'
+
+
 def _table_semantics(db, name):
     quoted = '"' + name.replace('"', '""') + '"'
     columns = db.execute(f'PRAGMA table_xinfo({quoted})').fetchall()
+    affinities = {row[1].casefold(): _affinity(row[2]) for row in columns}
+    defaults = {row[1].casefold(): _normalized_expression(_sql_tokens(row[4])) for row in columns if row[4] is not None}
     primary = sorted(row[1].casefold() for row in columns if row[5])
     not_null = sorted(row[1].casefold() for row in columns if row[3])
     indexes = db.execute(f'PRAGMA index_list({quoted})').fetchall()
@@ -439,7 +457,7 @@ def _table_semantics(db, name):
         group['columns'].sort(key=lambda pair: (pair[0], pair[1] or ''))
         foreign.append(group)
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
-    return {'primary_key': primary, 'rowid_alias': rowid_alias, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
+    return {'primary_key': primary, 'rowid_alias': rowid_alias, 'affinities': affinities, 'defaults': defaults, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
 
 
 def _asset_path(value):
@@ -453,6 +471,8 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
     bindings = []
     matched_aliases = set()
     def bind(table, column, identity, value, expected=None, size=None, relative_root=None, allow_reserved=False):
+        if type(identity) not in (str, int):
+            raise SnapshotError('invalid asset binding identity')
         p = _asset_path(value)
         if relative_root and not p.is_absolute():
             root, relative = relative_root, value
