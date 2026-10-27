@@ -111,4 +111,3 @@ def table_semantics(db, name):
         foreign.append(group)
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
     return {'primary_key': primary, 'rowid_alias': rowid_alias, 'affinities': affinities, 'hidden': {row[1].casefold(): row[6] for row in columns}, 'defaults': defaults, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
-
