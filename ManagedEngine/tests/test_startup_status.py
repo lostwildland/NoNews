@@ -10,6 +10,54 @@ import unittest
 
 
 class StartupStatusTest(unittest.TestCase):
+    def test_required_schema_semantics_are_checked_before_ready(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        changes = {
+            'primary_key': ('processing_jobs', 'id TEXT PRIMARY KEY', 'id TEXT'),
+            'unique': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL'),
+            'foreign_key': ('processing_jobs', 'item_id TEXT NOT NULL REFERENCES items(id)', 'item_id TEXT NOT NULL'),
+            'not_null': ('processing_jobs', 'stage TEXT NOT NULL', 'stage TEXT'),
+            'default': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts INTEGER NOT NULL'),
+            'affinity': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts TEXT NOT NULL DEFAULT 0'),
+            'rowid': ('raw_snapshots', 'id INTEGER PRIMARY KEY', 'id TEXT PRIMARY KEY'),
+            'check': ('items', "CHECK(media_type IN ('news','paper','newsletter','podcast','video'))", ''),
+            'generated': ('processing_jobs', 'stage TEXT NOT NULL', "stage TEXT GENERATED ALWAYS AS ('curator') VIRTUAL NOT NULL"),
+            'extra_check': ('processing_jobs', 'stage TEXT NOT NULL', "stage TEXT NOT NULL CHECK(stage='never')"),
+            'extra_unique': ('processing_jobs', 'stage TEXT NOT NULL', 'stage TEXT NOT NULL UNIQUE'),
+            'extra_not_null': ('processing_jobs', 'error TEXT', 'error TEXT NOT NULL'),
+            'extra_foreign_key': ('processing_jobs', 'error TEXT', 'error TEXT REFERENCES app_settings(key)'),
+            'partial_index': None,
+        }
+        for defect, change in changes.items():
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temp:
+                data = Path(temp) / 'data'
+                def launch():
+                    return subprocess.run([sys.executable, str(script), str(data)], input=json.dumps({'token':'a'*32})+'\n', text=True, capture_output=True, timeout=10)
+                self.assertEqual(json.loads(launch().stdout), {'status':'ready'})
+                database = data / 'information.sqlite'
+                with closing(sqlite3.connect(database)) as db, db:
+                    if change is None:
+                        db.execute('DROP INDEX media_document_one_pending')
+                    else:
+                        table, old, new = change
+                        definition = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone()[0]
+                        self.assertIn(old, definition)
+                        indexes = [r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL", (table,))]
+                        db.execute('DROP TABLE ' + table)
+                        db.execute(definition.replace(old, new, 1))
+                        for index in indexes:
+                            db.execute(index)
+                    db.execute('CREATE TABLE future_data(value BLOB)')
+                    db.execute('INSERT INTO future_data VALUES (?)', (b'preserved',))
+                before = database.read_bytes()
+                result = launch()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(json.loads(result.stdout), {'status':'error','code':'schema_incomplete'})
+                self.assertEqual(result.stderr, '')
+                self.assertEqual(database.read_bytes(), before)
+                with closing(sqlite3.connect(database)) as db:
+                    self.assertEqual(db.execute('SELECT value FROM future_data').fetchone(), (b'preserved',))
+
     def test_current_startup_preserves_empty_legacy_structures(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         with tempfile.TemporaryDirectory() as temp:
@@ -76,6 +124,9 @@ class StartupStatusTest(unittest.TestCase):
             with closing(sqlite3.connect(extra / 'information.sqlite')) as db, db:
                 db.execute('ALTER TABLE items ADD COLUMN future_field TEXT')
                 db.execute('CREATE TABLE future_extra (value TEXT)')
+                db.execute('CREATE INDEX extra_future ON items(future_field)')
+                db.execute('DROP INDEX media_document_one_pending')
+                db.execute("CREATE UNIQUE INDEX equivalent_pending ON media_document_generations(item_id) WHERE (state = 'pending')")
             self.assertEqual(json.loads(launch(extra).stdout), {'status': 'ready'})
             corrupt = root / 'corrupt'
             corrupt.mkdir()

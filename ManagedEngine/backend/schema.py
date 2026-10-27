@@ -68,21 +68,44 @@ def require_supported_database(db: sqlite3.Connection) -> None:
 
 
 def validate_structure(db: sqlite3.Connection) -> None:
-    """Compare required current tables and columns without mutating the database."""
-    with closing(sqlite3.connect(':memory:')) as reference:
-        ensure(reference)
-        names = [row[0] for row in reference.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
-        existing = {row[0] for row in db.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'")}
-        for name in names:
-            if name not in existing:
-                raise UnsupportedSchemaError('schema_incomplete')
-            quoted = '"' + name.replace('"', '""') + '"'
-            required = {row[1] for row in reference.execute('PRAGMA table_info(' + quoted + ')')}
-            actual = {row[1] for row in db.execute('PRAGMA table_info(' + quoted + ')')}
-            if not required.issubset(actual):
-                raise UnsupportedSchemaError('schema_incomplete')
+    """Require the current IO write invariants without repairing imported data."""
+    from .schema_semantics import table_semantics
+    try:
+        with closing(sqlite3.connect(':memory:')) as reference:
+            ensure(reference)
+            names = [row[0] for row in reference.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+            existing = {row[0].casefold(): row[0] for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            for name in names:
+                actual_name = existing.get(name.casefold())
+                if actual_name is None:
+                    raise ValueError('required table missing')
+                expected = table_semantics(reference, name)
+                current = table_semantics(db, actual_name)
+                for kind in ('primary_key', 'rowid_alias'):
+                    if current[kind] != expected[kind]:
+                        raise ValueError('required key missing')
+                for kind in ('affinities', 'defaults', 'hidden'):
+                    if any(column not in current['affinities'] or current[kind].get(column) != expected[kind].get(column)
+                           for column in expected['affinities']):
+                        raise ValueError('required column contract missing')
+                for kind in ('not_null', 'unique', 'foreign_keys', 'checks'):
+                    if not all(value in current[kind] for value in expected[kind]):
+                        raise ValueError('required constraint missing')
+                for column in set(current['not_null']) - set(expected['not_null']):
+                    if column in expected['affinities'] or current['defaults'].get(column) in (None, ['null']):
+                        raise ValueError('unsupported additional not-null constraint')
+                for kind in ('foreign_keys', 'checks'):
+                    if any(value not in expected[kind] for value in current[kind]):
+                        raise ValueError('unsupported additional constraint')
+                for keys, predicate in current['unique']:
+                    if [keys, predicate] in expected['unique']:
+                        continue
+                    if predicate is not None or any(column in expected['affinities'] or column in current['not_null'] or current['defaults'].get(column) not in (None, ['null']) for column, _ in keys):
+                        raise ValueError('unsupported additional uniqueness constraint')
+    except ValueError as exc:
+        raise UnsupportedSchemaError('schema_incomplete') from exc
 
 
 class _TransactionalScripts:
