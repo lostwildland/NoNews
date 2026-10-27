@@ -15,8 +15,26 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_binary_collation_quote_spellings_round_trip(self):
+        for spelling in ('BINARY', "'BINARY'", "'bInArY'", '"BINARY"', '`BINARY`', '[BINARY]'):
+            with self.subTest(spelling=spelling), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = self.make_simple(root)
+                database = root / 'source.sqlite'
+                with closing(sqlite3.connect(database)) as db, db:
+                    db.execute('ALTER TABLE items ADD COLUMN future TEXT COLLATE ' + spelling)
+                    db.execute("UPDATE items SET future='retained'")
+                    expected = db.execute('SELECT id, future FROM items ORDER BY id').fetchall()
+                before = database.read_bytes()
+                snapshot(database, {'vault': vault}, root / 'snap')
+                verify(root / 'snap')
+                restore(root / 'snap', root / 'restored')
+                with closing(sqlite3.connect(root / 'restored/database.sqlite')) as db:
+                    self.assertEqual(db.execute('SELECT id, future FROM items ORDER BY id').fetchall(), expected)
+                self.assertEqual(database.read_bytes(), before)
+
     def test_rowid_aliases_and_nonbinary_collations_are_refused(self):
-        for defect in ('rowid', '_rowid_', 'oid', 'collation'):
+        for defect in ('rowid', '_rowid_', 'oid', 'collation', 'quoted_collation'):
             for operation in ('snapshot', 'verify'):
                 with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
                     root = Path(tmp)
@@ -24,12 +42,13 @@ class SnapshotTests(unittest.TestCase):
                     snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
                     database = root / ('source.sqlite' if operation == 'snapshot' else 'snap/database.sqlite')
                     with closing(sqlite3.connect(database)) as db, db:
-                        if defect == 'collation':
+                        if defect in ('collation', 'quoted_collation'):
                             ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='items'").fetchone()[0]
                             rows = db.execute('SELECT * FROM items').fetchall()
                             indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL")]
                             db.execute('DROP TABLE items')
-                            db.execute(ddl.replace('media_type TEXT NOT NULL', 'media_type TEXT COLLATE NOCASE NOT NULL'))
+                            collation = 'NOCASE' if defect == 'collation' else "'NOCASE'"
+                            db.execute(ddl.replace('media_type TEXT NOT NULL', 'media_type TEXT COLLATE ' + collation + ' NOT NULL'))
                             for index in indexes:
                                 db.execute(index)
                             db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)

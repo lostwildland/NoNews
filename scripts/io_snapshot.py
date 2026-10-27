@@ -492,7 +492,8 @@ def _table_semantics(db, name):
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
     tokens = _sql_tokens(sql)
     for index, token in enumerate(tokens[:-1]):
-        if token.casefold() == 'collate' and _normalized_expression_tokens([tokens[index + 1]]) != ['binary']:
+        if token.casefold() == 'collate' and (_normalized_expression_tokens([tokens[index + 1]]) != ['binary']
+                                             and tokens[index + 1].casefold() != "'binary'"):
             raise SnapshotError('unsupported schema collation: ' + name)
     for index, token in enumerate(tokens[:-2]):
         if token.casefold() == 'on' and tokens[index + 1].casefold() == 'conflict' and tokens[index + 2].casefold() != 'abort':
