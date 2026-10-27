@@ -25,9 +25,9 @@
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
-      "last_reported_head": "f5e5c15775988c9ec899441c986459f816c386e6",
-      "implementation_state": "round-2 fixes; canonical schema gate and fixtures pending",
-      "review_evidence": "docs/acceptance/t01-review-r2.md"
+      "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
+      "implementation_state": "round-6 corrections pushed; 50 focused tests pass; fresh round-7 review pending",
+      "review_evidence": "docs/acceptance/t01-review-r6.md"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -39,9 +39,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "825ec68c54265cdd815dce4a45ad51a945bc5044",
-      "implementation_state": "round-1 fixes; lifecycle, readiness, error and rebuild pending",
-      "review_evidence": "docs/acceptance/t02-review-r1.md"
+      "last_reported_head": "588219c49bdd97c8745fd3ac70731daeb6a8f461",
+      "implementation_state": "round-3 corrections in progress with original owner; atomic init, linear framing and rollback-only readiness pending",
+      "review_evidence": "docs/acceptance/t02-review-r3.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
