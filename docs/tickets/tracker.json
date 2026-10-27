@@ -416,9 +416,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "R1 investigation only, no fix/tests; same owner continued implementation and now has serialized full-Xcode resource",
+      "implementation_state": "fixture repair implemented;99targeted/757full passes, parent confirms zero SQLite unlink/disk-I/O lines; independent repair review pending; final T30 remains blocked",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "0c45a2f0b445aba137199f333d43926e95827086"
+      "last_reported_head": "9f040dcef27b6665d49bfc18db97a2d745de2ac5"
     }
   },
   "spec": {
