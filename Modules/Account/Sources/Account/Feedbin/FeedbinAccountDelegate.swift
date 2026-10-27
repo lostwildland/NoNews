@@ -471,6 +471,9 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 	}
 
 	private var syncInitialization: Task<Void, Never>?
+	#if DEBUG
+	func waitForSyncInitializationForTesting() async { await syncInitialization?.value }
+	#endif
 
 	func accountDidInitialize() {
 		credentials = try? account?.retrieveCredentials(type: .basic)

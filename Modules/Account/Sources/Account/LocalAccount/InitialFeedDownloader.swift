@@ -12,6 +12,9 @@ import RSWeb
 import FeedFinder
 
 struct InitialFeedDownloader {
+	#if DEBUG
+	@MainActor static var afterDownloadForTesting: (() async -> Void)?
+	#endif
 
 	@MainActor static func download(_ url: URL) async throws -> (ParsedFeed?, URLResponse?) {
 		// Route through FeedFinder.downloadAndLog so the fetch shows up in the
@@ -23,6 +26,9 @@ struct InitialFeedDownloader {
 
 		let parserData = ParserData(url: url.absoluteString, data: data)
 		let parsedFeed = try await FeedParser.parse(parserData)
+		#if DEBUG
+		await afterDownloadForTesting?()
+		#endif
 		return (parsedFeed, downloadResponse.response)
 	}
 }

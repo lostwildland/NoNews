@@ -25,6 +25,9 @@ public typealias DownloadCallback = @MainActor (DownloadResponse, Error?) -> Swi
 
 	private init() {
 		let sessionConfiguration = URLSessionConfiguration.ephemeral
+		if Platform.isRunningUnitTests {
+			sessionConfiguration.protocolClasses = [TestingURLProtocol.self]
+		}
 		sessionConfiguration.requestCachePolicy = .reloadIgnoringLocalCacheData
 		sessionConfiguration.httpShouldSetCookies = false
 		sessionConfiguration.httpCookieAcceptPolicy = .never

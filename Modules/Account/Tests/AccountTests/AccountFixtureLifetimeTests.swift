@@ -13,6 +13,91 @@ import RSCore
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
 
+	@Test func failedOPMLFlushKeepsDirtySubscriptionsForRetry() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let path = account.dataFolder + "/Subscriptions.opml"
+		_ = try #require(account.ensureFolder(with: "Retry folder"))
+		try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: false)
+		let first = await account.closeForFixtureRemoval()
+		#expect(!first)
+		#expect(FileManager.default.fileExists(atPath: account.dataFolder))
+		try FileManager.default.removeItem(atPath: path)
+		let retried = await account.closeForFixtureRemoval()
+		#expect(retried)
+		let opml = try String(contentsOfFile: path, encoding: .utf8)
+		#expect(opml.contains("Retry folder"))
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func admittedFeedCreationPersistsDownloadedArticleDuringClose() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let path = account.dataFolder
+		let url = "https://fixture.invalid/t30-create-feed.xml"
+		let xml = """
+		<?xml version="1.0"?><rss version="2.0"><channel><title>Fixture</title><link>https://fixture.invalid/</link><description>Fixture</description><item><title>Admitted article</title><guid>fixture-article</guid><link>https://fixture.invalid/article</link></item></channel></rss>
+		"""
+		TestingURLProtocol.$currentTestID.withValue(nil) {
+			TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
+		}
+		let (downloaded, downloadedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		InitialFeedDownloader.afterDownloadForTesting = {
+			downloadedSignal.yield(())
+			for await _ in release { break }
+		}
+		defer { InitialFeedDownloader.afterDownloadForTesting = nil }
+		let creation = Task { @MainActor in
+			await withCheckedContinuation { continuation in
+				account.createFeed(url: url, name: nil, container: account, validateFeed: true) { continuation.resume(returning: $0) }
+			}
+		}
+		for await _ in downloaded { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.yield(())
+		let result = await creation.value
+		_ = try result.get()
+		#expect(await close.value)
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Admitted article'") == "Admitted article")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func acceptedSyncResetFinishesBeforeClose() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+		await delegate.waitForSyncInitializationForTesting()
+		let sync = delegate.syncDatabase
+		let path = account.dataFolder
+		await sync.insertStatuses([SyncStatus(articleID: "selected", key: .starred, flag: true)])
+		#expect(try await sync.selectForProcessing().count == 1)
+		let (started, startSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		sync.setResetHookForTesting {
+			startSignal.yield(())
+			for await _ in release { break }
+		}
+		defer { sync.setResetHookForTesting(nil) }
+		let accepted = sync.resetAllSelectedForProcessing()
+		#expect(accepted)
+		for await _ in started { break }
+		sync.beginClosing(accountID: account.accountID)
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.yield(())
+		#expect(await close.value)
+		#expect(try stringValue(in: path + "/Sync.sqlite3", sql: "SELECT selected FROM syncStatus WHERE articleID = 'selected'") == "0")
+		let rejected = sync.resetAllSelectedForProcessing()
+		#expect(!rejected)
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func retainedModelsCompleteRenameAfterAccountIsReleased() async throws {
 		let manager = TestAccountManager()
 		var account: Account? = manager.createAccount(type: .onMyMac)
@@ -22,6 +107,14 @@ import RSCore
 		account = nil
 		#expect(feed.account == nil)
 		#expect(folder.account == nil)
+		let notifications = NotificationCounter()
+		let observer = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: folder, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		folder.name = "Rejected"
+		#expect(folder.name == "Original")
+		#expect(notifications.count.withLock { $0 } == 0)
+		NotificationCenter.default.removeObserver(observer)
 		let feedResult: Result<Void, Error> = await withCheckedContinuation { continuation in
 			feed.rename(to: "Rejected") { continuation.resume(returning: $0) }
 		}
@@ -36,6 +129,7 @@ import RSCore
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)
 		let feed = account.createFeed(with: "Original", url: "https://example.com/during", feedID: "during", homePageURL: nil)
+		let folder = try #require(account.ensureFolder(with: "Before"))
 		let path = account.dataFolder
 		let (started, startSignal) = AsyncStream<Void>.makeStream()
 		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
@@ -59,11 +153,17 @@ import RSCore
 		let displayObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: feed, queue: nil) { _ in
 			notifications.count.withLock { $0 += 1 }
 		}
+		let folderObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: folder, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
 		feed.editedName = "Rejected"
+		folder.name = "Rejected"
+		#expect(folder.name == "Before")
 		#expect(feed.editedName == "Before")
 		#expect(notifications.count.withLock { $0 } == 0)
 		NotificationCenter.default.removeObserver(observer)
 		NotificationCenter.default.removeObserver(displayObserver)
+		NotificationCenter.default.removeObserver(folderObserver)
 		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
 		let rejected = await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
 		#expect(rejected.isEmpty)
@@ -74,6 +174,14 @@ import RSCore
 		releaseSignal.yield(())
 		let closed = await close.value
 		#expect(closed)
+		let afterCloseNotifications = NotificationCounter()
+		let afterCloseObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: folder, queue: nil) { _ in
+			afterCloseNotifications.count.withLock { $0 += 1 }
+		}
+		folder.name = "Rejected after close"
+		#expect(folder.name == "Before")
+		#expect(afterCloseNotifications.count.withLock { $0 } == 0)
+		NotificationCenter.default.removeObserver(afterCloseObserver)
 		#expect(feed.editedName == "Admitted")
 		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'during'") == "Admitted")
 		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT starred FROM statuses WHERE articleID = 'admitted'") == "1")
@@ -86,6 +194,7 @@ import RSCore
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .feedbin)
 		let path = account.dataFolder
+		_ = try #require(account.ensureFolder(with: "Persisted folder"))
 		let feed = account.createFeed(with: "Original", url: "https://example.com/fixture", feedID: "fixture-feed", homePageURL: nil)
 		feed.editedName = "Accepted"
 		let sync = try #require(account.delegate as? FeedbinAccountDelegate).syncDatabase
@@ -101,6 +210,8 @@ import RSCore
 		async let second = account.closeForFixtureRemoval()
 		let results = await (first, second)
 		#expect(!results.0 && !results.1)
+		let opml = try String(contentsOfFile: path + "/Subscriptions.opml", encoding: .utf8)
+		#expect(opml.contains("Persisted folder"))
 		#expect(FileManager.default.fileExists(atPath: path))
 		#expect(hasOpenFile(settingsIdentity))
 		feed.editedName = "Rejected"

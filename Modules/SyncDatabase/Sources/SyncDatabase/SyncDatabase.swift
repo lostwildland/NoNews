@@ -14,11 +14,27 @@ import RSDatabase
 import RSDatabaseObjC
 
 public actor SyncDatabase {
-	private let admission = Mutex<(closing: Bool, accountID: String?, sealed: Bool)>((false, nil, false))
+	private struct Admission {
+		var closing = false
+		var accountID: String?
+		var sealed = false
+		var pendingResets = 0
+		var drainWaiters = [CheckedContinuation<Void, Never>]()
+	}
+	private let admission = Mutex(Admission())
+	#if DEBUG
+	private let resetHook = Mutex<(@Sendable () async -> Void)?>(nil)
+	public nonisolated func setResetHookForTesting(_ hook: (@Sendable () async -> Void)?) {
+		resetHook.withLock { $0 = hook }
+	}
+	#endif
 	private nonisolated var acceptsWork: Bool { admission.withLock { !$0.sealed && (!$0.closing || ($0.accountID != nil && $0.accountID == DatabaseWork.current?.accountID && DatabaseWork.current?.isActive == true)) } }
 	public nonisolated func beginClosing(accountID: String? = nil) {
 		admission.withLock { state in
-			if !state.closing { state = (true, accountID, false) }
+			if !state.closing {
+				state.closing = true
+				state.accountID = accountID
+			}
 		}
 	}
 	private let database: FMDatabase
@@ -73,9 +89,38 @@ public actor SyncDatabase {
 		return try SyncStatusTable.selectPendingStarredStatusArticleIDs(database: database)
 	}
 
-	nonisolated public func resetAllSelectedForProcessing() {
-		guard acceptsWork else { return }
-		Task { await resetAllSelectedForProcessingAndWait() }
+	@discardableResult nonisolated public func resetAllSelectedForProcessing() -> Bool {
+		let accepted = admission.withLock { state in
+			guard !state.sealed && (!state.closing || (state.accountID != nil && state.accountID == DatabaseWork.current?.accountID && DatabaseWork.current?.isActive == true)) else { return false }
+			state.pendingResets += 1
+			return true
+		}
+		guard accepted else { return false }
+		#if DEBUG
+		let hook = resetHook.withLock { $0 }
+		#endif
+		Task {
+			#if DEBUG
+			await hook?()
+			#endif
+			await performAcceptedReset()
+			finishAcceptedReset()
+		}
+		return true
+	}
+
+	private func performAcceptedReset() { _resetAllSelectedForProcessing() }
+
+	private nonisolated func finishAcceptedReset() {
+		let waiters = admission.withLock { state -> [CheckedContinuation<Void, Never>] in
+			state.pendingResets -= 1
+			guard state.pendingResets == 0 && !state.drainWaiters.isEmpty else { return [] }
+			state.sealed = true
+			let waiters = state.drainWaiters
+			state.drainWaiters.removeAll()
+			return waiters
+		}
+		for waiter in waiters { waiter.resume() }
 	}
 
 	public func resetAllSelectedForProcessingAndWait() {
@@ -83,9 +128,19 @@ public actor SyncDatabase {
 		_resetAllSelectedForProcessing()
 	}
 
-	public func close() -> Bool {
+	public func close() async -> Bool {
 		beginClosing()
-		admission.withLock { $0.sealed = true }
+		await withCheckedContinuation { continuation in
+			let ready = admission.withLock { state in
+				if state.pendingResets == 0 {
+					state.sealed = true
+					return true
+				}
+				state.drainWaiters.append(continuation)
+				return false
+			}
+			if ready { continuation.resume() }
+		}
 		return database.close()
 	}
 

@@ -31,6 +31,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	public var name: String? {
 		didSet {
+			guard account?.acceptsFixtureWork == true else { name = oldValue; return }
 			postDisplayNameDidChangeNotification()
 		}
 	}

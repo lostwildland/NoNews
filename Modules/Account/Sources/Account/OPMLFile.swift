@@ -17,7 +17,7 @@ import RSParser
 
 	private var isDirty = false {
 		didSet {
-			queueSaveToDiskIfNeeded()
+			if isDirty { queueSaveToDiskIfNeeded() }
 		}
 	}
 	private let saveQueue = CoalescingQueue(name: "Save Queue", interval: 0.5)
@@ -42,22 +42,28 @@ import RSParser
 		}
 	}
 
-	func save() {
-		guard let account, !account.isDeleted else { return }
+	@discardableResult func save() -> Bool {
+		guard let account, !account.isDeleted else { return false }
 		let opmlDocumentString = opmlDocument(account: account)
 
 		do {
 			try opmlDocumentString.write(to: fileURL, atomically: true, encoding: .utf8)
+			return true
 		} catch let error as NSError {
 			Self.logger.error("OPML save to disk failed: \(error.localizedDescription)")
+			return false
 		}
 	}
 
 	@objc func saveToDiskIfNeeded() {
-		if isDirty {
-			isDirty = false
-			save()
-		}
+		_ = flush()
+	}
+
+	func flush() -> Bool {
+		guard isDirty else { return true }
+		guard save() else { return false }
+		isDirty = false
+		return true
 	}
 }
 

@@ -589,7 +589,6 @@ public enum FetchType {
 			return await closeTask.value
 		}
 		isClosing = true
-		isDeleted = true
 		database.beginClosing()
 		feedSettingsDatabase.beginClosing()
 		delegate.beginClosing()
@@ -607,6 +606,11 @@ public enum FetchType {
 				let tasks = Array(backgroundTasks.values)
 				for task in tasks { await task.value }
 			}
+			guard opmlFile.flush() else {
+				closeTask = nil
+				return false
+			}
+			isDeleted = true
 			let syncClosed = await delegate.closeDatabases()
 			initializationWork?.finish()
 			let articlesClosed = await database.close()
@@ -637,7 +641,7 @@ public enum FetchType {
 	}
 
 	@discardableResult func startBackground(_ operation: @escaping @MainActor () async -> Void) -> Bool {
-		guard !isClosing else { return false }
+		guard acceptsFixtureWork else { return false }
 		let id = UUID()
 		let work = DatabaseWork(accountID: accountID)
 		backgroundTasks[id] = Task { @MainActor in
