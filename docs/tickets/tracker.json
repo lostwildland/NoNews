@@ -43,8 +43,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "b9d2a22e2365163794e5dea16e2f9730b5ad2421",
-      "implementation_state": "R5 Standards0/Spec1P2; non-ABORT policy guard fixed;19Python tests18pass1skip and controller pass; current payload validation then R6 pending",
+      "last_reported_head": "316e9ba4f755cbac85f6958d5991899f419b44c0",
+      "implementation_state": "current conflict-policy payload built/signed; actual-bundle refusal and ABORT preservation verified by owner; fresh R6 review pending; visual Ready unverified",
       "review_evidence": "docs/acceptance/t02-review-r5.md"
     },
     "03": {
@@ -416,9 +416,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "fixture repair implemented;99targeted/757full passes, parent confirms zero SQLite unlink/disk-I/O lines; independent repair review pending; final T30 remains blocked",
+      "implementation_state": "fixture R1 Standards0/Spec2P2; original owner correcting close retry and submission boundary; prior99targeted/757full evidence remains scoped to9f040dc; full T30 open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "9f040dcef27b6665d49bfc18db97a2d745de2ac5"
+      "last_reported_head": "9f040dcef27b6665d49bfc18db97a2d745de2ac5",
+      "review_evidence": "docs/acceptance/t30-fixture-review-r1.md"
     }
   },
   "spec": {
