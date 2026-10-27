@@ -464,5 +464,16 @@
         "evidence": "t02-packaging-review-r10.md"
       }
     }
-  }
+  },
+  "correction_reviews": [
+    {
+      "axis": "standards",
+      "base": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
+      "head": "51365ee2ae9390b01779318f4b022332d7107657",
+      "coverage": "8 paths complete",
+      "findings": "1 P2 root extras",
+      "correction": "eb6a156;5syntheticregressionspass;fresh review pending",
+      "evidence": "t02-packaging-review-r10.md"
+    }
+  ]
 }

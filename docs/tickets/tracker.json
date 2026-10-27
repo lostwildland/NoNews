@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "51365ee",
-      "implementation_state": "Packaging full-scope Standards1P2/Spec2P2; CI correction36fc3ae and explicit-source boundary51365ee pushed. Four synthetic security regressions red/green; final bundle/CI/fresh review pending. Streaming still uncommitted and incomplete; API/UI gates open",
+      "last_reported_head": "eb6a156",
+      "implementation_state": "Packaging correction R11 Standards complete1P2 root extras; root allowlist eb6a156 pushed and5syntheticregressions pass. R18 non-aggregate memory cases<243KiB; auto still red/full source uncommitted. Native/CI/bundle/full review/API/UI remain open",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
