@@ -21,17 +21,18 @@
       "number": 3,
       "id": 6062369875,
       "title": "Lossless IO snapshot, manifest and independent restore",
-      "status": "open",
+      "status": "closed",
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
       "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
-      "implementation_state": "reopened for shared conflict-policy integrity follow-up;51snapshot tests pass; independent review pending",
-      "review_evidence": "docs/acceptance/t02-review-r5.md",
+      "implementation_state": "accepted current-schema developer interface with independent conflict-policy follow-up Standards0/Spec0 and51integrated tests; personal migration pending",
+      "review_evidence": "docs/acceptance/t02-review-r6.md",
       "accepted_implementation_head": "24675be3f146162aad6c48851780331da8bc2f1e",
       "integration_head": "1f4f5d9",
       "followup_branch": "feature/nonews-io-parity",
-      "followup_base": "09b51fa5bf81cdb6d9dbfe694ff6499119e31ba3"
+      "followup_base": "09b51fa5bf81cdb6d9dbfe694ff6499119e31ba3",
+      "followup_head": "741cbfb2834fe976f2b1b967d6efcaa7cd55d57f"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -44,8 +45,8 @@
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
       "last_reported_head": "316e9ba4f755cbac85f6958d5991899f419b44c0",
-      "implementation_state": "current conflict-policy payload built/signed; actual-bundle refusal and ABORT preservation verified by owner; fresh R6 review pending; visual Ready unverified",
-      "review_evidence": "docs/acceptance/t02-review-r5.md"
+      "implementation_state": "current packaged payload verified; R6 Standards and Spec both explicitly incomplete after truncated output; fresh bounded single-scope R7 review required; no integration or visual Ready",
+      "review_evidence": "docs/acceptance/t02-review-r6.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
