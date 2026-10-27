@@ -1,5 +1,11 @@
 # T02 managed-engine evidence (partial)
 
+## Independent review round 1: historical-schema correction
+
+Reviewed HEAD `4a7cc9ef88107c86287507774dd1bfa0b5176d26`. Spec review found one P1: source retirement migrations could drop historical human work, observation bodies and draft-file references when opening an older schema. The coordinator first reproduced a schema-40 start succeeding on a fixture containing those rows/paths. Writable startup now checks the version and whether an unversioned database is populated before changing journal/schema state; it accepts only new empty data or current schema 41 and closes its connection on refusal. Unsupported historical forms are retained for a separately verified import, not migrated destructively on startup. A typed safe schema-error code is available for the native error-message correction.
+
+The public stdio regression now verifies refusal and the exact retained human/observation rows, draft path, version and database bytes. It passed after failing before the guard. The focused Python suite passed 8 tests with one optional reference-checkout test skipped; compilation and diff checks passed. This source correction has not yet been reassembled into the already running isolated app. The owner must rebuild the stage/bundle and address the other independent findings before fresh review: failed-child ownership/retry/shutdown, bounded readiness for a populated history, and actionable startup errors. Native Settings appearance remains unobserved because CUA returns `cgWindowNotFound`.
+
 Base: `c9ecfa14e884a7ce8895bb13eec3ea8711cbef90`. Reference IO checkout HEAD: `e9ba73f0b44a781ea68c0670114f9281f66f5cd3`; its `backend/server.py` was modified in that checkout. No IO source or payload is copied into this branch.
 
 The experimental stdio adapter constructs the reference `backend.server.Application` directly with explicit temporary roots, settings-only scope and no injected integrations or workers. It reads jobs and processing settings through `Application.handle`, and exposes a small allowlist on an authenticated, size-limited input stream. It removes `INFORMATION_OS_*` variables before importing the application. The caller must still provide a minimal environment at process creation, including avoiding interpreter startup configuration from the ambient environment.

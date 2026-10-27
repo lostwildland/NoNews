@@ -1,5 +1,7 @@
 # IO boot slice provenance
 
+NoNews adaptation: writable startup now accepts an empty database or current schema 41. A populated older/unversioned database and a newer schema are refused before journal/schema changes; their migration requires an independently verified importer. This deliberately prevents source retirement migrations from deleting historical rows or file references during ordinary app startup. The extracted migration functions are not permission to run destructive legacy retirement against imported data.
+
 Reference HEAD `e9ba73f0b44a781ea68c0670114f9281f66f5cd3` (working tree had modifications). The owner authorized reuse. The schema-owner functions and their supporting constants/helpers were extracted from the working tree files identified below. `core.InformationDB` and `jobs.JobQueue` retain only methods used for schema and the public operations; `server.py` adapts the settings-scope jobs and processing-settings dispatch. No CLI, external writer, personal taxonomy or credentials loader is included. Later tickets own the other operations. `schema.py` adds a newer-version refusal before schema mutations.
 
 Source file SHA-256 (working-tree bytes):

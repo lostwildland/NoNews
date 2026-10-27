@@ -289,6 +289,13 @@ class InformationDB:
             self.db = sqlite3.connect(f'file:{Path(path).resolve()}?mode=ro', uri=True, timeout=30, isolation_level=None)
         else:
             self.db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+        if not read_only:
+            try:
+                from .schema import require_supported_database
+                require_supported_database(self.db)
+            except Exception:
+                self.db.close()
+                raise
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA foreign_keys=ON')
         self.db.execute('PRAGMA busy_timeout=30000')

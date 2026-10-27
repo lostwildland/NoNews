@@ -1,13 +1,45 @@
 import json
+from contextlib import closing
 from pathlib import Path
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 class PackagedServiceTest(unittest.TestCase):
+    def test_older_schema_startup_preserves_historical_rows_and_file_references(self):
+        engine = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            data = Path(directory) / 'data'
+            command = [sys.executable, str(engine / 'stdio_service.py'), str(data)]
+            bootstrap = json.dumps({'token': 'a' * 32}) + '\n'
+            env = {'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}
+            first = subprocess.run(command, input=bootstrap, text=True, capture_output=True,
+                                   timeout=10, env=env, cwd=directory)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            database = data / 'information.sqlite'
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("UPDATE schema_meta SET value='40' WHERE key='schema_version'")
+                db.execute('CREATE TABLE human_final (content TEXT)')
+                db.execute("INSERT INTO human_final VALUES ('synthetic human work')")
+                db.execute('CREATE TABLE observation_inputs (body TEXT)')
+                db.execute("INSERT INTO observation_inputs VALUES ('synthetic observed body')")
+                db.execute('ALTER TABLE editor_drafts ADD COLUMN artifact_path TEXT')
+                db.execute("INSERT INTO editor_drafts(id,created_at,artifact_path) VALUES ('legacy','now','relative/draft.md')")
+            before = database.read_bytes()
+            refused = subprocess.run(command, input=bootstrap, text=True, capture_output=True,
+                                     timeout=10, env=env, cwd=directory)
+            self.assertNotEqual(refused.returncode, 0)
+            with closing(sqlite3.connect(database)) as db:
+                self.assertEqual(db.execute('SELECT content FROM human_final').fetchone(), ('synthetic human work',))
+                self.assertEqual(db.execute('SELECT body FROM observation_inputs').fetchone(), ('synthetic observed body',))
+                self.assertEqual(db.execute('SELECT artifact_path FROM editor_drafts').fetchone(), ('relative/draft.md',))
+                self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('40',))
+            self.assertEqual(database.read_bytes(), before)
+
     def test_relocated_real_schema_settings_and_preservation(self):
         engine = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as root:

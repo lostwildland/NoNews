@@ -50,10 +50,24 @@ def stamp(db: sqlite3.Connection, value: int = SCHEMA_VERSION) -> None:
         ON CONFLICT(key) DO UPDATE SET value=excluded.value""", (_VERSION_KEY, str(value)))
 
 
+class UnsupportedSchemaError(ValueError):
+    def __init__(self, code):
+        self.code = code
+        super().__init__(code)
+
+
+def require_supported_database(db: sqlite3.Connection) -> None:
+    current = version(db)
+    if current > SCHEMA_VERSION:
+        raise UnsupportedSchemaError('schema_newer')
+    if current != SCHEMA_VERSION and db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1").fetchone():
+        raise UnsupportedSchemaError('schema_migration_required')
+
+
 def ensure(db: sqlite3.Connection, *, artifacts=None) -> bool:
-    """Bring the database to ``SCHEMA_VERSION``. True when this call did the work."""
-    if version(db) > SCHEMA_VERSION:
-        raise ValueError("Database schema is newer than this engine")
+    """Initialize empty data or open the supported schema without destructive legacy migration."""
+    require_supported_database(db)
     from . import (content_store, core, delivery, feed_settings, folders, jobs,
                    legacy_content_migration, literature, media_jobs, media_raw_activation,
                    media_store, news_media, pipeline, projection, reading_notes,
