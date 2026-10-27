@@ -14,11 +14,20 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class AcceptanceBuildPreservationTests(unittest.TestCase):
+    def prepare_entry(self, root):
+        (root / "buildscripts").mkdir()
+        shutil.copy(ROOT / "buildscripts/acceptance.sh", root / "buildscripts/acceptance.sh")
+        generator = root / "buildscripts/updateSecrets.sh"
+        generator.write_text("#!/bin/bash\nset -eu\n"
+                             "test -z \"${FEEDLY_CLIENT_SECRET+x}\"\n"
+                             "test ! -e \"$PROJECT_DIR/Modules/Secrets/Sources/Secrets/SecretKey.swift\"\n"
+                             "printf 'synthetic prepared source' > \"$PROJECT_DIR/Modules/Secrets/Sources/Secrets/SecretKey.swift\"\n")
+        generator.chmod(0o700)
+
     def test_overlapping_builds_do_not_modify_concurrent_source_updates(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "buildscripts").mkdir()
-            shutil.copy(ROOT / "buildscripts/acceptance.sh", root / "buildscripts/acceptance.sh")
+            self.prepare_entry(root)
             (root / "NetNewsWire.xcodeproj").mkdir()
             secret = root / "Modules/Secrets/Sources/Secrets/SecretKey.swift"
             secret.parent.mkdir(parents=True)
@@ -32,6 +41,7 @@ class AcceptanceBuildPreservationTests(unittest.TestCase):
 import os, pathlib, sys, time
 project = pathlib.Path(sys.argv[sys.argv.index('-project') + 1]).resolve().parent
 generated = project / 'Modules/Secrets/Sources/Secrets/SecretKey.swift'
+assert generated.read_bytes() == b'synthetic prepared source'
 generated.write_bytes(b'synthetic generated source')
 gates = pathlib.Path(os.environ['FIXTURE_GATES'])
 role = os.environ['FIXTURE_ROLE']
@@ -76,8 +86,7 @@ while not wait_for.exists():
             for status in (0, 23):
                 with self.subTest(original_exists=original is not None, status=status), tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)
-                    (root / "buildscripts").mkdir()
-                    shutil.copy(ROOT / "buildscripts/acceptance.sh", root / "buildscripts/acceptance.sh")
+                    self.prepare_entry(root)
                     secret = root / "Modules/Secrets/Sources/Secrets/SecretKey.swift"
                     secret.parent.mkdir(parents=True)
                     if original is not None:
@@ -90,7 +99,7 @@ while not wait_for.exists():
                                        "test -z \"${FEEDLY_CLIENT_SECRET+x}\"\n"
                                        "project_dir=\"$(cd \"$(dirname \"$2\")\" && pwd)\"\n"
                                        "generated=\"$project_dir/Modules/Secrets/Sources/Secrets/SecretKey.swift\"\n"
-                                       "test ! -e \"$generated\"\n"
+                                       "test \"$(cat \"$generated\")\" = 'synthetic prepared source'\n"
                                        "printf 'synthetic newly generated source' > \"$generated\"\n"
                                        "exit \"$FIXTURE_BUILD_STATUS\"\n")
                     command.chmod(0o700)

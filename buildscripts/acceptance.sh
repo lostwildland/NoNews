@@ -27,6 +27,9 @@ PY
 # Scheme pre-actions generate empty upstream keys, regardless of the caller's environment.
 unset MERCURY_CLIENT_ID MERCURY_CLIENT_SECRET FEEDLY_CLIENT_ID FEEDLY_CLIENT_SECRET INOREADER_APP_ID INOREADER_APP_KEY
 
+# SwiftPM discovers source files before the scheme's generation pre-action runs.
+PROJECT_DIR="$source_snapshot" "$source_snapshot/buildscripts/updateSecrets.sh"
+
 xcodebuild -project "$source_snapshot/NetNewsWire.xcodeproj" -scheme NetNewsWire -configuration Debug \
   -destination 'platform=macOS' -derivedDataPath "$derived" \
   -clonedSourcePackagesDirPath "$root/.build/acceptance/SourcePackages" \
