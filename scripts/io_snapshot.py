@@ -321,7 +321,7 @@ def _schema41(db):
         raise SnapshotError('required schema descriptor is unavailable') from exc
     try:
         semantic_data = (Path(__file__).parent / 'io_schema41_semantics.json').read_bytes()
-        if hashlib.sha256(semantic_data).hexdigest() != '9b47bf70bbbe8e6b56d4f6d19bc8bdc0bdd6f2a2e50b148dfde175a0c43db647':
+        if hashlib.sha256(semantic_data).hexdigest() != '2760b4b85282087cb742749084e0a886daf5fe60560312cb376c723d64d8540c':
             raise SnapshotError('required schema descriptor is invalid')
         semantics = json.loads(semantic_data)
     except (OSError, ValueError) as exc:
@@ -340,6 +340,8 @@ def _schema41(db):
         expected = semantics[name]
         if current['primary_key'] != expected['primary_key']:
             raise SnapshotError('required schema invariant missing: ' + name + ' primary key')
+        if current['rowid_alias'] != expected['rowid_alias']:
+            raise SnapshotError('required schema invariant missing: ' + name + ' rowid alias')
         for kind in ('not_null', 'unique', 'foreign_keys', 'checks'):
             if not all(value in current[kind] for value in expected[kind]):
                 raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
@@ -398,8 +400,13 @@ def _table_semantics(db, name):
     columns = db.execute(f'PRAGMA table_xinfo({quoted})').fetchall()
     primary = sorted(row[1].casefold() for row in columns if row[5])
     not_null = sorted(row[1].casefold() for row in columns if row[3])
+    indexes = db.execute(f'PRAGMA index_list({quoted})').fetchall()
+    # DESC column keys and WITHOUT ROWID tables have a PK index rather than a rowid alias.
+    rowid_alias = (primary[0] if len(primary) == 1 and
+                   any(row[5] and row[2].upper() == 'INTEGER' for row in columns) and
+                   not any(index[3] == 'pk' for index in indexes) else None)
     unique = []
-    for index in db.execute(f'PRAGMA index_list({quoted})'):
+    for index in indexes:
         if not index[2]:
             continue
         index_name = index[1]
@@ -432,7 +439,13 @@ def _table_semantics(db, name):
         group['columns'].sort(key=lambda pair: (pair[0], pair[1] or ''))
         foreign.append(group)
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
-    return {'primary_key': primary, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
+    return {'primary_key': primary, 'rowid_alias': rowid_alias, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
+
+
+def _asset_path(value):
+    if not isinstance(value, str) or not value or '\x00' in value or '\\' in value:
+        raise SnapshotError('invalid required asset reference')
+    return Path(value)
 
 
 def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
@@ -440,12 +453,10 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
     bindings = []
     matched_aliases = set()
     def bind(table, column, identity, value, expected=None, size=None, relative_root=None, allow_reserved=False):
-        if not isinstance(value, str) or not value or '\x00' in value or '\\' in value:
-            raise SnapshotError('invalid required asset reference')
-        if relative_root and not Path(value).is_absolute():
+        p = _asset_path(value)
+        if relative_root and not p.is_absolute():
             root, relative = relative_root, value
         else:
-            p = Path(value)
             if not p.is_absolute() or any(part in ('.', '..') for part in value.split('/')):
                 raise SnapshotError('unresolved asset root')
             matches = [(name, p.relative_to(base).as_posix()) for name, base in roots.items() if p.is_relative_to(base) and p != base]
@@ -466,6 +477,8 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
             raise SnapshotError('required asset size mismatch')
         bindings.append({'table': table, 'column': column, 'id': identity, 'root': root, 'path': relative, 'sha256': evidence['sha256']})
     def markup(table, column, identity, text, document=None):
+        if not isinstance(text, str):
+            raise SnapshotError('version text is not text')
         inventory = inventory_markdown_images(text)
         if inventory.review:
             raise SnapshotError('image inventory requires review: ' + inventory.review[0].kind)
@@ -605,7 +618,8 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                     bind('literature_assets', 'source_path', ident, source, digest)
         if 'literature_cleanup_backups' in tables:
             for ident, directory, digest, body_count, draft_count in db.execute('SELECT backup_id, path, manifest_sha256, body_count, draft_count FROM literature_cleanup_backups'):
-                manifest_path = str(Path(directory) / 'manifest.json')
+                directory = _asset_path(directory)
+                manifest_path = str(directory / 'manifest.json')
                 bind('literature_cleanup_backups', 'path.manifest.json', ident, manifest_path, digest)
                 binding = bindings[-1]
                 try:
@@ -620,7 +634,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                             name = prefix + str(record[key]) + '.md'
                             if '/' in name or '\\' in name:
                                 raise SnapshotError('unsafe cleanup backup name')
-                            bind('literature_cleanup_backups', 'path.' + name, ident, str(Path(directory) / name), record['sha256'])
+                            bind('literature_cleanup_backups', 'path.' + name, ident, str(directory / name), record['sha256'])
                 except (OSError, ValueError, TypeError, KeyError) as exc:
                     raise SnapshotError('invalid cleanup backup') from exc
         if 'raw_snapshots' in tables:

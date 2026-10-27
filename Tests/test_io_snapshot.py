@@ -16,7 +16,7 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 class SnapshotTests(unittest.TestCase):
     def test_schema_semantic_constraints_are_required_for_snapshot_and_verify(self):
-        for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null') for op in ('snapshot', 'verify')):
+        for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null', 'missing-rowid-alias', 'descending-primary-key') for op in ('snapshot', 'verify')):
             with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 vault = self.make_simple(root)
@@ -36,6 +36,12 @@ class SnapshotTests(unittest.TestCase):
                             db.execute('DROP TABLE media_document_generations')
                             db.execute(ddl.replace("CHECK(state IN ('pending','committed'))", ''))
                             db.execute(index_ddl)
+                        elif defect in ('missing-rowid-alias', 'descending-primary-key'):
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='raw_snapshots'").fetchone()[0]
+                            self.assertIn('id INTEGER PRIMARY KEY', ddl)
+                            db.execute('DROP TABLE raw_snapshots')
+                            replacement = 'id TEXT PRIMARY KEY' if defect == 'missing-rowid-alias' else 'id INTEGER PRIMARY KEY DESC'
+                            db.execute(ddl.replace('id INTEGER PRIMARY KEY', replacement))
                         elif defect == 'missing-primary-key':
                             db.execute('DROP TABLE app_settings')
                             db.execute('CREATE TABLE app_settings(key TEXT, value TEXT NOT NULL, updated_at TEXT NOT NULL)')
@@ -227,6 +233,41 @@ class SnapshotTests(unittest.TestCase):
             self.assertNotIn('Traceback', result.stderr)
             self.assertFalse((root / 'snap').exists())
             self.assertEqual(before, (root / 'source.sqlite').read_bytes())
+
+    def test_blob_backup_path_and_document_are_refused_without_cli_tracebacks(self):
+        for kind in ('backup-path', 'body-text'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = self.make_simple(root)
+                with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                    if kind == 'backup-path':
+                        db.execute("INSERT INTO literature_cleanup_backups (backup_id,request_id,item_id,path,manifest_sha256,bytes,body_count,draft_count,verified_at,created_at) VALUES ('backup','request','item',?,? ,0,0,0,'now','now')", (b'backup', '0' * 64))
+                    else:
+                        self.add_raw(db)
+                        self.add_body(db, 'synthetic', 'database')
+                        db.execute('UPDATE body_texts SET text=?', (b'synthetic',))
+                before = (root / 'source.sqlite').read_bytes()
+                cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
+                result = subprocess.run([sys.executable, str(cli), 'snapshot', str(root / 'source.sqlite'),
+                                         str(root / 'snap'), '--root', f'vault={vault}'],
+                                        capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('invalid required asset reference' if kind == 'backup-path' else 'version text is not text', result.stdout)
+                self.assertNotIn('Traceback', result.stderr)
+                self.assertFalse((root / 'snap').exists())
+                self.assertEqual(before, (root / 'source.sqlite').read_bytes())
+
+    def test_restored_raw_snapshot_ids_are_generated_as_io_expects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            restore(root / 'snap', root / 'restored')
+            with closing(sqlite3.connect(root / 'restored/database.sqlite')) as db, db:
+                for expected in (1, 2):
+                    cursor = db.execute("INSERT INTO raw_snapshots(item_id,path,source_hash,retrieved_at,created_at) VALUES ('item','',?,'now','now')", (f'synthetic-{expected}',))
+                    self.assertEqual(cursor.lastrowid, expected)
+                    self.assertEqual(db.execute('SELECT id FROM raw_snapshots WHERE rowid=?', (cursor.lastrowid,)).fetchone(), (expected,))
 
     def test_imported_raw_cannot_use_an_archive_in_place_of_its_file_authority(self):
         with tempfile.TemporaryDirectory() as tmp:

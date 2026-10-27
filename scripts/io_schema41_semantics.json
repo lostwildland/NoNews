@@ -11,6 +11,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": []
   },
   "ai_feed_settings": {
@@ -59,6 +60,7 @@
     "primary_key": [
       "freshrss_feed_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -86,6 +88,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": []
   },
   "ai_folder_profiles": {
@@ -108,6 +111,7 @@
     "primary_key": [
       "folder"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -133,6 +137,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -155,6 +160,7 @@
     "primary_key": [
       "key"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -184,6 +190,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -218,6 +225,7 @@
     "primary_key": [
       "snapshot_id"
     ],
+    "rowid_alias": "snapshot_id",
     "unique": []
   },
   "body_versions": {
@@ -283,6 +291,7 @@
     "primary_key": [
       "snapshot_id"
     ],
+    "rowid_alias": "snapshot_id",
     "unique": []
   },
   "command_batches": {
@@ -294,6 +303,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -334,6 +344,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -379,6 +390,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -417,6 +429,7 @@
       "item_id",
       "target"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -459,6 +472,7 @@
     "primary_key": [
       "draft_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -519,6 +533,7 @@
     "primary_key": [
       "draft_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -553,6 +568,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -616,6 +632,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -641,6 +658,7 @@
       "id",
       "kind"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -695,6 +713,7 @@
       "feed_id",
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -724,6 +743,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -770,6 +790,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -795,6 +816,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -817,6 +839,7 @@
     "primary_key": [
       "key"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -839,6 +862,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -877,6 +901,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -928,6 +953,7 @@
       "item_id",
       "role"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -966,6 +992,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1011,6 +1038,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1078,6 +1106,7 @@
     "primary_key": [
       "import_key"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1116,6 +1145,7 @@
     "primary_key": [
       "draft_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1172,6 +1202,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -1222,6 +1253,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": []
   },
   "literature_cleanup_backups": {
@@ -1254,6 +1286,7 @@
     "primary_key": [
       "backup_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1306,6 +1339,7 @@
       "object_key",
       "request_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1368,6 +1402,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1431,6 +1466,7 @@
     "primary_key": [
       "draft_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1509,6 +1545,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1567,6 +1604,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1626,6 +1664,7 @@
     "primary_key": [
       "snapshot_id"
     ],
+    "rowid_alias": "snapshot_id",
     "unique": [
       [
         [
@@ -1691,6 +1730,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1728,6 +1768,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1779,6 +1820,7 @@
       "original_key",
       "purpose"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1832,6 +1874,7 @@
       "generation",
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1874,6 +1917,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": []
   },
   "media_objects": {
@@ -1895,6 +1939,7 @@
     "primary_key": [
       "key"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -1942,6 +1987,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -1976,6 +2022,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2007,6 +2054,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": []
   },
   "media_source_current": {
@@ -2026,6 +2074,7 @@
       "owner_kind",
       "source_ref"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2069,6 +2118,7 @@
       "source_ref",
       "source_revision"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2115,6 +2165,7 @@
       "owner_kind",
       "source_ref"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2155,6 +2206,7 @@
       "owner_kind",
       "source_ref"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2189,6 +2241,7 @@
       "kit_id",
       "role"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2229,6 +2282,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2279,6 +2333,7 @@
     "primary_key": [
       "command_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2316,6 +2371,7 @@
     "primary_key": [
       "observation_id"
     ],
+    "rowid_alias": "observation_id",
     "unique": []
   },
   "observation_paper_labels": {
@@ -2344,6 +2400,7 @@
     "primary_key": [
       "observation_id"
     ],
+    "rowid_alias": "observation_id",
     "unique": []
   },
   "observation_projection": {
@@ -2374,6 +2431,7 @@
     "primary_key": [
       "observation_id"
     ],
+    "rowid_alias": "observation_id",
     "unique": []
   },
   "pipeline_stage_runs": {
@@ -2391,6 +2449,7 @@
       "job_id",
       "stage"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2448,6 +2507,7 @@
     "primary_key": [
       "snapshot_id"
     ],
+    "rowid_alias": "snapshot_id",
     "unique": []
   },
   "processing_jobs": {
@@ -2479,6 +2539,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2512,6 +2573,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2551,6 +2613,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -2589,6 +2652,7 @@
     "primary_key": [
       "feed_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2608,6 +2672,7 @@
     "primary_key": [
       "folder"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2629,6 +2694,7 @@
     "primary_key": [
       "key"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2665,6 +2731,7 @@
       "item_id",
       "stage"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2706,6 +2773,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": "id",
     "unique": [
       [
         [
@@ -2743,6 +2811,7 @@
     "primary_key": [
       "id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2782,6 +2851,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [
@@ -2836,6 +2906,7 @@
     "primary_key": [
       "item_id"
     ],
+    "rowid_alias": null,
     "unique": [
       [
         [

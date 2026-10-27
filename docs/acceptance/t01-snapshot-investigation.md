@@ -1,5 +1,13 @@
 # T01 snapshot investigation (incomplete)
 
+## Independent review round 4 coordinator corrections
+
+Reviewed `4e561e8`: Standards found one P2 cleanup-backup BLOB path reaching Path before validation; Spec found one P2 INTEGER PRIMARY KEY rowid-alias semantics missing from the schema gate. The coordinator first reproduced a public CLI traceback for the backup path, and snapshot acceptance of TEXT PRIMARY KEY and INTEGER PRIMARY KEY DESC alterations (verify only reported a generic integrity mismatch). A common path validator now precedes both binding and backup-directory construction. Non-text document input now has an explicit refusal instead of a generic CLI error; originals and publication absence are checked.
+
+The canonical semantic descriptor now records each table's rowid alias, using INTEGER declaration and absence of a separate PK index to distinguish SQLite's DESC/WITHOUT ROWID cases. It contains 19 aliases; regenerated descriptor SHA-256 `2760b4b85282087cb742749084e0a886daf5fe60560312cb376c723d64d8540c` supersedes the earlier descriptor hash below. Public snapshot/verify tests reject both altered definitions. A restored database independently generates Raw IDs and resolves the same records via lastrowid, as IO requires.
+
+The first full run after regeneration read an old locally generated Python module cache and failed the descriptor digest guard. The on-disk descriptor and source digest matched; removing only that generated module cache allowed the new source to load. The following run exposed a synthetic test attempting two identical item/source-hash values, correctly refused by the existing unique constraint. The fixture now uses distinct source hashes without changing that constraint. Final `PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest discover -s Tests -p 'test_io_snapshot.py' -q` passed 45 tests. Compilation and original-base diff checks follow before commit. No native build, production data or remote operation was used; fresh independent review remains required.
+
 ## Independent review round 3 and semantic-schema continuation
 
 The parent reported a Standards P2 for a BLOB archive path causing a crash and a Spec P2 for missing semantic schema enforcement at `5014a503bf2769cd50c4c988f73fd7686795bd27`. The parent fixed the first in `63bf1e8` and normalized whitespace in `1efbce9858dac9adaf34cce9baaf44e966cbe692`; those fixes and tests remain. The implementation owner addressed the second as described here; both axes await fresh independent review.
