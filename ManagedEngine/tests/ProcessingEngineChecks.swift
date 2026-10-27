@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 @main struct Checks {
 	@MainActor static func wait(_ engine: ProcessingEngine, _ expected: (ProcessingEngine.State) -> Bool) async throws {
@@ -50,9 +51,11 @@ import Foundation
 			}
 		}
 		precondition(read == 3)
+		engine.stop { engine.start() }
+		try await wait(engine) { $0 == .ready }
 		engine.stop()
 		try await wait(engine) { $0 == .stopped }
-		for mode in ["timeout", "crash", "malformed", "oversize"] {
+		for mode in ["timeout", "closedstdout", "crash", "malformed", "oversize"] {
 			let entry = dir.appendingPathComponent(mode + ".py")
 			try FileManager.default.copyItem(at: fixture, to: entry)
 			let test = ProcessingEngine(testRuntime: runtime, entry: entry, dataRoot: data, timeout: 0.3)
@@ -95,6 +98,43 @@ import Foundation
 		stubborn.stop { stopped = true }
 		try await wait(stubborn) { $0 == .stopped }
 		precondition(stopped)
+		for (code, fragment) in [("schema_migration_required", "verified migration"), ("schema_newer", "newer version"), ("schema_incomplete", "incomplete"), ("data_corrupt", "verified backup"), ("data_unavailable", "Check access"), ("startup_failed", "could not start")] {
+			let entry = dir.appendingPathComponent("startup_" + code + ".py")
+			try FileManager.default.copyItem(at: fixture, to: entry)
+			for _ in 0..<3 {
+				let test = ProcessingEngine(testRuntime: runtime, entry: entry, dataRoot: data, timeout: 0.5)
+				test.start()
+				try await wait(test) { if case .failed = $0 { return true }; return false }
+				guard case .failed(let message) = test.state, message.contains(fragment) else { fatalError("Startup reason lost") }
+			}
+		}
+		let ownerEntry = dir.appendingPathComponent("failstubborn.py")
+		try FileManager.default.copyItem(at: fixture, to: ownerEntry)
+		let ownerData = dir.appendingPathComponent("owner-data")
+		let owner = ProcessingEngine(testRuntime: runtime, entry: ownerEntry, dataRoot: ownerData, timeout: 0.3)
+		owner.start()
+		try await wait(owner) { $0 == .ready }
+		owner.request(method: "PUT", path: "/api/settings/processing", body: ["processors": 2]) { _ in }
+		try await wait(owner) { $0 == .stopping }
+		var quitFinished = false
+		owner.stop { quitFinished = true }
+		for _ in 0..<20 { owner.start() }
+		precondition(!quitFinished)
+		let owners = try String(contentsOf: ownerData.appendingPathComponent("owners"), encoding: .utf8)
+		let ownerIDs = owners.split(separator: "\n")
+		precondition(ownerIDs.count == 1)
+		guard let ownerPID = Int32(ownerIDs[0]) else { fatalError("Missing child PID") }
+		precondition(kill(ownerPID, 0) == 0)
+		try await wait(owner) { if case .failed = $0 { return true }; return false }
+		precondition(quitFinished)
+		precondition(kill(ownerPID, 0) != 0)
+		if CommandLine.arguments.count > 2 {
+			let real = ProcessingEngine(testRuntime: runtime, entry: root.appendingPathComponent("ManagedEngine/.prepared/stdio_service.py"), dataRoot: URL(fileURLWithPath: CommandLine.arguments[2]), timeout: 4)
+			real.start()
+			try await wait(real) { $0 == .ready }
+			real.stop()
+			try await wait(real) { $0 == .stopped }
+		}
 		let missing = ProcessingEngine(testRuntime: dir.appendingPathComponent("missing"), entry: fixture, dataRoot: data)
 		missing.start()
 		guard case .failed = missing.state else { fatalError("Missing runtime did not fail") }

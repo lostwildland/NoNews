@@ -1,6 +1,8 @@
 """Managed settings-scope slice of the IO Application public dispatch."""
 from pathlib import Path
-from . import causes, settings
+from contextlib import closing
+import sqlite3
+from . import causes, settings, schema
 from .core import InformationDB, utcnow
 from .jobs import JobQueue
 
@@ -19,11 +21,18 @@ class Application:
         self.database = database
         self.processors_default = 1
         database.parent.mkdir(parents=True, exist_ok=True)
+        if database.exists():
+            with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True)) as db:
+                schema.require_supported_database(db)
+                if schema.version(db) == schema.SCHEMA_VERSION:
+                    schema.validate_structure(db)
         with InformationDB(database):
             pass
 
     def handle(self, method: str, path: str, query: dict, body: dict):
         with InformationDB(self.database) as db:
+            if path == '/api/status' and method == 'GET':
+                return {'schemaVersion': schema.version(db.db)}
             if path == '/api/settings/processing':
                 if method == 'GET':
                     return {'processors': settings.processors(db.db, fallback=self.processors_default),

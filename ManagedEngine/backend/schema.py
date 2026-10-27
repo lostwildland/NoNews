@@ -65,6 +65,25 @@ def require_supported_database(db: sqlite3.Connection) -> None:
         raise UnsupportedSchemaError('schema_migration_required')
 
 
+
+def validate_structure(db: sqlite3.Connection) -> None:
+    """Compare required current tables and columns without mutating the database."""
+    with sqlite3.connect(':memory:') as reference:
+        ensure(reference)
+        names = [row[0] for row in reference.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+        existing = {row[0] for row in db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        for name in names:
+            if name not in existing:
+                raise UnsupportedSchemaError('schema_incomplete')
+            quoted = '"' + name.replace('"', '""') + '"'
+            required = {row[1] for row in reference.execute('PRAGMA table_info(' + quoted + ')')}
+            actual = {row[1] for row in db.execute('PRAGMA table_info(' + quoted + ')')}
+            if not required.issubset(actual):
+                raise UnsupportedSchemaError('schema_incomplete')
+
+
 def ensure(db: sqlite3.Connection, *, artifacts=None) -> bool:
     """Initialize empty data or open the supported schema without destructive legacy migration."""
     require_supported_database(db)

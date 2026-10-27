@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import os
 import signal
 from pathlib import Path
@@ -6,8 +7,15 @@ import sys
 import time
 
 mode = Path(__file__).stem
-if mode == 'stubborn':
+if mode in {'stubborn', 'failstubborn'}:
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
+if mode.startswith('startup_'):
+    print(json.dumps({'status': 'error', 'code': mode.removeprefix('startup_')}), flush=True)
+    sys.exit(1)
+if mode == 'closedstdout':
+    os.close(1)
+    time.sleep(10)
+    sys.exit()
 if mode == 'timeout':
     time.sleep(10)
     sys.exit()
@@ -27,19 +35,26 @@ token = bootstrap['token']
 assert len(token) >= 24
 print(json.dumps({'status': 'ready'}), flush=True)
 root = Path(sys.argv[1])
+if mode == 'failstubborn':
+    with (root / 'owners').open('a') as owners:
+        owners.write(str(os.getpid()) + '\n')
+    ownership = sqlite3.connect(root / 'owner.sqlite', timeout=0)
+    ownership.execute('BEGIN EXCLUSIVE')
 setting = root / 'fixture-setting'
 for line in sys.stdin:
     request = json.loads(line)
     assert request['token'] == token
     path = request['path']
-    if request['method'] == 'PUT' and mode == 'requesttimeout':
+    if request['method'] == 'PUT' and mode in {'requesttimeout', 'failstubborn'}:
         time.sleep(10)
     if request['method'] == 'PUT' and mode == 'requestcrash':
         sys.exit(1)
     if request['method'] == 'PUT' and mode == 'badreply':
         print(json.dumps({'id': request['id']}), flush=True)
         continue
-    if path == '/api/jobs':
+    if path == '/api/status':
+        result = {'schemaVersion': 41}
+    elif path == '/api/jobs':
         result = {'jobs': []}
     elif request['method'] == 'PUT':
         value = request['body']['processors']

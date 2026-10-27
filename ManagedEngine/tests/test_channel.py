@@ -15,6 +15,7 @@ class ChannelTest(unittest.TestCase):
             backend = root / 'backend'
             backend.mkdir()
             (backend / '__init__.py').write_text('')
+            (backend / 'schema.py').write_text('class UnsupportedSchemaError(Exception): pass\n')
             (backend / 'server.py').write_text('''\
 import os
 class Application:

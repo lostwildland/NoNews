@@ -11,12 +11,11 @@ final class ProcessingEngine {
 	static let didChange = Notification.Name("ProcessingEngineDidChange")
 	private(set) var state: State = .stopped {
 		didSet {
+			let finished = process == nil && (state == .stopped || isFailed)
+			let callbacks = finished ? stopCallbacks : []
+			if finished { stopCallbacks.removeAll() }
 			NotificationCenter.default.post(name: Self.didChange, object: self)
-			if state == .stopped {
-				let callbacks = stopCallbacks
-				stopCallbacks.removeAll()
-				for callback in callbacks { callback() }
-			}
+			for callback in callbacks { callback() }
 		}
 	}
 
@@ -36,6 +35,7 @@ final class ProcessingEngine {
 	private var stopTimer: Timer?
 	private var generation = 0
 	private var sawReady = false
+	private var failureMessage: String?
 	private let limit = 65536
 	private let writer = DispatchQueue(label: "ProcessingEngine.writer")
 
@@ -59,7 +59,7 @@ final class ProcessingEngine {
 #endif
 
 	func start() {
-		guard state == .stopped || isFailed else { return }
+		guard process == nil && (state == .stopped || isFailed) else { return }
 		guard let (runtime, entry) = locate(), FileManager.default.isExecutableFile(atPath: runtime.path),
 			  FileManager.default.isReadableFile(atPath: entry.path) else {
 			state = .failed("Processing component is missing. Reinstall the app.")
@@ -79,6 +79,7 @@ final class ProcessingEngine {
 		let run = generation
 		buffer.removeAll()
 		sawReady = false
+		failureMessage = nil
 		token = UUID().uuidString.replacingOccurrences(of: "-", with: "") + UUID().uuidString.replacingOccurrences(of: "-", with: "")
 		let child = Process()
 		let stdin = Pipe()
@@ -89,19 +90,33 @@ final class ProcessingEngine {
 		child.standardInput = stdin
 		child.standardOutput = stdout
 		child.standardError = FileHandle.nullDevice
-		child.terminationHandler = { [weak self] _ in
-			Task { @MainActor in self?.exited(run: run) }
-		}
-		stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
-			let bytes = handle.availableData
-			Task { @MainActor in self?.received(bytes, run: run) }
-		}
 		process = child
 		input = stdin.fileHandleForWriting
 		output = stdout.fileHandleForReading
 		state = .starting
 		do {
 			try child.run()
+			try? stdout.fileHandleForWriting.close()
+			let descriptor = dup(stdout.fileHandleForReading.fileDescriptor)
+			guard descriptor >= 0 else { fail("Processing communication failed."); return }
+			DispatchQueue.global(qos: .utility).async { [weak self] in
+				defer { close(descriptor) }
+				var bytes = [UInt8](repeating: 0, count: 8192)
+				while true {
+					let count = Darwin.read(descriptor, &bytes, bytes.count)
+					if count < 0 && errno == EINTR { continue }
+					guard count > 0 else { break }
+					let data = Data(bytes.prefix(count))
+					let consumed = DispatchSemaphore(value: 0)
+					DispatchQueue.main.async {
+						self?.received(data, run: run)
+						consumed.signal()
+					}
+					consumed.wait()
+				}
+				child.waitUntilExit()
+				DispatchQueue.main.async { self?.exited(run: run) }
+			}
 			write(["token": token])
 			startupTimer = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
 				Task { @MainActor in self?.timedOut(run: run) }
@@ -119,6 +134,8 @@ final class ProcessingEngine {
 		if let completion { stopCallbacks.append(completion) }
 		guard state != .stopping else { return }
 		guard let child = process, child.isRunning else {
+			state = .stopping
+			generation += 1
 			cleanup()
 			state = .stopped
 			return
@@ -143,7 +160,7 @@ final class ProcessingEngine {
 
 	func request(method: String, path: String, body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		guard state == .ready || state == .starting, process?.isRunning == true, pending.count < 32,
-			  [("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			  [("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
@@ -171,7 +188,7 @@ final class ProcessingEngine {
 		writer.async { [weak self] in
 			do { try input.write(contentsOf: line) }
 			catch { Task { @MainActor in
-				if self?.generation == run { self?.fail("Processing communication failed.") }
+				if self?.generation == run, self?.state == .ready { self?.fail("Processing communication failed.") }
 			} }
 		}
 	}
@@ -187,10 +204,13 @@ final class ProcessingEngine {
 				fail("Invalid response from processing component.")
 				return
 			}
-			if state == .starting, !sawReady, value["status"] as? String == "ready" {
+			if state == .starting, value["status"] as? String == "error", let code = value["code"] as? String {
+				fail(startupMessage(code))
+				return
+			} else if state == .starting, !sawReady, value["status"] as? String == "ready" {
 				sawReady = true
-				request(method: "GET", path: "/api/jobs") { [weak self] result in
-					guard let self, case .success(let jobs) = result, jobs["jobs"] is [Any] else { self?.fail("Processing readiness check failed."); return }
+				request(method: "GET", path: "/api/status") { [weak self] result in
+					guard let self, case .success(let status) = result, status["schemaVersion"] is Int else { self?.fail("Processing readiness check failed."); return }
 					self.request(method: "GET", path: "/api/settings/processing") { [weak self] result in
 						guard let self, case .success(let settings) = result, settings["processors"] is Int else { self?.fail("Processing readiness check failed."); return }
 						self.startupTimer?.invalidate()
@@ -221,24 +241,44 @@ final class ProcessingEngine {
 	private func timedOut(run: Int) {
 		if run == generation && state == .starting { fail("Processing startup timed out. Try again.") }
 	}
+	private func startupMessage(_ code: String) -> String {
+		switch code {
+		case "schema_migration_required": return "Processing data needs a verified migration before it can be opened."
+		case "schema_newer": return "Processing data was created by a newer version. Update the app."
+		case "schema_incomplete": return "Processing data is incomplete. Restore a verified backup."
+		case "data_corrupt": return "Processing data could not be read. Restore a verified backup."
+		case "data_unavailable": return "Processing data is unavailable. Check access and try again."
+		default: return "Processing could not start. Try again."
+		}
+	}
 	private func exited(run: Int) {
 		guard run == generation else { return }
+		let message = failureMessage
 		let stopping = state == .stopping
-		state = stopping ? .stopped : .failed("Processing component stopped unexpectedly. Try again.")
+		state = .stopping
+		generation += 1
 		cleanup()
+		state = message.map { .failed($0) } ?? (stopping ? .stopped : .failed("Processing component stopped unexpectedly. Try again."))
 	}
 	private func fail(_ message: String) {
 		guard state != .stopped && state != .stopping && !isFailed else { return }
-		let child = process
-		generation += 1
-		state = .failed(message)
-		cleanup()
-		if let child, child.isRunning {
-			child.terminate()
-			let pid = child.processIdentifier
-			DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
-				if child.isRunning { kill(pid, SIGKILL) }
-			}
+		failureMessage = message
+		guard let child = process, child.isRunning else {
+			state = .stopping
+			generation += 1
+			cleanup()
+			state = .failed(message)
+			return
+		}
+		state = .stopping
+		startupTimer?.invalidate()
+		failPending()
+		try? input?.close()
+		input = nil
+		child.terminate()
+		let pid = child.processIdentifier
+		DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+			if child.isRunning { kill(pid, SIGKILL) }
 		}
 	}
 	private func failPending() {
@@ -251,7 +291,6 @@ final class ProcessingEngine {
 	private func cleanup() {
 		startupTimer?.invalidate()
 		stopTimer?.invalidate()
-		output?.readabilityHandler = nil
 		try? output?.close()
 		try? input?.close()
 		input = nil

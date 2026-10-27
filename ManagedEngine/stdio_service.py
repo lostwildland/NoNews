@@ -2,11 +2,12 @@
 import hmac
 import json
 import os
+import sqlite3
 from pathlib import Path
 import sys
 
 MAX_MESSAGE = 65536
-ALLOWED = {('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
+ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
            ('PUT', '/api/settings/processing')}
 
 
@@ -43,13 +44,33 @@ def main():
         for key in tuple(os.environ):
             if key.startswith('INFORMATION_OS_'):
                 del os.environ[key]
-        from backend.server import Application
-        root = Path(sys.argv[1])
-        root.mkdir(parents=True, exist_ok=True)
-        app = Application(root / 'information.sqlite', root / 'raw', root / 'artifacts',
-                          token=token, write_scope='settings')
-        app.handle('GET', '/api/jobs', {}, {})
-        app.handle('GET', '/api/settings/processing', {}, {})
+        try:
+            from backend.schema import UnsupportedSchemaError
+        except Exception:
+            send({'status': 'error', 'code': 'startup_failed'})
+            return 1
+        try:
+            from backend.server import Application
+            root = Path(sys.argv[1])
+            root.mkdir(parents=True, exist_ok=True)
+            app = Application(root / 'information.sqlite', root / 'raw', root / 'artifacts',
+                              token=token, write_scope='settings')
+            app.handle('GET', '/api/status', {}, {})
+            app.handle('GET', '/api/settings/processing', {}, {})
+        except UnsupportedSchemaError as error:
+            send({'status': 'error', 'code': error.code})
+            return 1
+        except sqlite3.DatabaseError as error:
+            code = getattr(error, 'sqlite_errorcode', None)
+            kind = 'data_corrupt' if code in {sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB} else 'data_unavailable'
+            send({'status': 'error', 'code': kind})
+            return 1
+        except (OSError, PermissionError):
+            send({'status': 'error', 'code': 'data_unavailable'})
+            return 1
+        except Exception:
+            send({'status': 'error', 'code': 'startup_failed'})
+            return 1
         send({'status': 'ready'})
         while True:
             message = read_message()
