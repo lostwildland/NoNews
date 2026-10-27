@@ -1,5 +1,15 @@
 # T01 snapshot investigation (incomplete)
 
+## Independent review round 6 coordinator corrections
+
+Reviewed HEAD `7580501f88a5cb9b21fcff96fd8ddd9a2168a9d3`. Standards reproduced one P2: deeply nested JSON metadata raised an uncaught RecursionError. Spec reproduced one P1 (HTML priority attributes hid independently loadable local images) and one P2 (extra restrictive schema constraints could break restored IO writes). These findings and corrections remain separate from acceptance.
+
+All untrusted JSON reads now translate decoding/depth errors into SnapshotError and enforce a container-depth bound of 128 before recursive reference traversal. Public snapshot and verify CLI tests cover 200- and 1100-level input with no traceback, no publication and unchanged input. The schema gate refuses unproved extra CHECK/foreign-key/unique/not-null constraints, canonical-table triggers, expression indexes and nonunique partial indexes that can reject canonical writes. Missing defaults remain required, and adding a default to a formerly defaultless canonical column is also refused. Nullable/defaultless extra columns with harmless indexes and unknown ordinary tables still round-trip; the old positive expression-unique-index fixture was restrictive and was replaced with a plain index on the extra column. This conservatively refuses some equivalent custom schema additions; it does not repair or discard them.
+
+The image inventory now covers all usable data-viewer-src/src/data-src/data-lazy-src attributes, in addition to the existing srcset, Markdown, reference and Obsidian forms. Newly discovered secondary attributes are appended after original occurrences so existing reviewed alias indices keep their meaning. A new test first reproduced an index-only alias losing its intended reference after a secondary attribute was added to the inventory, then passed with stable original indices. The public round trip reads both approved aliases and secondary local image bytes after the source vault is unavailable. Missing secondary assets refuse publication.
+
+Final focused verification: `PYTHONDONTWRITEBYTECODE=1 python3 -W error::ResourceWarning -m unittest discover -s Tests -p 'test_io_snapshot.py' -q` passed **50 tests**. Python compilation and original-base diff checks passed. No production data, native/Xcode build or live remote service was used. Quiescent source ownership, conservative schema refusal and later recovery-consumer integration remain limitations; T01 stays open pending fresh two-axis review.
+
 ## Independent review round 5 coordinator corrections
 
 Review of `596408d` reproduced two P2 defects using temporary synthetic data: a BLOB binding identity caused manifest JSON serialization to raise TypeError, and removal of items.starred's default admitted a restored schema that could not perform the current IO item insert. The common binding boundary now refuses identities outside text/integer before manifest construction; unknown binary data in ordinary tables remains preserved. Its CLI regression checks the safe refusal, no traceback/publication and unchanged database/asset.

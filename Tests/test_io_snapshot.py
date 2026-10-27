@@ -15,6 +15,111 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_extra_restrictive_constraints_are_refused(self):
+        for defect in ('check', 'not_null', 'unique', 'foreign_keys', 'expression_index', 'partial_index', 'trigger'):
+            for operation in ('snapshot', 'verify'):
+                with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    vault = self.make_simple(root)
+                    snapshot(root / 'source.sqlite', {'vault':vault}, root / 'snap')
+                    database = root / ('source.sqlite' if operation == 'snapshot' else 'snap/database.sqlite')
+                    with closing(sqlite3.connect(database)) as db, db:
+                        db.execute('DROP TABLE app_settings')
+                        additions = {'check': ", CHECK(value='only')", 'not_null': ', extra TEXT NOT NULL', 'foreign_keys': ', FOREIGN KEY(key) REFERENCES items(id)'}
+                        db.execute('CREATE TABLE app_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL' + additions.get(defect,'') + ')')
+                        if defect == 'unique': db.execute('CREATE UNIQUE INDEX extra_unique_value ON app_settings(value)')
+                        if defect == 'expression_index': db.execute("CREATE INDEX extra_expression ON app_settings(json_extract(value,'$.x'))")
+                        if defect == 'partial_index': db.execute("CREATE INDEX extra_partial ON app_settings(value) WHERE json_extract(value,'$.x')=1")
+                        if defect == 'trigger': db.execute("CREATE TRIGGER extra_restrict BEFORE INSERT ON app_settings BEGIN SELECT RAISE(ABORT,'blocked'); END")
+                    if operation == 'snapshot':
+                        with self.assertRaisesRegex(SnapshotError, 'unsupported additional schema'):
+                            snapshot(database, {'vault':vault}, root / 'bad')
+                        self.assertFalse((root / 'bad').exists())
+                    else:
+                        p=root / 'snap/manifest.json'
+                        manifest=json.loads(p.read_text())
+                        manifest['database_sha256']=hashlib.sha256(database.read_bytes()).hexdigest()
+                        p.write_text(json.dumps(manifest))
+                        with self.assertRaisesRegex(SnapshotError, 'unsupported additional schema'):
+                            verify(root / 'snap')
+
+    def test_deep_json_is_refused_without_a_cli_traceback(self):
+        from scripts.io_snapshot import _database
+        for depth in (200,1100):
+            for operation in ('snapshot','verify'):
+                with self.subTest(depth=depth,operation=operation), tempfile.TemporaryDirectory() as tmp:
+                    root=Path(tmp)
+                    vault=self.make_simple(root)
+                    with closing(sqlite3.connect(root/'source.sqlite')) as db, db:
+                        db.execute('CREATE TABLE future_metadata(id INTEGER PRIMARY KEY,metadata_json TEXT)')
+                        db.execute("INSERT INTO future_metadata VALUES(1,'[]')")
+                    snapshot(root/'source.sqlite',{'vault':vault},root/'snap')
+                    database=root/('source.sqlite' if operation=='snapshot' else 'snap/database.sqlite')
+                    with closing(sqlite3.connect(database)) as db, db:
+                        db.execute('UPDATE future_metadata SET metadata_json=?',('['*depth+'0'+']'*depth,))
+                    before=database.read_bytes()
+                    if operation=='verify':
+                        p=root/'snap/manifest.json'
+                        manifest=json.loads(p.read_text())
+                        manifest['database_sha256']=hashlib.sha256(database.read_bytes()).hexdigest()
+                        manifest['database']=_database(database)
+                        p.write_text(json.dumps(manifest))
+                    cli=Path(__file__).parents[1]/'scripts/io_snapshot.py'
+                    args=['snapshot',str(database),str(root/'bad'),'--root',f'vault={vault}'] if operation=='snapshot' else ['verify',str(root/'snap')]
+                    result=subprocess.run([sys.executable,str(cli),*args],capture_output=True,text=True)
+                    self.assertNotEqual(result.returncode,0)
+                    self.assertIn('JSON',result.stdout)
+                    self.assertNotIn('Traceback',result.stderr)
+                    self.assertFalse((root/'bad').exists())
+                    self.assertEqual(database.read_bytes(),before)
+
+    def test_all_html_image_attributes_are_preserved(self):
+        for body in ('<img data-viewer-src="https://example.invalid/remote.png" src="images/local.png">',
+                     '<img src="https://example.invalid/remote.png" data-src="images/local.png">'):
+            with self.subTest(body=body), tempfile.TemporaryDirectory() as tmp:
+                root=Path(tmp)
+                vault=self.make_simple(root)
+                images=root/'images'
+                images.mkdir()
+                with closing(sqlite3.connect(root/'source.sqlite')) as db, db:
+                    self.add_raw(db)
+                    self.add_body(db,body,'database')
+                with self.assertRaisesRegex(SnapshotError,'required asset missing'):
+                    snapshot(root/'source.sqlite',{'vault':vault,'paper_images':images},root/'bad')
+                self.assertFalse((root/'bad').exists())
+                payload=b'\x89PNG\r\n\x1a\nsynthetic'
+                (images/'local.png').write_bytes(payload)
+                snapshot(root/'source.sqlite',{'vault':vault,'paper_images':images},root/'snap')
+                restore(root/'snap',root/'restored')
+                images.rename(root/'old-images')
+                self.assertEqual(read_asset(root/'restored','body_texts','text.images/local.png',1),payload)
+
+    def test_new_html_attributes_preserve_reviewed_alias_indices(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            raw = vault / 'raw/paper'
+            (raw / 'assets').mkdir(parents=True)
+            shared = vault / 'raw/images'
+            shared.mkdir()
+            body = '<img data-viewer-src="https://example.invalid/remote.png" src="assets/secondary.png" srcset="assets/small.png 1x">\n![legacy](assets/legacy.png)'
+            (raw / 'body.md').write_text(body)
+            (raw / 'assets/secondary.png').write_bytes(b'secondary')
+            (raw / 'assets/small.png').write_bytes(b'small')
+            approved = b'approved legacy image'
+            (shared / 'approved.png').write_bytes(approved)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                self.add_raw(db)
+                db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
+                self.add_file_authority(db)
+                self.add_body(db, body, 'imported')
+            alias = {'occurrence_index':2, 'document_source_hash':hashlib.sha256(body.encode()).hexdigest(), 'shared_relative_path':'raw/images/approved.png', 'expected_source_sha256':hashlib.sha256(approved).hexdigest(), 'owner_evidence':'synthetic review', 'owner_document_relative_path':'raw/paper/body.md'}
+            snapshot(root / 'source.sqlite', {'vault':vault}, root / 'snap', image_aliases=[alias])
+            restore(root / 'snap', root / 'out')
+            vault.rename(root / 'old-vault')
+            self.assertEqual(read_asset(root / 'out', 'literature_raws', 'path.assets/legacy.png', 1), approved)
+            self.assertEqual(read_asset(root / 'out', 'literature_raws', 'path.assets/secondary.png', 1), b'secondary')
+
     def test_schema_semantic_constraints_are_required_for_snapshot_and_verify(self):
         for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null', 'missing-rowid-alias', 'descending-primary-key', 'missing-default', 'wrong-default', 'wrong-affinity') for op in ('snapshot', 'verify')):
             with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
@@ -67,7 +172,8 @@ class SnapshotTests(unittest.TestCase):
                             self.assertIn('UNIQUE(owner_kind, owner_id, source_ref)', ddl)
                             db.execute('DROP TABLE media_pending')
                             db.execute(ddl.replace(',\n        UNIQUE(owner_kind, owner_id, source_ref)', ''))
-                    message = 'required schema invariant missing: items ' + ('affinities' if defect == 'wrong-affinity' else 'defaults') if defect in ('missing-default', 'wrong-default', 'wrong-affinity') else 'required schema invariant'
+                    message = ('required schema invariant missing: items ' + ('affinities' if defect == 'wrong-affinity' else 'defaults') if defect in ('missing-default', 'wrong-default', 'wrong-affinity') else
+                               'unsupported additional schema expression index' if defect == 'wrong-expression-index' else 'required schema invariant')
                     if destination:
                         with self.assertRaisesRegex(SnapshotError, message):
                             snapshot(database, {'vault': vault}, destination)
@@ -167,7 +273,7 @@ class SnapshotTests(unittest.TestCase):
                 db.execute('CREATE UNIQUE INDEX replacement_pending ON media_document_generations ("item_id" COLLATE BINARY) WHERE ( "state" = \'pending\' )')
                 db.execute('CREATE INDEX extra_lookup ON app_settings(value)')
                 db.execute('CREATE UNIQUE INDEX extra_unique ON app_settings(extra)')
-                db.execute('CREATE UNIQUE INDEX extra_expression ON app_settings(lower(value))')
+                db.execute('CREATE INDEX extra_unknown_lookup ON app_settings(extra)')
                 db.execute('CREATE TABLE "future table" (id TEXT, value BLOB)')
                 db.execute("INSERT INTO \"future table\" VALUES ('new',X'00FF')")
             snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')

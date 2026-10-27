@@ -28,6 +28,21 @@ class SnapshotError(Exception):
     """Snapshot cannot be proven safe or complete."""
 
 
+def _load_json(value):
+    try:
+        decoded = json.loads(value)
+    except (ValueError, TypeError, RecursionError) as exc:
+        raise SnapshotError('JSON is invalid or exceeds nesting limit') from exc
+    pending = [(decoded, 0)]
+    while pending:
+        obj, depth = pending.pop()
+        if depth > 128:
+            raise SnapshotError('JSON exceeds nesting limit')
+        children = obj.values() if isinstance(obj, dict) else obj if isinstance(obj, list) else ()
+        pending.extend((child, depth + 1) for child in children if isinstance(child, (dict, list)))
+    return decoded
+
+
 PATH_FIELDS = {
     ('literature_raws','path'), ('literature_drafts','path'), ('private_raw_sources','relative_path'),
     ('media_pending','staging_path'), ('media_document_generations','staging_path'),
@@ -327,6 +342,8 @@ def _schema41(db):
     except (OSError, ValueError) as exc:
         raise SnapshotError('required schema descriptor is unavailable') from exc
     tables = {row[0].casefold(): row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if any(table.casefold() in required for table, in db.execute("SELECT tbl_name FROM sqlite_master WHERE type='trigger'")):
+        raise SnapshotError('unsupported additional schema trigger on canonical table')
     for name, columns in required.items():
         actual = tables.get(name.casefold())
         if actual is None:
@@ -343,11 +360,22 @@ def _schema41(db):
         if current['rowid_alias'] != expected['rowid_alias']:
             raise SnapshotError('required schema invariant missing: ' + name + ' rowid alias')
         for kind in ('affinities', 'defaults'):
-            if any(current[kind].get(column) != value for column, value in expected[kind].items()):
+            if any(current[kind].get(column) != expected[kind].get(column) for column in expected['affinities']):
                 raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
         for kind in ('not_null', 'unique', 'foreign_keys', 'checks'):
             if not all(value in current[kind] for value in expected[kind]):
                 raise SnapshotError('required schema invariant missing: ' + name + ' ' + kind)
+        for column in set(current['not_null']) - set(expected['not_null']):
+            if column in expected['affinities'] or current['defaults'].get(column) in (None, ['null']):
+                raise SnapshotError('unsupported additional schema constraint: ' + name + ' not_null')
+        for kind in ('foreign_keys', 'checks'):
+            if any(value not in expected[kind] for value in current[kind]):
+                raise SnapshotError('unsupported additional schema constraint: ' + name + ' ' + kind)
+        for keys, predicate in current['unique']:
+            if [keys, predicate] in expected['unique']:
+                continue
+            if predicate is not None or any(column in expected['affinities'] or column in current['not_null'] or current['defaults'].get(column) not in (None, ['null']) for column, _ in keys):
+                raise SnapshotError('unsupported additional schema constraint: ' + name + ' unique')
 
 
 _SQL_TOKEN = re.compile(r'''\s+|--[^\r\n]*|/\*.*?\*/|'(?:''|[^'])*'|"(?:""|[^"])*"|`(?:``|[^`])*`|\[[^\]]*\]|[A-Za-z_][A-Za-z_0-9$]*|\d+(?:\.\d+)?|<=|>=|<>|!=|==|\|\||.''', re.S)
@@ -425,12 +453,14 @@ def _table_semantics(db, name):
                    not any(index[3] == 'pk' for index in indexes) else None)
     unique = []
     for index in indexes:
-        if not index[2]:
-            continue
         index_name = index[1]
         index_quoted = '"' + index_name.replace('"', '""') + '"'
         index_keys = [row for row in db.execute(f'PRAGMA index_xinfo({index_quoted})') if row[5]]
         if not index_keys or any(row[2] is None for row in index_keys):
+            raise SnapshotError('unsupported additional schema expression index: ' + name)
+        if not index[2]:
+            if index[4]:
+                raise SnapshotError('unsupported additional schema partial index: ' + name)
             continue
         keys = [(row[2].casefold(), (row[4] or '').casefold()) for row in index_keys]
         predicate = None
@@ -646,7 +676,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                     manifest_bytes = _read_file(asset_dirs[binding['root']], binding['path'])
                     if hashlib.sha256(manifest_bytes).hexdigest() != digest:
                         raise SnapshotError('cleanup manifest hash mismatch')
-                    backup = json.loads(manifest_bytes)
+                    backup = _load_json(manifest_bytes)
                     if len(backup['bodies']) != body_count or len(backup['drafts']) != draft_count:
                         raise SnapshotError('cleanup manifest count mismatch')
                     for group, prefix, key in ((backup['bodies'], 'body-', 'versionId'), (backup['drafts'], 'draft-', 'draftId')):
@@ -674,7 +704,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                             raise SnapshotError('quarantine has no immutable byte evidence')
                     if preimage:
                         try:
-                            data = json.loads(preimage)
+                            data = _load_json(preimage)
                             bind('media_raw_activation_intents', 'preimage_json.staging_path', ident, data['staging_path'], data['document_hash'])
                         except (ValueError, TypeError, KeyError) as exc:
                             raise SnapshotError('invalid recovery preimage') from exc
@@ -708,7 +738,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                     col = '"' + name.replace('"', '""') + '"'
                     for rowid, raw in db.execute(f'SELECT rowid, {col} FROM {ident} WHERE {col} IS NOT NULL AND {col} != \'\''):
                         try:
-                            value = json.loads(raw)
+                            value = _load_json(raw)
                         except (ValueError, TypeError) as exc:
                             raise SnapshotError('unreadable JSON reference metadata') from exc
                         def visit(obj, trail):
@@ -962,7 +992,7 @@ def verify(directory):
         inventory = _inventory(root)
         if set(p.split('/')[0] for p in inventory) != {'database.sqlite', 'manifest.json', 'assets'}:
             raise SnapshotError('unexpected snapshot contents')
-        manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+        manifest = _load_json((root / 'manifest.json').read_text(encoding='utf-8'))
         if set(manifest) != {'format', 'database_sha256', 'database', 'assets', 'remote_reference_counts', 'source_roots', 'asset_bindings', 'reference_coverage', 'asset_storage', 'image_aliases'} or manifest['format'] != 4:
             raise SnapshotError('invalid manifest')
         if not isinstance(manifest['assets'], dict) or not manifest['assets']:
@@ -997,7 +1027,7 @@ def verify(directory):
 def _recovery_read(directory, table, column, identity):
     root = Path(directory)
     verify(root)
-    manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+    manifest = _load_json((root / 'manifest.json').read_text(encoding='utf-8'))
     matches = [b for b in manifest['asset_bindings'] if b['table'] == table and b['column'] == column and b['id'] == identity]
     if len(matches) != 1:
         raise SnapshotError('asset reference not uniquely bound')
@@ -1089,7 +1119,7 @@ def main():
                 if not sep or name in roots or not path:
                     raise SnapshotError('invalid or duplicate root')
                 roots[name] = path
-            aliases = json.loads(Path(args.image_aliases).read_text(encoding='utf-8')) if args.image_aliases else None
+            aliases = _load_json(Path(args.image_aliases).read_text(encoding='utf-8')) if args.image_aliases else None
             snapshot(args.database, roots, args.destination, image_aliases=aliases)
         elif args.command == 'verify':
             print(json.dumps(verify(args.snapshot), sort_keys=True))

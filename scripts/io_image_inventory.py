@@ -679,7 +679,6 @@ def _try_html_images(
                 target_span=attribute["value_span"],
             )
         )
-        break
     for attribute in attributes:
         if attribute["name"] not in {"srcset", "data-srcset"}:
             continue
@@ -753,6 +752,7 @@ def inventory_markdown_images(text: str) -> ImageInventory:
         return ImageInventory((), (), tuple(review))
     definitions, review = _scan_reference_definitions(masked)
     occurrences: list[ImageOccurrence] = []
+    additional_attributes: list[ImageOccurrence] = []
     index = 0
     size = len(masked)
     while index < size:
@@ -771,11 +771,20 @@ def inventory_markdown_images(text: str) -> ImageInventory:
         elif char == "<" and not _is_escaped(text, index):
             found, end, records = _try_html_images(masked, index)
             review.extend(records)
-            occurrences.extend(found)
+            primary_seen = False
+            for occurrence in found:
+                if occurrence.kind in {"html_img", "html_source"}:
+                    if primary_seen:
+                        additional_attributes.append(occurrence)
+                        continue
+                    primary_seen = True
+                occurrences.append(occurrence)
             index = max(end, index + 1)
             continue
         index += 1
 
+    # Keep existing reviewed alias indices stable when adding secondary HTML URLs.
+    occurrences.extend(additional_attributes)
     resolved: list[ImageOccurrence] = []
     for occurrence in occurrences:
         if occurrence.kind == "reference" and occurrence.label:
