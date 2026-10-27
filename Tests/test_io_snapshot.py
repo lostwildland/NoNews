@@ -15,6 +15,61 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_imported_draft_requires_authoritative_file_mapping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            text = 'Synthetic imported draft'
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript('CREATE TABLE editor_drafts (id TEXT, item_id TEXT); CREATE TABLE draft_versions (draft_id TEXT, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE draft_bodies (draft_id TEXT, text TEXT);')
+                db.execute('INSERT INTO editor_drafts VALUES (?,?)', ('draft', 'item'))
+                db.execute('INSERT INTO draft_versions VALUES (?,?,?,?,NULL)', ('draft', 'item', hashlib.sha256(text.encode()).hexdigest(), 'imported'))
+                db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft', text))
+            with self.assertRaisesRegex(SnapshotError, 'imported draft.*authoritative file'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
+            self.assertFalse((root / 'missing').exists())
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                self.assertEqual(db.execute('SELECT authority FROM draft_versions').fetchone(), ('imported',))
+                db.execute("UPDATE draft_versions SET authority='database'")
+            snapshot(root / 'source.sqlite', {'vault': vault}, root / 'database-authority')
+            restore(root / 'database-authority', root / 'restored')
+            with closing(sqlite3.connect(root / 'restored/database.sqlite')) as db:
+                self.assertEqual(db.execute('SELECT text FROM draft_bodies').fetchone(), (text,))
+
+    def test_managed_remote_object_requires_preserved_verified_bytes(self):
+        for storage in ('file', 'database'):
+            with self.subTest(storage=storage), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = self.make_simple(root)
+                payload = b'synthetic managed image'
+                digest = hashlib.sha256(payload).hexdigest()
+                with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                    db.execute('CREATE TABLE media_objects (key TEXT PRIMARY KEY, namespace TEXT, stored_sha256 TEXT, bytes INTEGER, public_url TEXT, deleted_at TEXT)')
+                    db.execute('INSERT INTO media_objects VALUES (?,?,?,?,?,NULL)', ('object', 'test', digest, len(payload), 'https://example.invalid/object'))
+                    db.execute('CREATE TABLE media_upload_intents (object_key TEXT, payload BLOB)')
+                with self.assertRaisesRegex(SnapshotError, 'managed object.*preserved bytes'):
+                    snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
+                if storage == 'file':
+                    (vault / 'object.png').write_bytes(b'wrong image bytes')
+                else:
+                    with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                        db.execute('INSERT INTO media_upload_intents VALUES (?,?)', ('object', b'wrong image bytes'))
+                with self.assertRaisesRegex(SnapshotError, 'managed object.*preserved bytes'):
+                    snapshot(root / 'source.sqlite', {'vault': vault}, root / 'changed')
+                if storage == 'file':
+                    (vault / 'object.png').write_bytes(payload)
+                else:
+                    with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                        db.execute('UPDATE media_upload_intents SET payload=? WHERE object_key=?', (payload, 'object'))
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                restore(root / 'snap', root / 'restored')
+                vault.rename(root / 'old-vault')
+                if storage == 'file':
+                    self.assertEqual((root / 'restored/assets/vault/object.png').read_bytes(), payload)
+                else:
+                    with closing(sqlite3.connect(root / 'restored/database.sqlite')) as db:
+                        self.assertEqual(db.execute('SELECT payload FROM media_upload_intents').fetchone()[0], payload)
+
     def test_reviewed_alias_is_bound_to_document_owner_and_hash(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -479,11 +534,12 @@ class SnapshotTests(unittest.TestCase):
                 INSERT INTO app_settings VALUES ('setting','synthetic','now');
                 INSERT INTO media_upload_intents VALUES ('object','item','item','image','{}',X'0001FF','now');
                 INSERT INTO media_receipts (id,owner_kind,owner_id,status,created_at) VALUES (1,'item','item','uploaded','now');
-                INSERT INTO media_objects (key,namespace,sha256,stored_sha256,ext,bytes,public_url,created_at) VALUES ('object','test','hash','hash','png',3,'https://example.invalid/object','now');
                 INSERT INTO media_raw_activation_intents (id,item_id,old_mapping_json,old_authority_json,citekey,candidate_hash,state) VALUES ('intent','item','{}','{}','key','hash','complete');
                 CREATE TABLE "future table" (identity TEXT, payload BLOB);
                 INSERT INTO "future table" VALUES ('future',X'00FF');
             ''')
+            object_digest = hashlib.sha256(b'\x00\x01\xff').hexdigest()
+            db.execute("INSERT INTO media_objects (key,namespace,sha256,stored_sha256,ext,bytes,public_url,created_at) VALUES ('object','test',?,?,'png',3,'https://example.invalid/object','now')", (object_digest, object_digest))
             db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','body.md',hashlib.sha256(body).hexdigest(),'now'))
             db.execute('INSERT INTO literature_drafts VALUES (?,?,?,?,?,?,?,?,?,?)', ('draft','item','key','identity','file-id','draft.md',1,'payload',hashlib.sha256(draft).hexdigest(),'now'))
             db.execute("INSERT INTO body_versions (snapshot_id,item_id,sha256,characters,authority,source,retrieved_at,stored_at) VALUES (1,'item',?, ?, 'imported','synthetic','now','now')", (hashlib.sha256(body).hexdigest(),len(body)))
@@ -495,7 +551,7 @@ class SnapshotTests(unittest.TestCase):
             report = verify(root / 'snap')
             self.assertEqual(report['remote_reference_counts'], {'media_objects': 1, 'media_receipts': 1, 'media_upload_intents': 1})
             remote = remote_references(root / 'snap')
-            self.assertEqual(remote, [{'key': 'object', 'namespace': 'test', 'expected_sha256': 'hash', 'status': 'requires_live_readback'}])
+            self.assertEqual(remote, [{'key': 'object', 'namespace': 'test', 'expected_sha256': object_digest, 'status': 'requires_live_readback'}])
             coverage = json.loads((root / 'snap/manifest.json').read_text())['reference_coverage']
             self.assertIn(['literature_cleanup_backups', 'path', 'bound'], coverage)
             self.assertIn(['media_document_generations', 'provenance_json', 'recursive_path_keys'], coverage)

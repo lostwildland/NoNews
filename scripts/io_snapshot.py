@@ -477,6 +477,21 @@ def _references(path, assets, bindings):
     """Validate known file authorities; reject unsupported live references."""
     with closing(_db(path)) as db:
         tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        if 'media_objects' in tables:
+            columns = {r[1] for r in db.execute('PRAGMA table_info(media_objects)')}
+            if not {'key', 'stored_sha256', 'bytes'} <= columns:
+                raise SnapshotError('unsupported managed object schema')
+            deleted = 'deleted_at' if 'deleted_at' in columns else 'NULL'
+            preserved = {(entry['sha256'], entry['size']) for tree in assets.values()
+                         for entry in tree.values() if isinstance(entry, dict)}
+            for key, digest, size, removed in db.execute(f'SELECT key, stored_sha256, bytes, {deleted} FROM media_objects'):
+                if removed or (digest, size) in preserved:
+                    continue
+                payloads = (db.execute('SELECT payload FROM media_upload_intents WHERE object_key=?', (key,))
+                            if 'media_upload_intents' in tables else ())
+                if not any(isinstance(payload, bytes) and len(payload) == size
+                           and hashlib.sha256(payload).hexdigest() == digest for (payload,) in payloads):
+                    raise SnapshotError('managed object has no preserved bytes with matching hash and size')
         for table, root, path_col, hash_col in (
             ('literature_raws', 'vault', 'path', 'file_sha256'),
             ('literature_drafts', 'vault', 'path', 'file_sha256'),
@@ -528,7 +543,9 @@ def _references(path, assets, bindings):
         if 'editor_drafts' in tables:
             for ident, item in db.execute('SELECT id, item_id FROM editor_drafts'):
                 mapping = db.execute('SELECT item_id FROM literature_drafts WHERE draft_id=?', (ident,)).fetchone() if 'literature_drafts' in tables else None
-                version = db.execute('SELECT item_id FROM draft_versions WHERE draft_id=?', (ident,)).fetchone() if 'draft_versions' in tables else None
+                version = db.execute('SELECT item_id, authority FROM draft_versions WHERE draft_id=?', (ident,)).fetchone() if 'draft_versions' in tables else None
+                if version and version[1] == 'imported' and not mapping:
+                    raise SnapshotError('imported draft has no authoritative file mapping')
                 if not (mapping or version):
                     raise SnapshotError('unresolved draft authority')
                 if any(row and row[0] != item for row in (mapping, version)):
