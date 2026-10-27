@@ -15,6 +15,179 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_wal_source_without_shm_is_never_modified(self):
+        import shutil
+        for mode in (0o755, 0o555):
+            with self.subTest(directory_mode=oct(mode)), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                assets = root / 'vault'
+                assets.mkdir()
+                writer_dir = root / 'writer'
+                writer_dir.mkdir()
+                writer = sqlite3.connect(writer_dir / 'live.sqlite')
+                try:
+                    writer.execute('PRAGMA journal_mode=WAL')
+                    writer.execute('PRAGMA wal_autocheckpoint=0')
+                    writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(id TEXT PRIMARY KEY, payload BLOB); INSERT INTO future_table VALUES ('wal-row',X'0001FF');")
+                    source = root / 'source'
+                    source.mkdir()
+                    shutil.copyfile(writer_dir / 'live.sqlite', source / 'data.sqlite')
+                    shutil.copyfile(writer_dir / 'live.sqlite-wal', source / 'data.sqlite-wal')
+                    os.chmod(source, mode)
+                    def state():
+                        return {p.name: (p.read_bytes(), p.stat().st_mode & 0o777) for p in source.iterdir()}
+                    before = state()
+                    snapshot(source / 'data.sqlite', {'vault': assets}, root / 'snap')
+                    self.assertEqual(state(), before)
+                    self.assertEqual(source.stat().st_mode & 0o777, mode)
+                    restore(root / 'snap', root / 'out')
+                    with closing(sqlite3.connect(root / 'out/database.sqlite')) as db:
+                        self.assertEqual(db.execute('SELECT * FROM future_table').fetchall(), [('wal-row', b'\x00\x01\xff')])
+                finally:
+                    if (root / 'source').exists():
+                        os.chmod(root / 'source', 0o755)
+                    writer.close()
+
+    def test_wal_source_with_shm_bytes_and_modes_are_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assets = root / 'vault'
+            assets.mkdir()
+            source = root / 'source'
+            source.mkdir()
+            writer = sqlite3.connect(source / 'data.sqlite')
+            try:
+                writer.execute('PRAGMA journal_mode=WAL')
+                writer.execute('PRAGMA wal_autocheckpoint=0')
+                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(id TEXT PRIMARY KEY); INSERT INTO future_table VALUES ('synthetic');")
+                def state():
+                    return {p.name: (hashlib.sha256(p.read_bytes()).hexdigest(), p.stat().st_mode & 0o777) for p in source.iterdir()}
+                before = state()
+                self.assertIn('data.sqlite-shm', before)
+                snapshot(source / 'data.sqlite', {'vault': assets}, root / 'snap')
+                self.assertEqual(state(), before)
+                restore(root / 'snap', root / 'out')
+                with closing(sqlite3.connect(root / 'out/database.sqlite')) as db:
+                    self.assertEqual(db.execute('SELECT * FROM future_table').fetchall(), [('synthetic',)])
+            finally:
+                writer.close()
+
+    def test_reused_wal_uses_stable_index_to_prove_committed_prefix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = root / 'vault'
+            vault.mkdir()
+            writer = sqlite3.connect(root / 'source.sqlite')
+            try:
+                writer.execute('PRAGMA journal_mode=WAL')
+                writer.execute('PRAGMA wal_autocheckpoint=0')
+                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(value BLOB);")
+                for _ in range(10):
+                    writer.execute('INSERT INTO future_table VALUES (?)', (b'x' * 8000,))
+                    writer.commit()
+                writer.execute('PRAGMA wal_checkpoint(RESTART)').fetchall()
+                writer.execute('INSERT INTO future_table VALUES (?)', (b'after-restart',))
+                writer.commit()
+                sidecars = [root / 'source.sqlite', root / 'source.sqlite-wal', root / 'source.sqlite-shm']
+                before = [(p.read_bytes(), p.stat().st_mode & 0o777) for p in sidecars]
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                self.assertEqual([(p.read_bytes(), p.stat().st_mode & 0o777) for p in sidecars], before)
+                restore(root / 'snap', root / 'out')
+                with closing(sqlite3.connect(root / 'out/database.sqlite')) as db:
+                    self.assertEqual(db.execute('SELECT count(*) FROM future_table').fetchone(), (11,))
+                    self.assertEqual(db.execute('SELECT value FROM future_table ORDER BY rowid DESC LIMIT 1').fetchone(), (b'after-restart',))
+            finally:
+                writer.close()
+
+    def test_mismatched_wal_index_is_refused(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = root / 'vault'
+            vault.mkdir()
+            writer = sqlite3.connect(root / 'live.sqlite')
+            try:
+                writer.execute('PRAGMA journal_mode=WAL')
+                writer.execute('PRAGMA wal_autocheckpoint=0')
+                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO schema_meta VALUES ('schema_version','41');")
+                for suffix in ('', '-wal', '-shm'):
+                    shutil.copyfile(root / ('live.sqlite' + suffix), root / ('copy.sqlite' + suffix))
+                index = root / 'copy.sqlite-shm'
+                content = bytearray(index.read_bytes())
+                content[48] ^= 1
+                index.write_bytes(content)
+                with self.assertRaisesRegex(SnapshotError, 'inconsistent source WAL index'):
+                    snapshot(root / 'copy.sqlite', {'vault': vault}, root / 'snap')
+                self.assertFalse((root / 'snap').exists())
+            finally:
+                writer.close()
+
+    def test_database_sidecars_reject_symlinks_special_files_and_journal(self):
+        for suffix, kind in (('-wal', 'symlink'), ('-shm', 'symlink'), ('-wal', 'fifo'), ('-journal', 'file')):
+            with self.subTest(suffix=suffix, kind=kind), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = self.make_simple(root)
+                sidecar = root / ('source.sqlite' + suffix)
+                if kind == 'symlink':
+                    sidecar.symlink_to(root / 'source.sqlite')
+                elif kind == 'fifo':
+                    os.mkfifo(sidecar)
+                else:
+                    sidecar.write_bytes(b'synthetic journal')
+                with self.assertRaisesRegex(SnapshotError, 'unsafe database sidecar|rollback journal'):
+                    snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                self.assertFalse((root / 'snap').exists())
+
+    def test_source_change_during_file_copy_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            source = root / 'source.sqlite'
+            inode = source.stat().st_ino
+            real_read = os.read
+            seen = 0
+            def changing(fd, size):
+                nonlocal seen
+                data = real_read(fd, size)
+                if data and os.fstat(fd).st_ino == inode:
+                    seen += 1
+                    if seen == 2:
+                        with source.open('ab') as out:
+                            out.write(b'concurrent change')
+                return data
+            with patch('scripts.io_snapshot.os.read', side_effect=changing):
+                with self.assertRaisesRegex(SnapshotError, 'source changed'):
+                    snapshot(source, {'vault': vault}, root / 'snap')
+            self.assertFalse((root / 'snap').exists())
+
+    def test_corrupted_wal_is_refused_before_private_recovery(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assets = root / 'vault'
+            assets.mkdir()
+            writer = sqlite3.connect(root / 'live.sqlite')
+            try:
+                writer.execute('PRAGMA journal_mode=WAL')
+                writer.execute('PRAGMA wal_autocheckpoint=0')
+                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41');")
+                shutil.copyfile(root / 'live.sqlite', root / 'copy.sqlite')
+                shutil.copyfile(root / 'live.sqlite-wal', root / 'copy.sqlite-wal')
+                wal = root / 'copy.sqlite-wal'
+                data = bytearray(wal.read_bytes())
+                data[-1] ^= 1
+                wal.write_bytes(data)
+                with self.assertRaisesRegex(SnapshotError, 'WAL.*checksum mismatch'):
+                    snapshot(root / 'copy.sqlite', {'vault': assets}, root / 'snap')
+                self.assertFalse((root / 'snap').exists())
+                shutil.copyfile(root / 'live.sqlite-wal', wal)
+                wal.write_bytes(wal.read_bytes()[:-1])
+                with self.assertRaisesRegex(SnapshotError, 'incomplete source WAL frame'):
+                    snapshot(root / 'copy.sqlite', {'vault': assets}, root / 'truncated')
+                self.assertFalse((root / 'truncated').exists())
+            finally:
+                writer.close()
+
     def test_imported_draft_requires_authoritative_file_mapping(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

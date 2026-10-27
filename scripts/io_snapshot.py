@@ -10,6 +10,7 @@ import posixpath
 import re
 import sqlite3
 import stat
+import struct
 import tempfile
 import time
 from pathlib import Path
@@ -129,14 +130,149 @@ def _db(path):
     return sqlite3.connect('file:' + quote(str(path.resolve()), safe='/') + '?mode=ro', uri=True)
 
 
+def _source_files(source, copy_to=None):
+    """Observe database sidecars without ever opening the source with SQLite."""
+    parent = os.open(source.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    result = {}
+    try:
+        for suffix in ('', '-wal', '-shm', '-journal'):
+            name = source.name + suffix
+            try:
+                fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise SnapshotError('unsafe database sidecar') from exc
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode):
+                    raise SnapshotError('unsafe database sidecar')
+                if suffix == '-journal':
+                    raise SnapshotError('rollback journal requires explicit recovery')
+                digest = hashlib.sha256()
+                output_name = 'coordination.evidence' if suffix == '-shm' else 'source.sqlite' + suffix
+                output = open(copy_to / output_name, 'xb') if copy_to and suffix in ('', '-wal', '-shm') else None
+                try:
+                    while True:
+                        block = os.read(fd, 1024 * 1024)
+                        if not block:
+                            break
+                        digest.update(block)
+                        if output:
+                            output.write(block)
+                finally:
+                    if output:
+                        output.close()
+                after = os.fstat(fd)
+                try:
+                    named = os.stat(name, dir_fd=parent, follow_symlinks=False)
+                except FileNotFoundError as exc:
+                    raise SnapshotError('source changed during snapshot; retry after writers pause') from exc
+                def identity(s):
+                    return (s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+                if identity(info) != identity(after) or identity(info) != identity(named):
+                    raise SnapshotError('source changed during snapshot; retry after writers pause')
+                result[suffix] = (identity(info), digest.hexdigest())
+            finally:
+                os.close(fd)
+    finally:
+        os.close(parent)
+    if '' not in result:
+        raise SnapshotError('source database is missing')
+    if '-shm' in result and '-wal' not in result:
+        raise SnapshotError('orphan database coordination file')
+    return result
+
+
+def _validate_wal(path, coordination):
+    """Reject incomplete or corrupt frames that SQLite might otherwise ignore."""
+    if not path.exists() or path.stat().st_size == 0:
+        return
+    with path.open('rb') as stream:
+        header = stream.read(32)
+        if len(header) != 32:
+            raise SnapshotError('incomplete source WAL')
+        magic, version, page_size, _, salt1, salt2, checksum1, checksum2 = struct.unpack('>8I', header)
+        if magic not in (0x377f0682, 0x377f0683) or version != 3007000 or page_size < 512 or page_size > 65536 or page_size & (page_size - 1):
+            raise SnapshotError('invalid source WAL header')
+        order = '<' if magic == 0x377f0682 else '>'
+        def checksum(data, s1=0, s2=0):
+            words = struct.unpack(order + str(len(data) // 4) + 'I', data)
+            for i in range(0, len(words), 2):
+                s1 = (s1 + words[i] + s2) & 0xffffffff
+                s2 = (s2 + words[i + 1] + s1) & 0xffffffff
+            return s1, s2
+        if checksum(header[:24]) != (checksum1, checksum2):
+            raise SnapshotError('source WAL header checksum mismatch')
+        max_frame = None
+        index_checksum = None
+        index_pages = None
+        if coordination.exists():
+            with coordination.open('rb') as index:
+                evidence = index.read(96)
+            if len(evidence) < 96 or evidence[:48] != evidence[48:96]:
+                raise SnapshotError('inconsistent source WAL index')
+            index_header = evidence[:48]
+            if (struct.unpack_from('=I', index_header, 0)[0] != 3007000 or index_header[12] != 1 or
+                index_header[13] != (magic & 1) or
+                struct.unpack_from('=H', index_header, 14)[0] != (1 if page_size == 65536 else page_size) or
+                index_header[32:40] != header[16:24]):
+                raise SnapshotError('source WAL index identity mismatch')
+            native_order = '<' if struct.pack('=I', 1)[0] == 1 else '>'
+            original_order = order
+            order = native_order
+            index_sum = checksum(index_header[:40])
+            order = original_order
+            if index_sum != struct.unpack_from('=2I', index_header, 40):
+                raise SnapshotError('source WAL index checksum mismatch')
+            max_frame = struct.unpack_from('=I', index_header, 16)[0]
+            index_pages = struct.unpack_from('=I', index_header, 20)[0]
+            index_checksum = struct.unpack_from('=2I', index_header, 24)
+        current = (checksum1, checksum2)
+        count = 0
+        commit_size = 0
+        while frame := stream.read(24):
+            if max_frame is not None and count == max_frame:
+                while frame:
+                    if len(frame) != 24 or len(stream.read(page_size)) != page_size:
+                        raise SnapshotError('incomplete source WAL frame')
+                    if struct.unpack_from('>2I', frame, 8) == (salt1, salt2):
+                        raise SnapshotError('source WAL contains unindexed frames')
+                    frame = stream.read(24)
+                break
+            if len(frame) != 24:
+                raise SnapshotError('incomplete source WAL frame')
+            page_number, commit_size, frame_salt1, frame_salt2, c1, c2 = struct.unpack('>6I', frame)
+            page = stream.read(page_size)
+            if len(page) != page_size:
+                raise SnapshotError('incomplete source WAL frame')
+            if not page_number or (frame_salt1, frame_salt2) != (salt1, salt2):
+                raise SnapshotError('source WAL frame identity mismatch')
+            current = checksum(frame[:8] + page, *current)
+            if current != (c1, c2):
+                raise SnapshotError('source WAL frame checksum mismatch')
+            count += 1
+        if max_frame is not None and (count != max_frame or (count and (not commit_size or commit_size != index_pages or current != index_checksum))):
+            raise SnapshotError('source WAL index does not prove committed frames')
+
+
 def _backup(source, target):
-    deadline = time.monotonic() + 10
-    def progress(status, remaining, total):
-        if time.monotonic() > deadline:
-            raise SnapshotError('database writers prevented a bounded backup')
-    with closing(_db(source)) as src, closing(sqlite3.connect(target)) as dst:
-        src.backup(dst, pages=256, progress=progress, sleep=0.05)
-        dst.execute('PRAGMA journal_mode=DELETE')
+    with tempfile.TemporaryDirectory(prefix='.io-sqlite-', dir=target.parent) as temp:
+        private = Path(temp)
+        before = _source_files(source)
+        copied = _source_files(source, private)
+        after = _source_files(source)
+        if before != copied or before != after:
+            raise SnapshotError('source changed during snapshot; retry after writers pause')
+        _validate_wal(private / 'source.sqlite-wal', private / 'coordination.evidence')
+        deadline = time.monotonic() + 10
+        def progress(status, remaining, total):
+            if time.monotonic() > deadline:
+                raise SnapshotError('database writers prevented a bounded backup')
+        with closing(sqlite3.connect(private / 'source.sqlite')) as src, closing(sqlite3.connect(target)) as dst:
+            src.backup(dst, pages=256, progress=progress, sleep=0.05)
+            dst.execute('PRAGMA journal_mode=DELETE')
+        return before
 
 
 def _database(path):
@@ -618,7 +754,7 @@ def snapshot(database, roots, destination, *, image_aliases=None):
     with tempfile.TemporaryDirectory(prefix='.io-snapshot-', dir=destination.parent) as temp:
         stage = Path(temp)
         first = {name: _inventory(path) for name, path in roots.items()}
-        _backup(database, stage / 'database.sqlite')
+        source_before = _backup(database, stage / 'database.sqlite')
         evidence = _database(stage / 'database.sqlite')
         if evidence['schema_version'] != '41':
             version = evidence['schema_version']
@@ -632,8 +768,8 @@ def snapshot(database, roots, destination, *, image_aliases=None):
         copied_dirs = _asset_dirs(stage, storage)
         copied = {name: _inventory(copied_dirs[name]) for name in roots}
         second = {name: _inventory(path) for name, path in roots.items()}
-        _backup(database, stage / 'check.sqlite')
-        if first != copied or first != second or evidence != _database(stage / 'check.sqlite'):
+        source_after = _backup(database, stage / 'check.sqlite')
+        if first != copied or first != second or source_before != source_after or evidence != _database(stage / 'check.sqlite'):
             raise SnapshotError('source changed during snapshot; retry after writers pause')
         (stage / 'check.sqlite').unlink()
         manifest = {'format': 4, 'database_sha256': _hash(stage / 'database.sqlite'), 'database': evidence, 'assets': first, 'remote_reference_counts': references, 'source_roots': root_bindings, 'asset_bindings': bindings, 'reference_coverage': _coverage(stage / 'database.sqlite'), 'asset_storage': storage, 'image_aliases': image_aliases}
