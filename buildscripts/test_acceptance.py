@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import plistlib
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -7,6 +9,40 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+class AcceptanceBuildPreservationTests(unittest.TestCase):
+    def test_preserves_generated_file_on_success_and_failure(self):
+        for original in (None, b"synthetic existing generated source\n"):
+            for status in (0, 23):
+                with self.subTest(original_exists=original is not None, status=status), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (root / "buildscripts").mkdir()
+                    shutil.copy(ROOT / "buildscripts/acceptance.sh", root / "buildscripts/acceptance.sh")
+                    secret = root / "Modules/Secrets/Sources/Secrets/SecretKey.swift"
+                    secret.parent.mkdir(parents=True)
+                    if original is not None:
+                        secret.write_bytes(original)
+                        secret.chmod(0o600)
+                    binary = root / "bin"
+                    binary.mkdir()
+                    command = binary / "xcodebuild"
+                    command.write_text("#!/bin/bash\nset -eu\n"
+                                       "test -z \"${FEEDLY_CLIENT_SECRET+x}\"\n"
+                                       "printf 'synthetic newly generated source' > \"$FIXTURE_GENERATED_FILE\"\n"
+                                       "exit \"$FIXTURE_BUILD_STATUS\"\n")
+                    command.chmod(0o700)
+                    environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"],
+                                       FEEDLY_CLIENT_SECRET="synthetic-test-value", FIXTURE_GENERATED_FILE=str(secret),
+                                       FIXTURE_BUILD_STATUS=str(status))
+                    result = subprocess.run(["/bin/bash", str(root / "buildscripts/acceptance.sh"), "build"],
+                                            env=environment, capture_output=True)
+                    self.assertEqual(result.returncode, status, result.stderr)
+                    if original is None:
+                        self.assertFalse(secret.exists())
+                    else:
+                        self.assertEqual(secret.read_bytes(), original)
+                        self.assertEqual(secret.stat().st_mode & 0o777, 0o600)
 
 
 class AcceptanceVerificationTests(unittest.TestCase):
