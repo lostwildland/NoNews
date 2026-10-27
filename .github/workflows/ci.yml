@@ -62,6 +62,7 @@ jobs:
             -xcconfig .github/macos-ci-signing.xcconfig \
             -destination "platform=macOS,arch=arm64" \
             -resultBundlePath "$result_bundle" \
+            CI_SOURCE_ROOT="$GITHUB_WORKSPACE" \
             test 2>&1 | tee "$build_log" | xcbeautify --renderer github-actions
 
           ./buildscripts/fail_on_warnings.sh "$build_log"
