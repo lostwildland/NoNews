@@ -16,7 +16,7 @@ The native app starts and stops a private IO processing component and shows its 
 
 ## Blocked by
 
-- https://github.com/lostwildland/NoNews/issues/2
+None (can start immediately). T00 build tooling is independent; coordinate the shared build resource and apply its acceptance profile for final native verification.
 
 ## Delivery contract
 

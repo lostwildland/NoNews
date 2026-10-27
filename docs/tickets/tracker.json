@@ -26,9 +26,8 @@
       "title": "App-managed IO engine with native health and shutdown",
       "status": "open",
       "native_parent": true,
-      "native_blockers": [
-        "00"
-      ]
+      "native_blockers": [],
+      "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately."
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",

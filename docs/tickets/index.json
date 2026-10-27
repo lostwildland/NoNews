@@ -39,9 +39,7 @@
   {
     "key": "02",
     "title": "App-managed IO engine with native health and shutdown",
-    "blocked_by": [
-      "00"
-    ],
+    "blocked_by": [],
     "capabilities": [
       "A1",
       "F6"

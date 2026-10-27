@@ -16,3 +16,5 @@
 
 - T00 and T01 were dispatched in isolated Terra high worktrees; initial delegation IDs recorded. T01 returned incomplete investigation only, so its ticket remains open and is being continued by the same owner.
 - Added source-backed native configuration catalog and made prompt history/restore and placeholder validation explicit T03 acceptance.
+
+- Recovery read confirmed T00 still running with no pending user question; changed files are isolated acceptance build tooling. T02 has no genuine code/API dependency on that tooling, so removed the speculative blocker and prepared independent engine implementation. Shared heavy-build resource remains serialized.
