@@ -1,0 +1,10 @@
+// CI uses an isolated, ad-hoc signed app so the bundled interpreter can inherit its sandbox.
+CODE_SIGNING_ALLOWED = YES
+CODE_SIGNING_REQUIRED = NO
+CODE_SIGN_IDENTITY = -
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_ENTITLEMENTS = $(SRCROOT)/buildscripts/acceptance.entitlements
+ORGANIZATION_IDENTIFIER = org.nonews.ci
+DEVELOPMENT_TEAM =
+PROVISIONING_PROFILE_SPECIFIER =
+EXCLUDED_SOURCE_FILE_NAMES = $(inherited) *.applescript
