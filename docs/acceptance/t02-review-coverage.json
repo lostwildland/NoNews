@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "19bce6b82f0426946424002c0c2d19c3bfa2d295",
-  "state": "Native10path scopes complete0/0atidenticalblobs. Parserfix26071ee passes46tests1optionalSkip;freshjobs/canonicaldatabase/currentpackaging/crossgroupreview and currentbundlevisual/remoteCIremainpending.",
+  "candidate": "3c9c2e79559d559d3689f9c27eaa5bfe67a08ee6",
+  "state": "Native scopes remain complete at unchanged blobs. Shared schema/helper correction and cached parser performance await fresh two-axis review. Current packaging deltas, cross-group review, installed bundle and visible UI remain open.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -77,18 +77,18 @@
     {
       "path": "ManagedEngine/JOBS-IPC.md",
       "group": "jobs",
-      "blob": "0806155e1996f0fd8c908b18eb309e9c132b9f0a",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
-      "previous_blob": "f597b35aae3a5311b9095b9a86a0bc6a9144b1f2"
+      "blob": "9668f55781c3dc5f2c9835cce6c16ba183bf3916",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "0806155e1996f0fd8c908b18eb309e9c132b9f0a"
     },
     {
       "path": "ManagedEngine/PROVENANCE.md",
       "group": "packaging",
-      "blob": "553e61c5a8b14f2cafc492a5543450e1c377ac5c",
-      "standards": "pending transaction correction assessment at19bce6b",
-      "spec": "pending transaction correction assessment at19bce6b",
-      "previous_blob": "8963d3109d4bf6f429fbab8ba0da5a22c46bdc0e"
+      "blob": "a1c46e04f0b84d7ff36cade0dd8c804079f7e1a4",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "553e61c5a8b14f2cafc492a5543450e1c377ac5c"
     },
     {
       "path": "ManagedEngine/assemble_payload.py",
@@ -152,10 +152,10 @@
     {
       "path": "ManagedEngine/backend/job_stream.py",
       "group": "jobs",
-      "blob": "e45b6477009ad5fb7223bd0f59875c4bbc154472",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
-      "previous_blob": "0cc055f851c0b1c1485ce97d0dbf2ff11444c5a4"
+      "blob": "e7220ba9a6a0b528e65e2af77b3c246b3b11fc98",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "e45b6477009ad5fb7223bd0f59875c4bbc154472"
     },
     {
       "path": "ManagedEngine/backend/jobs.py",
@@ -265,9 +265,10 @@
     {
       "path": "ManagedEngine/backend/schema_semantics.py",
       "group": "database",
-      "blob": "798ada1ec18132b2bed453e3304dbc288165c77f",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "blob": "8ad3e9e0f18f2c375518cb3db475fbd463958990",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "798ada1ec18132b2bed453e3304dbc288165c77f"
     },
     {
       "path": "ManagedEngine/backend/server.py",
@@ -336,16 +337,18 @@
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
       "group": "native",
-      "blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "blob": "e329864ab15828a32e2556ee2d1793abd2d7213b",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697"
     },
     {
       "path": "ManagedEngine/tests/make_large_fixture.py",
       "group": "jobs",
-      "blob": "9910428df4d27e4bd40f400aae2c394e0d01d5e0",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion"
+      "blob": "5226d16d713f7d65045964728ea1ac883dfad8d6",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "9910428df4d27e4bd40f400aae2c394e0d01d5e0"
     },
     {
       "path": "ManagedEngine/tests/native_fixture.py",
@@ -387,18 +390,18 @@
     {
       "path": "ManagedEngine/tests/test_jobs_paging.py",
       "group": "jobs",
-      "blob": "b54e7adc5768908b80bb98e1527c595b0d7ccf2e",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
-      "previous_blob": "0b1f1f8506f1532fe500386ee23ea552a9358429"
+      "blob": "6adabab7338e0416df2b9702c75ab18fa266a673",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "b54e7adc5768908b80bb98e1527c595b0d7ccf2e"
     },
     {
       "path": "ManagedEngine/tests/test_large_snapshot.py",
       "group": "jobs",
-      "blob": "d455d237ef92728d3c36d498fa702cac8d9b33bb",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "previous_blob": "4e6835ced71fea31af070ef2a0247e5cacf03c5c"
+      "blob": "eb0c6485c60703780292ef010434a0725e1c1cf3",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "d455d237ef92728d3c36d498fa702cac8d9b33bb"
     },
     {
       "path": "ManagedEngine/tests/test_packaged_service.py",
@@ -431,9 +434,10 @@
     {
       "path": "ManagedEngine/tests/test_startup_status.py",
       "group": "database",
-      "blob": "529b5665ce2790d1f480146ec6d045d1bbc3e1f6",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "blob": "536956f005a4438aa4f61aaed2b3d8b977d1bab2",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "529b5665ce2790d1f480146ec6d045d1bbc3e1f6"
     },
     {
       "path": "ManagedEngine/tests/test_stdio.py",
@@ -467,9 +471,10 @@
     {
       "path": "buildscripts/acceptance.sh",
       "group": "packaging",
-      "blob": "cbf6a9fcb5cff467d3f91eaa6aeba038644856c9",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "blob": "f049ee10db861766fc02381def35ee1aef6f3e06",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "cbf6a9fcb5cff467d3f91eaa6aeba038644856c9"
     },
     {
       "path": "buildscripts/embed-processing-engine.sh",
@@ -488,9 +493,10 @@
     {
       "path": "buildscripts/test_acceptance.py",
       "group": "packaging",
-      "blob": "c1a1ce87de931e8180b1bdfd270c6404c57e511c",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "blob": "3b0557ec904c2c30fd0e6243f352353a09031d40",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "c1a1ce87de931e8180b1bdfd270c6404c57e511c"
     },
     {
       "path": "buildscripts/verify_acceptance.py",
@@ -510,10 +516,10 @@
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "68fc1c2476bb02ea22ae9dcb13c6ddae2647a1c4",
-      "standards": "pending transaction correction assessment at19bce6b",
-      "spec": "pending transaction correction assessment at19bce6b",
-      "previous_blob": "165ba352b5d2191c89c1518b22548e6d07d1cd86"
+      "blob": "abf36f45a8d56a7183fbf02b10ccebd6889d67d2",
+      "standards": "pending current blob review",
+      "spec": "pending current blob review",
+      "previous_blob": "68fc1c2476bb02ea22ae9dcb13c6ddae2647a1c4"
     }
   ],
   "scope_reviews": {
