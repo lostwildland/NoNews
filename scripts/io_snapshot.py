@@ -304,9 +304,31 @@ def _database(path):
             version = db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone()
         except sqlite3.Error:
             version = None
+        if version and str(version[0]) == '41':
+            _schema41(db)
         return {'schema_sha256': schema_hash, 'tables': tables, 'schema_version': version[0] if version else None,
                 'user_version': db.execute('PRAGMA user_version').fetchone()[0],
                 'application_id': db.execute('PRAGMA application_id').fetchone()[0]}
+
+
+def _schema41(db):
+    try:
+        descriptor = (Path(__file__).parent / 'io_schema41.json').read_bytes()
+        if hashlib.sha256(descriptor).hexdigest() != 'b305db3c43167c5734963b1b99a53e3e842413a0ebf25226db7ca729307f2659':
+            raise SnapshotError('required schema descriptor is invalid')
+        required = json.loads(descriptor)
+    except (OSError, ValueError) as exc:
+        raise SnapshotError('required schema descriptor is unavailable') from exc
+    tables = {row[0].casefold(): row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    for name, columns in required.items():
+        actual = tables.get(name.casefold())
+        if actual is None:
+            raise SnapshotError('required schema table missing: ' + name)
+        quoted = '"' + actual.replace('"', '""') + '"'
+        present = {row[1].casefold() for row in db.execute(f'PRAGMA table_xinfo({quoted})')}
+        missing = sorted(c for c in columns if c.casefold() not in present)
+        if missing:
+            raise SnapshotError('required schema column missing: ' + name + '.' + missing[0])
 
 
 def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):

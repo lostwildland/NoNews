@@ -15,6 +15,120 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    @staticmethod
+    def init_schema(db):
+        db.executescript((Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text())
+        db.execute("INSERT INTO schema_meta (key,value) VALUES ('schema_version','41')")
+        db.executemany("INSERT INTO items (id,media_type,first_ingested_at,review_date,created_at,updated_at) VALUES (?,'paper','now','now','now','now')", [('item',), ('other',), ('retired',), ('wrong',)])
+
+    @staticmethod
+    def add_raw(db, item='item', path=''):
+        db.execute("INSERT INTO raw_snapshots (id,item_id,path,source_hash,retrieved_at,created_at) VALUES (1,?,?, 'synthetic-source','now','now')", (item, path))
+
+    @staticmethod
+    def add_body(db, text, authority):
+        db.execute("INSERT INTO body_versions (snapshot_id,item_id,sha256,characters,authority,source,retrieved_at,stored_at) VALUES (1,'item',?,?,?,'synthetic','now','now')", (hashlib.sha256(text.encode()).hexdigest(), len(text), authority))
+        db.execute('INSERT INTO body_texts (snapshot_id,text) VALUES (1,?)', (text,))
+
+    @staticmethod
+    def add_file_authority(db, item='item'):
+        db.execute("INSERT INTO literature_files (item_id,citekey,status,source,conditional_writer,enabled_at,updated_at) VALUES (?,'key','active','synthetic','writer','now','now')", (item,))
+
+    def test_schema41_requires_complete_tables_and_columns(self):
+        fixture = (Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text()
+        for defect in ('marker-only', 'missing-table', 'missing-column'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = root / 'vault'
+                vault.mkdir()
+                with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                    if defect == 'marker-only':
+                        db.execute('CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+                    else:
+                        db.executescript(fixture)
+                        if defect == 'missing-table':
+                            db.execute('DROP TABLE app_settings')
+                        else:
+                            db.execute('ALTER TABLE app_settings DROP COLUMN updated_at')
+                    db.execute("INSERT INTO schema_meta (key,value) VALUES ('schema_version','41')")
+                message = {'marker-only': 'required schema table missing: activity',
+                           'missing-table': 'required schema table missing: app_settings',
+                           'missing-column': 'required schema column missing: app_settings.updated_at'}[defect]
+                with self.assertRaisesRegex(SnapshotError, message):
+                    snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                self.assertFalse((root / 'snap').exists())
+
+    def test_verify_rejects_missing_required_schema_even_with_valid_marker(self):
+        fixture = (Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text()
+        for sql, message in (('DROP TABLE app_settings', 'required schema table missing: app_settings'),
+                             ('ALTER TABLE app_settings DROP COLUMN updated_at', 'required schema column missing: app_settings.updated_at')):
+            with self.subTest(defect=sql), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                vault = root / 'vault'
+                vault.mkdir()
+                with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                    db.executescript(fixture)
+                    db.execute("INSERT INTO schema_meta (key,value) VALUES ('schema_version','41')")
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                with closing(sqlite3.connect(root / 'snap/database.sqlite')) as db, db:
+                    db.execute(sql)
+                manifest_file = root / 'snap/manifest.json'
+                manifest = json.loads(manifest_file.read_text())
+                manifest['database_sha256'] = hashlib.sha256((root / 'snap/database.sqlite').read_bytes()).hexdigest()
+                manifest_file.write_text(json.dumps(manifest))
+                with self.assertRaisesRegex(SnapshotError, message):
+                    verify(root / 'snap')
+
+    def test_schema_descriptor_matches_fixture_and_column_order_is_irrelevant(self):
+        fixture = (Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text()
+        descriptor = json.loads((Path(__file__).parents[1] / 'scripts/io_schema41.json').read_text())
+        with closing(sqlite3.connect(':memory:')) as db:
+            db.executescript(fixture)
+            expected = {name: sorted(row[1] for row in db.execute('PRAGMA table_info("' + name.replace('"', '""') + '")'))
+                        for name, in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()}
+            self.assertEqual(descriptor, expected)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('DROP TABLE app_settings')
+                db.execute('CREATE TABLE app_settings (updated_at TEXT NOT NULL, value TEXT NOT NULL, key TEXT PRIMARY KEY, extra TEXT)')
+                db.execute("INSERT INTO app_settings (key,value,updated_at,extra) VALUES ('key','synthetic','now','extra')")
+                db.execute('CREATE TABLE "future table" (id TEXT, value BLOB)')
+                db.execute("INSERT INTO \"future table\" VALUES ('new',X'00FF')")
+            snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            verify(root / 'snap')
+            restore(root / 'snap', root / 'out')
+            with closing(sqlite3.connect(root / 'out/database.sqlite')) as db:
+                self.assertEqual(db.execute('SELECT key,value,extra FROM app_settings').fetchall(), [('key','synthetic','extra')])
+                self.assertEqual(db.execute('SELECT id,value FROM "future table"').fetchall(), [('new',b'\x00\xff')])
+
+    def test_cli_refuses_when_shipped_schema_descriptor_is_missing(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            snapshot(root / 'source.sqlite', {'vault': vault}, root / 'valid')
+            source_scripts = Path(__file__).parents[1] / 'scripts'
+            isolated = root / 'isolated'
+            isolated.mkdir()
+            for name in ('io_snapshot.py', 'io_image_inventory.py'):
+                shutil.copyfile(source_scripts / name, isolated / name)
+            shutil.copytree(source_scripts / '_snapshot_vendor', isolated / '_snapshot_vendor', ignore=shutil.ignore_patterns('__pycache__'))
+            result = subprocess.run([sys.executable, str(isolated / 'io_snapshot.py'), 'snapshot', str(root / 'source.sqlite'), str(root / 'snap'), '--root', f'vault={vault}'], cwd=isolated, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('required schema descriptor is unavailable', result.stdout)
+            self.assertNotIn('Traceback', result.stderr)
+            self.assertFalse((root / 'snap').exists())
+            verified = subprocess.run([sys.executable, str(isolated / 'io_snapshot.py'), 'verify', str(root / 'valid')], cwd=isolated, capture_output=True, text=True)
+            self.assertNotEqual(verified.returncode, 0)
+            self.assertIn('required schema descriptor is unavailable', verified.stdout)
+            (isolated / 'io_schema41.json').write_text('{}')
+            result = subprocess.run([sys.executable, str(isolated / 'io_snapshot.py'), 'snapshot', str(root / 'source.sqlite'), str(root / 'snap'), '--root', f'vault={vault}'], cwd=isolated, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('required schema descriptor is invalid', result.stdout)
+            self.assertFalse((root / 'snap').exists())
+
     def test_corrupt_deflate_is_refused_without_a_cli_traceback(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -22,8 +136,7 @@ class SnapshotTests(unittest.TestCase):
             archive = vault / 'source.html.gz'
             archive.write_bytes(b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x07' + b'\x00' * 8)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE literature_assets (id INTEGER, source_path TEXT, archive_path TEXT, file_hash TEXT, metadata_json TEXT)')
-                db.execute('INSERT INTO literature_assets VALUES (1,?,?,?,?)', ('historical', str(archive), '0' * 64, '{}'))
+                db.execute("INSERT INTO literature_assets (id,item_id,kind,source_path,archive_path,file_hash,metadata_json) VALUES (1,'item','publisher_html',?,?,?,?)", ('historical', str(archive), '0' * 64, '{}'))
             with self.assertRaisesRegex(SnapshotError, 'invalid compressed source'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
@@ -39,10 +152,9 @@ class SnapshotTests(unittest.TestCase):
             root = Path(tmp)
             vault = self.make_simple(root)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('CREATE TABLE raw_snapshots (id INTEGER, item_id TEXT, path TEXT); CREATE TABLE body_versions (snapshot_id INTEGER, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER, text TEXT);')
-                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item', str(vault / 'body')))
-                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(b'synthetic').hexdigest(), 'imported'))
-                db.execute("INSERT INTO body_texts VALUES (1,'synthetic')")
+                self.add_raw(db, path=str(vault / 'body'))
+                self.add_body(db, 'synthetic', 'imported')
+                self.add_file_authority(db)
             with self.assertRaisesRegex(SnapshotError, 'imported raw.*authoritative file'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             self.assertFalse((root / 'snap').exists())
@@ -60,7 +172,8 @@ class SnapshotTests(unittest.TestCase):
                 try:
                     writer.execute('PRAGMA journal_mode=WAL')
                     writer.execute('PRAGMA wal_autocheckpoint=0')
-                    writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(id TEXT PRIMARY KEY, payload BLOB); INSERT INTO future_table VALUES ('wal-row',X'0001FF');")
+                    self.init_schema(writer)
+                    writer.executescript("CREATE TABLE future_table(id TEXT PRIMARY KEY, payload BLOB); INSERT INTO future_table VALUES ('wal-row',X'0001FF');")
                     source = root / 'source'
                     source.mkdir()
                     shutil.copyfile(writer_dir / 'live.sqlite', source / 'data.sqlite')
@@ -91,7 +204,8 @@ class SnapshotTests(unittest.TestCase):
             try:
                 writer.execute('PRAGMA journal_mode=WAL')
                 writer.execute('PRAGMA wal_autocheckpoint=0')
-                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(id TEXT PRIMARY KEY); INSERT INTO future_table VALUES ('synthetic');")
+                self.init_schema(writer)
+                writer.executescript("CREATE TABLE future_table(id TEXT PRIMARY KEY); INSERT INTO future_table VALUES ('synthetic');")
                 def state():
                     return {p.name: (hashlib.sha256(p.read_bytes()).hexdigest(), p.stat().st_mode & 0o777) for p in source.iterdir()}
                 before = state()
@@ -113,7 +227,8 @@ class SnapshotTests(unittest.TestCase):
             try:
                 writer.execute('PRAGMA journal_mode=WAL')
                 writer.execute('PRAGMA wal_autocheckpoint=0')
-                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO schema_meta VALUES ('schema_version','41'); CREATE TABLE future_table(value BLOB);")
+                self.init_schema(writer)
+                writer.executescript('CREATE TABLE future_table(value BLOB);')
                 for _ in range(10):
                     writer.execute('INSERT INTO future_table VALUES (?)', (b'x' * 8000,))
                     writer.commit()
@@ -141,7 +256,8 @@ class SnapshotTests(unittest.TestCase):
             try:
                 writer.execute('PRAGMA journal_mode=WAL')
                 writer.execute('PRAGMA wal_autocheckpoint=0')
-                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO schema_meta VALUES ('schema_version','41');")
+                self.init_schema(writer)
+                writer.commit()
                 for suffix in ('', '-wal', '-shm'):
                     shutil.copyfile(root / ('live.sqlite' + suffix), root / ('copy.sqlite' + suffix))
                 index = root / 'copy.sqlite-shm'
@@ -202,7 +318,8 @@ class SnapshotTests(unittest.TestCase):
             try:
                 writer.execute('PRAGMA journal_mode=WAL')
                 writer.execute('PRAGMA wal_autocheckpoint=0')
-                writer.executescript("CREATE TABLE schema_meta(key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41');")
+                self.init_schema(writer)
+                writer.commit()
                 shutil.copyfile(root / 'live.sqlite', root / 'copy.sqlite')
                 shutil.copyfile(root / 'live.sqlite-wal', root / 'copy.sqlite-wal')
                 wal = root / 'copy.sqlite-wal'
@@ -226,10 +343,9 @@ class SnapshotTests(unittest.TestCase):
             vault = self.make_simple(root)
             text = 'Synthetic imported draft'
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('CREATE TABLE editor_drafts (id TEXT, item_id TEXT); CREATE TABLE draft_versions (draft_id TEXT, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE draft_bodies (draft_id TEXT, text TEXT);')
-                db.execute('INSERT INTO editor_drafts VALUES (?,?)', ('draft', 'item'))
-                db.execute('INSERT INTO draft_versions VALUES (?,?,?,?,NULL)', ('draft', 'item', hashlib.sha256(text.encode()).hexdigest(), 'imported'))
-                db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft', text))
+                db.execute("INSERT INTO editor_drafts (id,item_id,created_at) VALUES ('draft','item','now')")
+                db.execute("INSERT INTO draft_versions (draft_id,item_id,sha256,characters,authority,stored_at) VALUES ('draft','item',?,?,'imported','now')", (hashlib.sha256(text.encode()).hexdigest(),len(text)))
+                db.execute('INSERT INTO draft_bodies (draft_id,text) VALUES (?,?)', ('draft', text))
             with self.assertRaisesRegex(SnapshotError, 'imported draft.*authoritative file'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
             self.assertFalse((root / 'missing').exists())
@@ -249,16 +365,14 @@ class SnapshotTests(unittest.TestCase):
                 payload = b'synthetic managed image'
                 digest = hashlib.sha256(payload).hexdigest()
                 with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                    db.execute('CREATE TABLE media_objects (key TEXT PRIMARY KEY, namespace TEXT, stored_sha256 TEXT, bytes INTEGER, public_url TEXT, deleted_at TEXT)')
-                    db.execute('INSERT INTO media_objects VALUES (?,?,?,?,?,NULL)', ('object', 'test', digest, len(payload), 'https://example.invalid/object'))
-                    db.execute('CREATE TABLE media_upload_intents (object_key TEXT, payload BLOB)')
+                    db.execute("INSERT INTO media_objects (key,namespace,sha256,stored_sha256,ext,bytes,public_url,created_at) VALUES ('object','test',?,?,'png',?,'https://example.invalid/object','now')", (digest,digest,len(payload)))
                 with self.assertRaisesRegex(SnapshotError, 'managed object.*preserved bytes'):
                     snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
                 if storage == 'file':
                     (vault / 'object.png').write_bytes(b'wrong image bytes')
                 else:
                     with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                        db.execute('INSERT INTO media_upload_intents VALUES (?,?)', ('object', b'wrong image bytes'))
+                        db.execute("INSERT INTO media_upload_intents (object_key,owner_kind,owner_id,source_ref,object_json,payload,created_at) VALUES ('object','item','item','image','{}',?,'now')", (b'wrong image bytes',))
                 with self.assertRaisesRegex(SnapshotError, 'managed object.*preserved bytes'):
                     snapshot(root / 'source.sqlite', {'vault': vault}, root / 'changed')
                 if storage == 'file':
@@ -291,11 +405,10 @@ class SnapshotTests(unittest.TestCase):
             (raw / 'body.md').write_text(body)
             (shared / 'approved.png').write_bytes(image)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT, path TEXT); CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, citekey TEXT, path TEXT, file_sha256 TEXT, bound_at TEXT); CREATE TABLE body_versions (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER PRIMARY KEY, text TEXT);')
-                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
-                db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
-                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(body.encode()).hexdigest(), 'imported'))
-                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
+                self.add_raw(db)
+                db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
+                self.add_file_authority(db)
+                self.add_body(db, body, 'imported')
             alias = {'target':'images/legacy.png', 'occurrence_index':0, 'document_source_hash':hashlib.sha256(body.encode()).hexdigest(), 'shared_relative_path':'raw/images/approved.png', 'expected_source_sha256':hashlib.sha256(image).hexdigest(), 'owner_evidence':'synthetic review', 'owner_document_relative_path':'raw/paper/body.md'}
             with self.assertRaisesRegex(SnapshotError, 'alias'):
                 snapshot(root / 'source.sqlite', {'vault':vault, 'paper_images':reader}, root / 'missing')
@@ -347,11 +460,10 @@ class SnapshotTests(unittest.TestCase):
             for name in ('ref.png', 'embed.png', 'main.png', 'small.png', 'large.png'):
                 (raw / 'images' / name).write_bytes(b'\x89PNG\r\n\x1a\n' + ('synthetic-' + name).encode())
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT, path TEXT); CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, citekey TEXT, path TEXT, file_sha256 TEXT, bound_at TEXT); CREATE TABLE body_versions (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER PRIMARY KEY, text TEXT);')
-                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
-                db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
-                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(body.encode()).hexdigest(), 'imported'))
-                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
+                self.add_raw(db)
+                db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1,?,?,?,?,?)', ('item','key','raw/paper/body.md',hashlib.sha256(body.encode()).hexdigest(),'now'))
+                self.add_file_authority(db)
+                self.add_body(db, body, 'imported')
             snapshot(root / 'source.sqlite', {'vault': vault, 'paper_images': raw / 'images'}, root / 'snap')
             restore(root / 'snap', root / 'out')
             os.rename(vault, root / 'old-vault')
@@ -369,9 +481,8 @@ class SnapshotTests(unittest.TestCase):
             (archive / 'source.html.gz').write_bytes(gzip.compress(body))
             (archive / 'figure.png').write_bytes(image)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE literature_assets (id INTEGER PRIMARY KEY, source_path TEXT, archive_path TEXT, file_hash TEXT, metadata_json TEXT)')
                 metadata = {'local_images': [{'archive_path': str(archive / 'figure.png'), 'file_hash': hashlib.sha256(image).hexdigest()}]}
-                db.execute('INSERT INTO literature_assets VALUES (1,?,?,?,?)', ('old', str(archive / 'source.html.gz'), hashlib.sha256(body).hexdigest(), json.dumps(metadata)))
+                db.execute("INSERT INTO literature_assets (id,item_id,kind,source_path,archive_path,file_hash,metadata_json) VALUES (1,'item','publisher_html',?,?,?,?)", ('old', str(archive / 'source.html.gz'), hashlib.sha256(body).hexdigest(), json.dumps(metadata)))
             snapshot(root / 'source.sqlite', {'vault': vault, 'archive': archive}, root / 'snap')
             (archive / 'figure.png').write_bytes(b'changed')
             with self.assertRaisesRegex(SnapshotError, 'hash mismatch'):
@@ -406,8 +517,7 @@ class SnapshotTests(unittest.TestCase):
             staging = root / 'staging'
             staging.mkdir()
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE media_raw_activation_intents (id TEXT PRIMARY KEY, state TEXT, quarantine_path TEXT, candidate_hash TEXT, preimage_json TEXT)')
-                db.execute('INSERT INTO media_raw_activation_intents VALUES (?,?,?,?,?)', ('intent', 'prepared', str(staging / 'reserved.md'), 'a' * 64, None))
+                db.execute("INSERT INTO media_raw_activation_intents (id,item_id,old_mapping_json,old_authority_json,citekey,candidate_hash,state,quarantine_path) VALUES ('intent','item','{}','{}','key',?,'prepared',?)", ('a' * 64, str(staging / 'reserved.md')))
             snapshot(root / 'source.sqlite', {'vault': vault, 'staging': staging}, root / 'snap')
             manifest = json.loads((root / 'snap/manifest.json').read_text())
             reserved = next(x for x in manifest['asset_bindings'] if x['column'] == 'quarantine_path')
@@ -425,11 +535,9 @@ class SnapshotTests(unittest.TestCase):
             (images / 'fig.png').write_bytes(b'\x89PNG\r\n\x1a\nsynthetic')
             body = 'synthetic ![figure](images/fig.png)'
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('CREATE TABLE raw_snapshots(id INTEGER PRIMARY KEY,item_id TEXT,path TEXT); CREATE TABLE body_versions(snapshot_id INTEGER PRIMARY KEY,item_id TEXT,sha256 TEXT,authority TEXT,cleaned_at TEXT); CREATE TABLE body_texts(snapshot_id INTEGER PRIMARY KEY,text TEXT);')
-                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
-                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item',hashlib.sha256(body.encode()).hexdigest(),'database'))
-                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
-            with self.assertRaises(SnapshotError):
+                self.add_raw(db)
+                self.add_body(db, body, 'database')
+            with self.assertRaisesRegex(SnapshotError, 'required asset missing'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
             snapshot(root / 'source.sqlite', {'vault': vault, 'paper_images': images}, root / 'snap')
             restore(root / 'snap', root / 'out')
@@ -442,8 +550,9 @@ class SnapshotTests(unittest.TestCase):
             vault = self.make_simple(root)
             text = 'synthetic ![[figure.png]]'
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE draft_bodies (draft_id TEXT, text TEXT)')
-                db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft', text))
+                db.execute("INSERT INTO editor_drafts (id,item_id,created_at) VALUES ('draft','item','now')")
+                db.execute("INSERT INTO draft_versions (draft_id,item_id,sha256,characters,authority,stored_at) VALUES ('draft','item',?,?,'database','now')", (hashlib.sha256(text.encode()).hexdigest(),len(text)))
+                db.execute('INSERT INTO draft_bodies (draft_id,text) VALUES (?,?)', ('draft', text))
             with self.assertRaisesRegex(SnapshotError, 'image reference has no document root'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
 
@@ -452,8 +561,8 @@ class SnapshotTests(unittest.TestCase):
             root = Path(tmp)
             vault = self.make_simple(root)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE private_raw_sources (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, relative_path TEXT, sha256 TEXT, size_bytes INTEGER)')
-                db.execute('INSERT INTO private_raw_sources VALUES (1,?,?,?,?)', ('item','body',hashlib.sha256(b'synthetic').hexdigest(),9))
+                self.add_raw(db)
+                db.execute('INSERT INTO private_raw_sources (snapshot_id,item_id,relative_path,sha256,size_bytes) VALUES (1,?,?,?,?)', ('item','body',hashlib.sha256(b'synthetic').hexdigest(),9))
             snapshot(root / 'source.sqlite', {'private_raw': vault}, root / 'snap')
             restore(root / 'snap', root / 'out')
             binding = recovery_binding(root / 'out', 'private_raw_sources', 'relative_path', 1)
@@ -484,8 +593,8 @@ class SnapshotTests(unittest.TestCase):
             private.mkdir()
             (private / 'raw').write_bytes(b'raw')
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE private_raw_sources (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, relative_path TEXT, sha256 TEXT, size_bytes INTEGER)')
-                db.execute('INSERT INTO private_raw_sources VALUES (1,?,?,?,?)', ('item','raw',hashlib.sha256(b'raw').hexdigest(),3))
+                self.add_raw(db)
+                db.execute('INSERT INTO private_raw_sources (snapshot_id,item_id,relative_path,sha256,size_bytes) VALUES (1,?,?,?,?)', ('item','raw',hashlib.sha256(b'raw').hexdigest(),3))
             snapshot(root / 'source.sqlite', {'vault': vault, 'private_raw': private}, root / 'snap')
             restore(root / 'snap', root / 'out')
             os.rename(vault, root / 'old-vault')
@@ -504,8 +613,7 @@ class SnapshotTests(unittest.TestCase):
             manifest = json.dumps({'bodies': [{'versionId': 3, 'sha256': hashlib.sha256(body).hexdigest()}], 'drafts': []}).encode()
             (folder / 'manifest.json').write_bytes(manifest)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE literature_cleanup_backups (backup_id TEXT, path TEXT, manifest_sha256 TEXT, body_count INTEGER, draft_count INTEGER)')
-                db.execute('INSERT INTO literature_cleanup_backups VALUES (?,?,?,?,?)', ('backup', str(folder), hashlib.sha256(manifest).hexdigest(), 1, 0))
+                db.execute("INSERT INTO literature_cleanup_backups (backup_id,request_id,item_id,path,manifest_sha256,bytes,body_count,draft_count,verified_at,created_at) VALUES ('backup','request','item',?,?,?,1,0,'now','now')", (str(folder), hashlib.sha256(manifest).hexdigest(),len(body)+len(manifest)))
             snapshot(root / 'source.sqlite', {'vault': vault, 'backups': backups}, root / 'snap')
             (folder / 'body-3.md').write_bytes(b'changed original')
             with self.assertRaisesRegex(SnapshotError, 'hash mismatch'):
@@ -514,7 +622,7 @@ class SnapshotTests(unittest.TestCase):
             os.rename(backups, root / 'old-backups')
             self.assertEqual(read_asset(root / 'out', 'literature_cleanup_backups', 'path.body-3.md', 'backup'), body)
             (root / 'out/assets/backups/batch/body-3.md').write_bytes(b'broken')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'snapshot integrity mismatch'):
                 verify(root / 'out')
 
     def test_document_staging_and_cleanup_tombstone(self):
@@ -527,16 +635,16 @@ class SnapshotTests(unittest.TestCase):
             (staging / 'document').write_bytes(body)
             (staging / 'retired').write_bytes(body)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE media_document_generations (item_id TEXT, generation INTEGER, staging_path TEXT, document_hash TEXT, document_bytes INTEGER, state TEXT, cleanup_state TEXT)')
-                db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('item', 1, str(staging / 'document'), hashlib.sha256(body).hexdigest(), len(body), 'pending', 'pending'))
-                db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('other', 1, str(staging / 'already-cleaned'), 'old-hash', 1, 'committed', 'cleaned'))
-                db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('retired', 1, str(staging / 'retired'), hashlib.sha256(body).hexdigest(), len(body), 'committed', 'reset-retired'))
+                sql = "INSERT INTO media_document_generations (item_id,generation,staging_path,document_hash,document_bytes,state,cleanup_state,staging_device,staging_inode,source_url,metadata_json,provenance_json) VALUES (?,?,?,?,?,?,?,1,1,'','{}','{}')"
+                db.execute(sql, ('item', 1, str(staging / 'document'), hashlib.sha256(body).hexdigest(), len(body), 'pending', 'pending'))
+                db.execute(sql, ('other', 1, str(staging / 'already-cleaned'), 'old-hash', 1, 'committed', 'cleaned'))
+                db.execute(sql, ('retired', 1, str(staging / 'retired'), hashlib.sha256(body).hexdigest(), len(body), 'committed', 'reset-retired'))
             snapshot(root / 'source.sqlite', {'vault': vault, 'staging': staging}, root / 'snap')
             restore(root / 'snap', root / 'out')
             os.rename(staging, root / 'removed-staging')
             self.assertEqual(read_asset(root / 'out', 'media_document_generations', 'staging_path', 1), body)
             self.assertEqual(read_asset(root / 'out', 'media_document_generations', 'staging_path', 3), body)
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'asset reference not uniquely bound'):
                 read_asset(root / 'out', 'media_document_generations', 'staging_path', 2)
 
     def test_unknown_path_and_missing_nested_root_fail_closed(self):
@@ -568,16 +676,12 @@ class SnapshotTests(unittest.TestCase):
             (stage / 'preimage.md').write_bytes(recovery)
             (stage / 'quarantine.md').write_bytes(quarantine)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('''
-                    CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT NOT NULL, path TEXT NOT NULL);
-                    CREATE TABLE media_pending (id INTEGER PRIMARY KEY, staging_path TEXT NOT NULL, payload_sha256 TEXT, payload_bytes INTEGER);
-                    CREATE TABLE media_raw_activation_intents (id TEXT PRIMARY KEY, state TEXT, quarantine_path TEXT, candidate_hash TEXT, preimage_json TEXT);
-                ''')
-                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item', str(archive / 'raw.md')))
-                db.execute('INSERT INTO media_pending VALUES (1,?,?,?)', (str(stage / 'pending.png'), hashlib.sha256(pending).hexdigest(), len(pending)))
+                self.add_raw(db, path=str(archive / 'raw.md'))
+                db.execute("INSERT INTO media_pending (id,owner_kind,owner_id,source_ref,staging_path,payload_sha256,payload_bytes,created_at) VALUES (1,'item','item','image',?,?,?,'now')", (str(stage / 'pending.png'), hashlib.sha256(pending).hexdigest(), len(pending)))
                 preimage = json.dumps({'staging_path': str(stage / 'preimage.md'), 'document_hash': hashlib.sha256(recovery).hexdigest()})
-                db.execute('INSERT INTO media_raw_activation_intents VALUES (?,?,?,?,?)', ('intent', 'prepared', None, '', preimage))
-                db.execute('INSERT INTO media_raw_activation_intents VALUES (?,?,?,?,?)', ('quarantine', 'prepared', str(stage / 'quarantine.md'), hashlib.sha256(quarantine).hexdigest(), None))
+                sql = "INSERT INTO media_raw_activation_intents (id,item_id,old_mapping_json,old_authority_json,citekey,candidate_hash,state,quarantine_path,preimage_json) VALUES (?,'item','{}','{}','key',?,'prepared',?,?)"
+                db.execute(sql, ('intent', '', None, preimage))
+                db.execute(sql, ('quarantine', hashlib.sha256(quarantine).hexdigest(), str(stage / 'quarantine.md'), None))
                 db.execute('CREATE TABLE synthetic_metadata (data_json TEXT)')
                 db.execute('INSERT INTO synthetic_metadata VALUES (?)', (json.dumps({'nested': {'asset_path': str(stage / 'preimage.md')}}),))
             snapshot(root / 'source.sqlite', {'vault': vault, 'archive': archive, 'staging': stage}, root / 'snap')
@@ -598,13 +702,9 @@ class SnapshotTests(unittest.TestCase):
             private.mkdir()
             (private / 'raw').write_bytes(b'private synthetic')
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('''
-                    CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT NOT NULL, path TEXT NOT NULL);
-                    CREATE TABLE private_raw_sources (snapshot_id INTEGER PRIMARY KEY, item_id TEXT NOT NULL, relative_path TEXT NOT NULL, sha256 TEXT NOT NULL, size_bytes INTEGER NOT NULL);
-                    INSERT INTO raw_snapshots VALUES (1,'item','');
-                ''')
-                db.execute('INSERT INTO private_raw_sources VALUES (1,?,?,?,?)', ('item','raw',hashlib.sha256(b'private synthetic').hexdigest(),17))
-            with self.assertRaises(SnapshotError):
+                self.add_raw(db)
+                db.execute('INSERT INTO private_raw_sources (snapshot_id,item_id,relative_path,sha256,size_bytes) VALUES (1,?,?,?,?)', ('item','raw',hashlib.sha256(b'private synthetic').hexdigest(),17))
+            with self.assertRaisesRegex(SnapshotError, 'required asset missing'):
                 snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             snapshot(root / 'source.sqlite', {'vault': vault, 'private_raw': private}, root / 'snap')
             restore(root / 'snap', root / 'out')
@@ -650,9 +750,9 @@ class SnapshotTests(unittest.TestCase):
             with patch('scripts.io_snapshot.os.rename', side_effect=interrupted):
                 with self.assertRaises(OSError):
                     restore(root / 'snap', root / 'out')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'unexpected snapshot contents'):
                 verify(root / 'out')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'destination already exists'):
                 restore(root / 'snap', root / 'out')
             restore(root / 'snap', root / 'new')
             self.assertEqual((root / 'new/assets/vault/body').read_bytes(), b'synthetic')
@@ -688,7 +788,7 @@ class SnapshotTests(unittest.TestCase):
                 calls += 1
                 if calls == 1:
                     with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                        db.execute("INSERT INTO schema_meta VALUES ('synthetic-change','1')")
+                        db.execute("INSERT INTO schema_meta (key,value) VALUES ('synthetic-change','1')")
             with patch('scripts.io_snapshot._backup', side_effect=changing):
                 with self.assertRaisesRegex(SnapshotError, 'source changed'):
                     snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
@@ -708,7 +808,7 @@ class SnapshotTests(unittest.TestCase):
                 if calls == 1:
                     (assets / 'body').write_bytes(b'new version')
                     with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                        db.execute("INSERT INTO schema_meta VALUES ('body-version','new')")
+                        db.execute("INSERT INTO schema_meta (key,value) VALUES ('body-version','new')")
             with patch('scripts.io_snapshot._backup', side_effect=changing):
                 with self.assertRaisesRegex(SnapshotError, 'source changed'):
                     snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
@@ -728,16 +828,16 @@ class SnapshotTests(unittest.TestCase):
             db.executescript((Path(__file__).parent / 'fixtures/io-v41-full.sql').read_text())
             self.assertEqual(db.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone(), (71,))
             db.executescript('''
-                INSERT INTO schema_meta VALUES ('schema_version','41');
+                INSERT INTO schema_meta (key,value) VALUES ('schema_version','41');
                 INSERT INTO items (id, media_type, first_ingested_at, review_date, created_at, updated_at) VALUES ('item','paper','now','now','now','now');
-                INSERT INTO item_identities VALUES (1,'item','paper','doi','synthetic-doi','now');
+                INSERT INTO item_identities (id,item_id,media_type,identity_type,identity_value,created_at) VALUES (1,'item','paper','doi','synthetic-doi','now');
                 INSERT INTO raw_snapshots (id,item_id,path,source_hash,retrieved_at,created_at,provenance) VALUES (1,'item','old-ref','source','now','now','');
                 INSERT INTO editor_drafts (id,item_id,raw_snapshot_id,created_at) VALUES ('draft','item',1,'now');
-                INSERT INTO literature_files VALUES ('item','key','active','synthetic','{}','writer','now','now');
+                INSERT INTO literature_files (item_id,citekey,status,source,evidence_json,conditional_writer,enabled_at,updated_at) VALUES ('item','key','active','synthetic','{}','writer','now','now');
                 INSERT INTO processing_jobs (id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json) VALUES ('job','item','edit','once','pending','now','now','now','{"synthetic":true}');
                 INSERT INTO ai_feed_settings (freshrss_feed_id,last_seen_at,updated_at) VALUES ('feed','now','now');
-                INSERT INTO app_settings VALUES ('setting','synthetic','now');
-                INSERT INTO media_upload_intents VALUES ('object','item','item','image','{}',X'0001FF','now');
+                INSERT INTO app_settings (key,value,updated_at) VALUES ('setting','synthetic','now');
+                INSERT INTO media_upload_intents (object_key,owner_kind,owner_id,source_ref,object_json,payload,created_at) VALUES ('object','item','item','image','{}',X'0001FF','now');
                 INSERT INTO media_receipts (id,owner_kind,owner_id,status,created_at) VALUES (1,'item','item','uploaded','now');
                 INSERT INTO media_raw_activation_intents (id,item_id,old_mapping_json,old_authority_json,citekey,candidate_hash,state) VALUES ('intent','item','{}','{}','key','hash','complete');
                 CREATE TABLE "future table" (identity TEXT, payload BLOB);
@@ -745,12 +845,12 @@ class SnapshotTests(unittest.TestCase):
             ''')
             object_digest = hashlib.sha256(b'\x00\x01\xff').hexdigest()
             db.execute("INSERT INTO media_objects (key,namespace,sha256,stored_sha256,ext,bytes,public_url,created_at) VALUES ('object','test',?,?,'png',3,'https://example.invalid/object','now')", (object_digest, object_digest))
-            db.execute('INSERT INTO literature_raws VALUES (1,?,?,?,?,?)', ('item','key','body.md',hashlib.sha256(body).hexdigest(),'now'))
-            db.execute('INSERT INTO literature_drafts VALUES (?,?,?,?,?,?,?,?,?,?)', ('draft','item','key','identity','file-id','draft.md',1,'payload',hashlib.sha256(draft).hexdigest(),'now'))
+            db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1,?,?,?,?,?)', ('item','key','body.md',hashlib.sha256(body).hexdigest(),'now'))
+            db.execute('INSERT INTO literature_drafts (draft_id,item_id,citekey,file_identity,file_draft_id,path,version,payload_sha256,file_sha256,bound_at) VALUES (?,?,?,?,?,?,?,?,?,?)', ('draft','item','key','identity','file-id','draft.md',1,'payload',hashlib.sha256(draft).hexdigest(),'now'))
             db.execute("INSERT INTO body_versions (snapshot_id,item_id,sha256,characters,authority,source,retrieved_at,stored_at) VALUES (1,'item',?, ?, 'imported','synthetic','now','now')", (hashlib.sha256(body).hexdigest(),len(body)))
-            db.execute('INSERT INTO body_texts VALUES (1,?)', (body.decode(),))
-            db.execute("INSERT INTO draft_versions VALUES ('draft','item',?,?,'imported','now',NULL,NULL)", (hashlib.sha256(draft).hexdigest(),len(draft)))
-            db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft',draft.decode()))
+            db.execute('INSERT INTO body_texts (snapshot_id,text) VALUES (1,?)', (body.decode(),))
+            db.execute("INSERT INTO draft_versions (draft_id,item_id,sha256,characters,authority,stored_at,cleaned_at,cleanup_request_id) VALUES ('draft','item',?,?,'imported','now',NULL,NULL)", (hashlib.sha256(draft).hexdigest(),len(draft)))
+            db.execute('INSERT INTO draft_bodies (draft_id,text) VALUES (?,?)', ('draft',draft.decode()))
             db.commit()
             snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             report = verify(root / 'snap')
@@ -785,7 +885,8 @@ class SnapshotTests(unittest.TestCase):
         assets.mkdir()
         (assets / 'body').write_bytes(b'synthetic')
         db = sqlite3.connect(root / 'source.sqlite')
-        db.executescript("CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO schema_meta VALUES ('schema_version','41');")
+        self.init_schema(db)
+        db.commit()
         db.close()
         return assets
 
@@ -795,12 +896,12 @@ class SnapshotTests(unittest.TestCase):
             assets = self.make_simple(root)
             snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             restore(root / 'snap', root / 'out')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'destination already exists'):
                 restore(root / 'snap', root / 'out')
             (root / 'snap/assets/vault/body').write_bytes(b'altered')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'snapshot integrity mismatch'):
                 verify(root / 'snap')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'snapshot integrity mismatch'):
                 restore(root / 'snap', root / 'new')
             self.assertFalse((root / 'new').exists())
             self.assertEqual((root / 'out/assets/vault/body').read_bytes(), b'synthetic')
@@ -810,13 +911,14 @@ class SnapshotTests(unittest.TestCase):
             root = Path(tmp)
             assets = self.make_simple(root)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.execute('CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY, item_id TEXT NOT NULL, citekey TEXT NOT NULL, path TEXT NOT NULL, file_sha256 TEXT NOT NULL, bound_at TEXT NOT NULL)')
-                db.execute('INSERT INTO literature_raws VALUES (1, ?, ?, ?, ?, ?)', ('item', 'key', '../outside', hashlib.sha256(b'synthetic').hexdigest(), 'now'))
-            with self.assertRaises(SnapshotError):
+                self.add_raw(db)
+                db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1, ?, ?, ?, ?, ?)', ('item', 'key', '../outside', hashlib.sha256(b'synthetic').hexdigest(), 'now'))
+                self.add_file_authority(db)
+            with self.assertRaisesRegex(SnapshotError, 'unsafe asset reference'):
                 snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
                 db.execute("UPDATE literature_raws SET path='body', file_sha256='wrong'")
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'required asset hash mismatch'):
                 snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             self.assertFalse((root / 'snap').exists())
 
@@ -825,18 +927,18 @@ class SnapshotTests(unittest.TestCase):
             root = Path(tmp)
             assets = self.make_simple(root)
             (assets / 'link').symlink_to(root / 'source.sqlite')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'asset tree contains an unsafe entry'):
                 snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             (assets / 'link').unlink()
             snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             (root / 'interrupted').mkdir()
             (root / 'interrupted/partial').write_text('keep')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'destination already exists'):
                 restore(root / 'snap', root / 'interrupted')
             self.assertEqual((root / 'interrupted/partial').read_text(), 'keep')
             (root / 'snap/assets/vault/body').unlink()
             (root / 'snap/assets/vault/body').symlink_to(root / 'source.sqlite')
-            with self.assertRaises(SnapshotError):
+            with self.assertRaisesRegex(SnapshotError, 'asset tree contains an unsafe entry'):
                 restore(root / 'snap', root / 'other')
 
     def test_unknown_raw_and_pending_media_are_not_silently_dropped(self):
@@ -844,12 +946,13 @@ class SnapshotTests(unittest.TestCase):
             root = Path(tmp)
             assets = self.make_simple(root)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript("CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, path TEXT); INSERT INTO raw_snapshots VALUES (1, 'old');")
+                self.add_raw(db, path='old')
             with self.assertRaisesRegex(SnapshotError, 'unresolved asset root'):
                 snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
-                db.executescript('DELETE FROM raw_snapshots; CREATE TABLE media_pending (id INTEGER PRIMARY KEY, staging_path TEXT NOT NULL); INSERT INTO media_pending VALUES (1, \'unknown\');')
-            with self.assertRaisesRegex(SnapshotError, 'unsupported asset reference schema'):
+                db.execute('DELETE FROM raw_snapshots')
+                db.execute("INSERT INTO media_pending (id,owner_kind,owner_id,source_ref,staging_path,created_at) VALUES (1,'item','item','image','unknown','now')")
+            with self.assertRaisesRegex(SnapshotError, 'media staging has no immutable byte evidence'):
                 snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snap')
 
     def test_wal_and_file_authority_round_trip(self):
@@ -861,18 +964,15 @@ class SnapshotTests(unittest.TestCase):
             (assets / 'raw/body.md').write_bytes(body)
             db = sqlite3.connect(root / 'source.sqlite')
             db.execute('PRAGMA journal_mode=WAL')
+            self.init_schema(db)
             db.executescript('''
-                CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-                CREATE TABLE items (id TEXT PRIMARY KEY);
-                CREATE TABLE raw_snapshots (id INTEGER PRIMARY KEY, item_id TEXT NOT NULL REFERENCES items(id), path TEXT NOT NULL, source_hash TEXT NOT NULL, retrieved_at TEXT NOT NULL, created_at TEXT NOT NULL, provenance TEXT NOT NULL DEFAULT '', UNIQUE(item_id, source_hash));
-                CREATE TABLE literature_raws (snapshot_id INTEGER PRIMARY KEY REFERENCES raw_snapshots(id), item_id TEXT NOT NULL REFERENCES items(id), citekey TEXT NOT NULL, path TEXT NOT NULL, file_sha256 TEXT NOT NULL, bound_at TEXT NOT NULL);
                 CREATE TABLE future_table (id TEXT PRIMARY KEY, payload BLOB);
-                INSERT INTO schema_meta VALUES ('schema_version', '41');
-                INSERT INTO items VALUES ('synthetic-item');
-                INSERT INTO raw_snapshots VALUES (1, 'synthetic-item', '', 'source', 'now', 'now', '');
+                INSERT INTO items (id,media_type,first_ingested_at,review_date,created_at,updated_at) VALUES ('synthetic-item','paper','now','now','now','now');
+                INSERT INTO raw_snapshots (id,item_id,path,source_hash,retrieved_at,created_at) VALUES (1,'synthetic-item','','source','now','now');
                 INSERT INTO future_table VALUES ('opaque', X'000102FF');
             ''')
-            db.execute('INSERT INTO literature_raws VALUES (1, ?, ?, ?, ?, ?)', ('synthetic-item', 'key', 'raw/body.md', hashlib.sha256(body).hexdigest(), 'now'))
+            db.execute('INSERT INTO literature_raws (snapshot_id,item_id,citekey,path,file_sha256,bound_at) VALUES (1, ?, ?, ?, ?, ?)', ('synthetic-item', 'key', 'raw/body.md', hashlib.sha256(body).hexdigest(), 'now'))
+            self.add_file_authority(db, 'synthetic-item')
             db.commit()
             snapshot(root / 'source.sqlite', {'vault': assets}, root / 'snapshot')
             verify(root / 'snapshot')
