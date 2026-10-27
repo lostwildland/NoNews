@@ -50,28 +50,28 @@
       "path": "Mac/AppDelegate.swift",
       "group": "native",
       "blob": "92f50b1835a800e3c7a4cb86af13e503445424da",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "Mac/Preferences/PreferencesWindowController.swift",
       "group": "native",
       "blob": "d12338b1698cdaeb76ffb6b3a200ca0771bc7551",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
       "blob": "f1d0657ec81b0e1c7f78d43b8ca1b237c6a8ccff",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
       "blob": "108c1a0883559ef6d9335a988fe8f1a86e6f8558",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
@@ -328,14 +328,14 @@
       "path": "ManagedEngine/stdio_service.py",
       "group": "native",
       "blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
       "group": "native",
       "blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
@@ -349,21 +349,21 @@
       "path": "ManagedEngine/tests/native_fixture.py",
       "group": "native",
       "blob": "f7d737f36685715ef346aa54567275d20d5b9142",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "ManagedEngine/tests/run_native_checks.sh",
       "group": "native",
       "blob": "1868054762864c48f498eddd92a5dda2e247d137",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
       "path": "ManagedEngine/tests/test_channel.py",
       "group": "native",
       "blob": "ca45dfd66835df76b543f269d6d6592570baf85b",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
@@ -435,7 +435,7 @@
       "path": "ManagedEngine/tests/test_stdio.py",
       "group": "native",
       "blob": "3ecd92d819113adc6800c63d459c1efe2586777a",
-      "standards": "pending current candidate review",
+      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
       "spec": "pending current candidate review"
     },
     {
@@ -536,6 +536,13 @@
         "state": "complete8/8 plus seams;1P2 deep aggregate recursion blocks history",
         "evidence": "t02-current-candidate.md"
       }
+    },
+    "native": {
+      "standards": {
+        "candidate": "d73d8d278812d09a01962ce1df8479cb896eb3ee",
+        "state": "complete10/10 plus connected lifecycle/settings/schema/termination seams;0 actionableP1/P2;lower-priority code-layout guidance deviation",
+        "evidence": "t02-current-candidate.md"
+      }
     }
   },
   "correction_reviews": [
@@ -576,5 +583,12 @@
     "seconds": 26.56,
     "checker": "root coordinator",
     "note": "Optional live reference comparison skipped; no production reads or native acceptance implied"
+  },
+  "source_provenance_readback": {
+    "checker": "root coordinator",
+    "files": 26,
+    "matching": 26,
+    "missing": 0,
+    "scope": "source file hashes listed by observed provenance; not a full extraction equivalence or runtime proof"
   }
 }
