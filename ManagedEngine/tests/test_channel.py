@@ -25,15 +25,17 @@ class Application:
 ''')
             token = 'a' * 32
             messages = [{'token': token}, {'token': 'wrong', 'method': 'GET', 'path': '/api/jobs'},
-                        {'token': token, 'method': 'GET', 'path': '/invalid'},
-                        {'token': token, 'method': 'GET', 'path': '/api/jobs'}]
+                        {'id': 'bad', 'token': token, 'method': 'GET', 'path': '/api/jobs'},
+                        {'id': 1, 'token': token, 'method': 'GET', 'path': '/invalid'},
+                        {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/jobs'}]
             result = subprocess.run([str(python), str(project / 'stdio_service.py'), str(root / 'data')],
                                     input=''.join(json.dumps(x) + '\n' for x in messages), text=True,
                                     capture_output=True, timeout=15, check=True,
                                     env={'PYTHONPATH': str(root), 'INFORMATION_OS_RAW_VAULT': str(root / 'outside')})
             replies = [json.loads(line) for line in result.stdout.splitlines()]
             self.assertEqual(replies, [{'status': 'ready'}, {'error': 'unauthorized'},
-                                       {'error': 'invalid operation'}, {'error': 'response too large'}])
+                                       {'error': 'invalid request id'}, {'id': 1, 'error': 'invalid operation'},
+                                       {'id': 2, 'error': 'response too large'}])
             self.assertFalse((root / 'outside').exists())
 
     def test_oversized_input_fails_without_diagnostics(self):

@@ -25,7 +25,10 @@ def read_message():
 def send(message):
     encoded = json.dumps(message, separators=(',', ':'), ensure_ascii=True)
     if len(encoded) + 1 > MAX_MESSAGE:
-        encoded = '{"error":"response too large"}'
+        replacement = {'error': 'response too large'}
+        if 'id' in message:
+            replacement['id'] = message['id']
+        encoded = json.dumps(replacement, separators=(',', ':'))
     print(encoded, flush=True)
 
 
@@ -56,15 +59,20 @@ def main():
             if not isinstance(supplied, str) or not supplied.isascii() or not hmac.compare_digest(token, supplied):
                 send({'error': 'unauthorized'})
                 continue
+            request_id = message.get('id')
+            if request_id is not None and (type(request_id) is not int or not 0 <= request_id < 2**53):
+                send({'error': 'invalid request id'})
+                continue
+            correlation = {} if request_id is None else {'id': request_id}
             method, path = message.get('method'), message.get('path')
             body = message.get('body', {})
             if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
-                send({'error': 'invalid operation'})
+                send({**correlation, 'error': 'invalid operation'})
                 continue
             try:
-                send({'result': app.handle(method, path, {}, body)})
+                send({**correlation, 'result': app.handle(method, path, {}, body)})
             except Exception:
-                send({'error': 'operation failed'})
+                send({**correlation, 'error': 'operation failed'})
     except Exception:
         return 1
 
