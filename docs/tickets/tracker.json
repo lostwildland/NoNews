@@ -41,8 +41,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "b95cffa5047bee9f65be99961e4e798e9e36bb63",
-      "implementation_state": "parent fixed independently reproduced concurrent WAL failure;18Python tests total17pass1skip and native controller pass; final-source packaging then R4 review pending",
+      "last_reported_head": "8a7de13121717db00fe8fbb992c82d0bcb2eeaf5",
+      "implementation_state": "final corrected code b95cffa validated; 753 macOS tests pass; relocated signed app running; fresh R4 reviews pending, native appearance unverified",
       "review_evidence": "docs/acceptance/t02-review-r3.md"
     },
     "03": {
