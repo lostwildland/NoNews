@@ -46,8 +46,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "91fdf89b306c53c65b97df2662348e81db80ce5e",
-      "implementation_state": "R27 Standards clear; Spec CHECK and commit-failure issues fixed. Coordinator final52 total/51pass/1optionalSkip and controller pass. Correction, jobs/packaging/cross-group review and current bundle pending.",
+      "last_reported_head": "9c9d4c8b55d545e019e7253d20c767a40584e12c",
+      "implementation_state": "R27/R28 schema/transaction corrections clear. Current code91fdf89 signed/relocated bundle has nine harness passes; coordinator source/identity/signature/hash readback passes. Jobs/current packaging/cross-group and visible UI gates remain open.",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {

@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "91fdf89b306c53c65b97df2662348e81db80ce5e",
-  "state": "R27/R28 shared schema/helper corrections cleared on both axes. Jobs/performance, packaging, cross-group and installed-bundle/UI gates remain open.",
+  "candidate": "9c9d4c8b55d545e019e7253d20c767a40584e12c",
+  "state": "Database corrections clear on both axes. Current signed relocated bundle/source/identity verified and nine real-bundle harness tests recorded. Jobs with updated controller fixture, current packaging and final cross-group review remain; visible Settings Ready remains unobserved.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -50,29 +50,29 @@
       "path": "Mac/AppDelegate.swift",
       "group": "native",
       "blob": "92f50b1835a800e3c7a4cb86af13e503445424da",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "Mac/Preferences/PreferencesWindowController.swift",
       "group": "native",
       "blob": "d12338b1698cdaeb76ffb6b3a200ca0771bc7551",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
       "blob": "f1d0657ec81b0e1c7f78d43b8ca1b237c6a8ccff",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
       "blob": "108c1a0883559ef6d9335a988fe8f1a86e6f8558",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/JOBS-IPC.md",
@@ -102,8 +102,8 @@
       "path": "ManagedEngine/backend/__init__.py",
       "group": "database",
       "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/causes.py",
@@ -117,37 +117,37 @@
       "path": "ManagedEngine/backend/content_store.py",
       "group": "database",
       "blob": "34a0bab256d3ee84af32445d4567c6bfd5fb2882",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/core.py",
       "group": "database",
       "blob": "4a85e7ada498faf8f6a5267e453f19a012daf8cf",
-      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
-      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
       "previous_blob": "c1b372f461d06363a230411d89dbb588795f2913"
     },
     {
       "path": "ManagedEngine/backend/delivery.py",
       "group": "database",
       "blob": "27019df30b3c65f8510d02b03d64165e93a51664",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/feed_settings.py",
       "group": "database",
       "blob": "de3a47b82819b16c768f8070822ed769408c598c",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/folders.py",
       "group": "database",
       "blob": "1efbb509011a0bfffd1f38a62a55acd3d8407c22",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/job_stream.py",
@@ -161,113 +161,113 @@
       "path": "ManagedEngine/backend/jobs.py",
       "group": "database",
       "blob": "6c068fc6e4e2fc698eb9c66ddd2bb06ff8fadd72",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/legacy_content_migration.py",
       "group": "database",
       "blob": "198e1846d8d7cd0cd7c8e664eb282b0b3c10ed3c",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/literature.py",
       "group": "database",
       "blob": "34e702f19ad0654af0deffcd867553523854e5fc",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/literature_mapping.py",
       "group": "database",
       "blob": "956c47311b2bb7fc3ee0d5f47a2fe2d081902804",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/media_jobs.py",
       "group": "database",
       "blob": "fba9f2166af86992d4d1d77fc8683b57f268267a",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/media_raw_activation.py",
       "group": "database",
       "blob": "dfc31687758a9cd10ec21aacdde749743a0fa70e",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/media_store.py",
       "group": "database",
       "blob": "9d8075435dae6c9aba73bf3c92d2901644192ff8",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/news_media.py",
       "group": "database",
       "blob": "6222c06c14f4fe1b8721244d73565e290597bdf3",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/pipeline.py",
       "group": "database",
       "blob": "2119992c8f6aac8766e8dd2ea62579343710249f",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/projection.py",
       "group": "database",
       "blob": "cc7ef6fb79a588c2892bfecff6817e186a971091",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/reading_notes.py",
       "group": "database",
       "blob": "67de0fa638fe01b6aa580418dfaf42c868944dd2",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/reconciliation.py",
       "group": "database",
       "blob": "670a2500a1bb58bbd4dbe28ac6f160ad7edd0899",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/reject_cleanup.py",
       "group": "database",
       "blob": "f3c7837766b60812e6d8b03ee8b501b9a94bbc61",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/reject_media_cleanup.py",
       "group": "database",
       "blob": "540ac85a29ac4120f726a505d0be4eae6ca3fb76",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/schema.py",
       "group": "database",
       "blob": "6416e4496c269aff561de30b181444e81988cd38",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/schema_semantics.py",
       "group": "database",
       "blob": "259a1b108ab93aeb4fdb18872ae9eea224c6bf46",
-      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
-      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
       "previous_blob": "8ad3e9e0f18f2c375518cb3db475fbd463958990"
     },
     {
@@ -282,22 +282,22 @@
       "path": "ManagedEngine/backend/service.py",
       "group": "database",
       "blob": "5d0a457c147343ce986b56159759b229f646a0f6",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/settings.py",
       "group": "database",
       "blob": "381e3beada9244a596616bbdb4f10da0414a8769",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/backend/zotero.py",
       "group": "database",
       "blob": "f87bfee153e80e78e309b4c9ae671364f28e2756",
-      "standards": "complete27/27database scope at26071ee;0 actionableP1/P2;Spec/crossgroup stillpending",
-      "spec": "pending current candidate review"
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
     },
     {
       "path": "ManagedEngine/payload_manifest.py",
@@ -331,8 +331,8 @@
       "path": "ManagedEngine/stdio_service.py",
       "group": "native",
       "blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
@@ -354,29 +354,29 @@
       "path": "ManagedEngine/tests/native_fixture.py",
       "group": "native",
       "blob": "f7d737f36685715ef346aa54567275d20d5b9142",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/tests/run_native_checks.sh",
       "group": "native",
       "blob": "1868054762864c48f498eddd92a5dda2e247d137",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/tests/test_channel.py",
       "group": "native",
       "blob": "ca45dfd66835df76b543f269d6d6592570baf85b",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/tests/test_initialization_probe.py",
       "group": "database",
       "blob": "4df1d559a87d6397fce67b5912c27b3e78e38a09",
-      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
-      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
       "previous_blob": "971f4736983af5293ba4c204f2e757803e82946b"
     },
     {
@@ -435,16 +435,16 @@
       "path": "ManagedEngine/tests/test_startup_status.py",
       "group": "database",
       "blob": "7c614e917f556a29838a90d8aa490b473ba076e2",
-      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
-      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
+      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
       "previous_blob": "536956f005a4438aa4f61aaed2b3d8b977d1bab2"
     },
     {
       "path": "ManagedEngine/tests/test_stdio.py",
       "group": "native",
       "blob": "3ecd92d819113adc6800c63d459c1efe2586777a",
-      "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
+      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
+      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
     },
     {
       "path": "ManagedEngine/verify_payload_source.py",
@@ -516,10 +516,10 @@
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "5df85e7b3fafee3f67767f1a4eadd53e1f0c8e3f",
-      "standards": "R27 scope complete before CHECK/commit correction; fresh delta review pending",
-      "spec": "R27 CHECK/commit findings corrected; fresh delta review pending",
-      "previous_blob": "abf36f45a8d56a7183fbf02b10ccebd6889d67d2"
+      "blob": "765cf976e4290a8b998c2afcfcf91d1db9972425",
+      "standards": "pending current evidence/source delta review",
+      "spec": "pending current evidence/source delta review",
+      "previous_blob": "5df85e7b3fafee3f67767f1a4eadd53e1f0c8e3f"
     }
   ],
   "scope_reviews": {
