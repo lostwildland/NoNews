@@ -40,6 +40,10 @@ class AcceptanceBuildPreservationTests(unittest.TestCase):
             command.write_text('''#!/usr/bin/env python3
 import os, pathlib, sys, time
 project = pathlib.Path(sys.argv[sys.argv.index('-project') + 1]).resolve().parent
+cache = pathlib.Path(next(value.split('=', 1)[1] for value in sys.argv if value.startswith('CLANG_MODULE_CACHE_PATH='))).resolve()
+assert cache.parent == project
+cache.mkdir()
+(cache / 'synthetic-module').write_bytes(b'synthetic module cache')
 generated = project / 'Modules/Secrets/Sources/Secrets/SecretKey.swift'
 assert generated.read_bytes() == b'synthetic prepared source'
 generated.write_bytes(b'synthetic generated source')
@@ -75,6 +79,8 @@ while not wait_for.exists():
                 self.assertEqual(processes[1].returncode, 0, errors)
                 self.assertEqual(secret.read_bytes(), b"synthetic update from ordinary build")
                 self.assertNotEqual((gates / "A-path").read_text(), (gates / "B-path").read_text())
+                for role in ("A", "B"):
+                    self.assertFalse((Path((gates / (role + "-path")).read_text()) / ".module-cache").exists())
             finally:
                 for process in processes:
                     if process.poll() is None:
