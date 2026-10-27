@@ -75,4 +75,3 @@ The older abbreviated positive fixtures are superseded: asset, WAL, authority, a
 # Round 3 review: malformed archive path correction
 
 The independent Standards review of `5014a503` found that a nonempty SQLite BLOB in `literature_assets.archive_path` reached `str.endswith` before the common asset-reference validator. The coordinator added a public CLI regression using the complete schema fixture; it first failed because the command emitted a traceback instead of the controlled refusal. The compression check now only examines text values, leaving the common validator to reject other types. The regression checks the refusal, no published snapshot, no traceback and exact source database preservation. The full focused suite passed 42 tests after the fix. No production or remote data was used.
-
