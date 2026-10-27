@@ -25,6 +25,14 @@ class SnapshotTests(unittest.TestCase):
                     db.execute('ALTER TABLE items ADD COLUMN future TEXT COLLATE ' + spelling)
                     db.execute("UPDATE items SET future='retained'")
                     expected = db.execute('SELECT id, future FROM items ORDER BY id').fetchall()
+                    definition = db.execute("SELECT sql FROM sqlite_master WHERE name='items'").fetchone()[0]
+                    indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL")]
+                    rows = db.execute('SELECT * FROM items').fetchall()
+                    db.execute('DROP TABLE items')
+                    db.execute(definition.replace('CHECK(media_type IN', 'CHECK(media_type COLLATE ' + spelling + ' IN'))
+                    for index in indexes:
+                        db.execute(index)
+                    db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)
                 before = database.read_bytes()
                 snapshot(database, {'vault': vault}, root / 'snap')
                 verify(root / 'snap')
@@ -34,7 +42,7 @@ class SnapshotTests(unittest.TestCase):
                 self.assertEqual(database.read_bytes(), before)
 
     def test_rowid_aliases_and_nonbinary_collations_are_refused(self):
-        for defect in ('rowid', '_rowid_', 'oid', 'collation', 'quoted_collation'):
+        for defect in ('rowid', '_rowid_', 'oid', 'collation', 'quoted_collation', 'check_literal'):
             for operation in ('snapshot', 'verify'):
                 with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
                     root = Path(tmp)
@@ -42,13 +50,16 @@ class SnapshotTests(unittest.TestCase):
                     snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
                     database = root / ('source.sqlite' if operation == 'snapshot' else 'snap/database.sqlite')
                     with closing(sqlite3.connect(database)) as db, db:
-                        if defect in ('collation', 'quoted_collation'):
+                        if defect in ('collation', 'quoted_collation', 'check_literal'):
                             ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='items'").fetchone()[0]
                             rows = db.execute('SELECT * FROM items').fetchall()
                             indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL")]
                             db.execute('DROP TABLE items')
-                            collation = 'NOCASE' if defect == 'collation' else "'NOCASE'"
-                            db.execute(ddl.replace('media_type TEXT NOT NULL', 'media_type TEXT COLLATE ' + collation + ' NOT NULL'))
+                            if defect == 'check_literal':
+                                db.execute(ddl.replace("'news','paper'", "'NEWS','paper'"))
+                            else:
+                                collation = 'NOCASE' if defect == 'collation' else "'NOCASE'"
+                                db.execute(ddl.replace('media_type TEXT NOT NULL', 'media_type TEXT COLLATE ' + collation + ' NOT NULL'))
                             for index in indexes:
                                 db.execute(index)
                             db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)
@@ -65,7 +76,7 @@ class SnapshotTests(unittest.TestCase):
                         manifest = json.loads(manifest_path.read_text())
                         manifest['database_sha256'] = hashlib.sha256(before).hexdigest()
                         manifest_path.write_text(json.dumps(manifest))
-                    with self.assertRaisesRegex(SnapshotError, 'rowid|collation'):
+                    with self.assertRaisesRegex(SnapshotError, 'rowid|collation|checks'):
                         if operation == 'snapshot':
                             snapshot(database, {'vault': vault}, root / 'bad')
                         else:
