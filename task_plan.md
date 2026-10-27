@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 remain onlyaccepted(2/31). T02current19bce6b passes48Python(47pass1skip);nativebothaxescomplete0,DBStandards27/27zeroP1P2withlatenttransactionfixawaitingdelta,DBSpec/jobsparsercorrection/currentpackaging/crossgroupreview/currentbundle/UI/remoteCIremain. T30R5foundrelease-without-closeFeedSettingsguardgap;rootweakownereditawaitsoriginalownerregressionandnativechecks. Splitreviewscopesforcompletecoverage. Fullproductfeatures/migration/sync/UIacceptanceunchanged.
+OnlyT00currentlyaccepted(1/31);T01reopenedforsharedschemafollowupwith52passingtests,narrowreviewrequired. T02guardfixes48tests47pass1skip;deepnestingstackperformanceP2stillneedsoriginalownerfix. Nativebothaxes0,DBSpecfindingsfixedbutawaitnarrowassessment;packaging/crossgroup/currentbundle/UI/remoteCIopen. T30released-ownerfix769testspassbutnormalbuildhitdiskfull;onlytwoownmodulecachesremoved(11GiB),space12GiB,andper-invocationcacheentrypasses5synthetictests. NeedfinalnativebuildandSMALLcompletegroupreviews. Fullfeature/migration/sync/UXscopeunchanged.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
