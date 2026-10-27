@@ -26,6 +26,12 @@ class StartupStatusTest(unittest.TestCase):
             'extra_unique': ('processing_jobs', 'stage TEXT NOT NULL', 'stage TEXT NOT NULL UNIQUE'),
             'extra_not_null': ('processing_jobs', 'error TEXT', 'error TEXT NOT NULL'),
             'extra_foreign_key': ('processing_jobs', 'error TEXT', 'error TEXT REFERENCES app_settings(key)'),
+            'replace': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT REPLACE'),
+            'ignore': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT IGNORE'),
+            'fail': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT FAIL'),
+            'rollback': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT ROLLBACK'),
+            'primary_replace': ('processing_jobs', 'id TEXT PRIMARY KEY', 'id TEXT PRIMARY KEY ON CONFLICT REPLACE'),
+            'null_replace': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0'),
             'partial_index': None,
         }
         for defect, change in changes.items():
@@ -121,6 +127,14 @@ class StartupStatusTest(unittest.TestCase):
             self.assertEqual(column_db.read_bytes(), before_column)
             extra = root / 'extra'
             self.assertEqual(json.loads(launch(extra).stdout), {'status': 'ready'})
+            with closing(sqlite3.connect(extra / 'information.sqlite')) as db, db:
+                definition = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone()[0]
+                indexes = [r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='processing_jobs' AND sql IS NOT NULL")]
+                db.execute('DROP TABLE processing_jobs')
+                db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT ABORT'))
+                for index in indexes:
+                    db.execute(index)
+            self.assertEqual(json.loads(launch(extra).stdout), {'status':'ready'})
             with closing(sqlite3.connect(extra / 'information.sqlite')) as db, db:
                 db.execute('ALTER TABLE items ADD COLUMN future_field TEXT')
                 db.execute('CREATE TABLE future_extra (value TEXT)')
