@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
   "candidate": "91fdf89b306c53c65b97df2662348e81db80ce5e",
-  "state": "R27 Standards clear; Spec CHECK/commit findings corrected at91fdf89, 51 Python passes and one optional skip. Correction, jobs-performance, packaging and cross-group reviews plus current signed bundle remain open.",
+  "state": "R27/R28 shared schema/helper corrections cleared on both axes. Jobs/performance, packaging, cross-group and installed-bundle/UI gates remain open.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -124,8 +124,8 @@
       "path": "ManagedEngine/backend/core.py",
       "group": "database",
       "blob": "4a85e7ada498faf8f6a5267e453f19a012daf8cf",
-      "standards": "R27 scope complete before CHECK/commit correction; fresh delta review pending",
-      "spec": "R27 CHECK/commit findings corrected; fresh delta review pending",
+      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
       "previous_blob": "c1b372f461d06363a230411d89dbb588795f2913"
     },
     {
@@ -266,8 +266,8 @@
       "path": "ManagedEngine/backend/schema_semantics.py",
       "group": "database",
       "blob": "259a1b108ab93aeb4fdb18872ae9eea224c6bf46",
-      "standards": "R27 scope complete before CHECK/commit correction; fresh delta review pending",
-      "spec": "R27 CHECK/commit findings corrected; fresh delta review pending",
+      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
       "previous_blob": "8ad3e9e0f18f2c375518cb3db475fbd463958990"
     },
     {
@@ -375,8 +375,8 @@
       "path": "ManagedEngine/tests/test_initialization_probe.py",
       "group": "database",
       "blob": "4df1d559a87d6397fce67b5912c27b3e78e38a09",
-      "standards": "R27 scope complete before CHECK/commit correction; fresh delta review pending",
-      "spec": "R27 CHECK/commit findings corrected; fresh delta review pending",
+      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
       "previous_blob": "971f4736983af5293ba4c204f2e757803e82946b"
     },
     {
@@ -435,8 +435,8 @@
       "path": "ManagedEngine/tests/test_startup_status.py",
       "group": "database",
       "blob": "7c614e917f556a29838a90d8aa490b473ba076e2",
-      "standards": "R27 scope complete before CHECK/commit correction; fresh delta review pending",
-      "spec": "R27 CHECK/commit findings corrected; fresh delta review pending",
+      "standards": "R27/R28 correction scopes complete; zero actionable P1/P2 at current blob; cross-group pending",
+      "spec": "R28 correction scope complete; zero actionable P1/P2 at current blob; cross-group pending",
       "previous_blob": "536956f005a4438aa4f61aaed2b3d8b977d1bab2"
     },
     {
