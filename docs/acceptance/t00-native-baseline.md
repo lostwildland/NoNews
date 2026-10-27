@@ -4,9 +4,10 @@ Ticket: https://github.com/lostwildland/NoNews/issues/2. Starting commit: `77550
 
 ## Reproduce on macOS
 
-Install Xcode with its command-line tools selected, Python 3, and network access to the pinned Swift packages and Sparkle binary. From the repository root:
+Install Xcode with its command-line tools selected, Python 3, and network access to the pinned Swift packages, Sparkle binary, Python runtime and Python dependencies. The T02 engine embed phase requires an explicitly prepared runtime. On a fresh checkout, prepare it once from the repository root before building:
 
 ```sh
+./ManagedEngine/prepare_runtime.sh
 python3 buildscripts/test_acceptance.py
 buildscripts/acceptance.sh build
 buildscripts/acceptance.sh verify

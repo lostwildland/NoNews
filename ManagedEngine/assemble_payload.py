@@ -4,13 +4,18 @@ import shutil
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from payload_manifest import contents
+from payload_sources import BACKEND_SOURCES, ROOT_SOURCES
 import json
 
 source = Path(__file__).resolve().parent
 payload = Path(sys.argv[1]).resolve()
-shutil.copytree(source / 'backend', payload / 'backend', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
-for name in ('stdio_service.py', 'PROVENANCE.md', 'JOBS-IPC.md', 'requirements.lock'):
-    shutil.copy2(source / name, payload / name)
+expected = {f'backend/{name}': source / 'backend' / name for name in BACKEND_SOURCES}
+expected.update({name: source / name for name in ROOT_SOURCES})
+if (source / 'backend').is_symlink() or any(path.is_symlink() or not path.is_file() for path in expected.values()):
+    raise SystemExit('Declared payload source must be a regular file.')
+(payload / 'backend').mkdir()
+for name, path in expected.items():
+    shutil.copy2(path, payload / name)
 for cache in payload.rglob('__pycache__'):
     if cache.is_dir() and not cache.is_symlink():
         shutil.rmtree(cache)
