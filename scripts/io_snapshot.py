@@ -481,7 +481,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
             query = f'SELECT "{identity}", "{column}", ' + (f'"{digest}"' if digest else 'NULL') + f' FROM "{table}"'
             for ident, value, expected in db.execute(query):
                 if value:
-                    compressed = table == 'literature_assets' and value.endswith('.gz')
+                    compressed = table == 'literature_assets' and isinstance(value, str) and value.endswith('.gz')
                     bind(table, column, ident, value, None if compressed else expected, relative_root=relative_root)
                     if compressed:
                         binding = bindings[-1]

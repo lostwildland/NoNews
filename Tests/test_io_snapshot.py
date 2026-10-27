@@ -147,6 +147,23 @@ class SnapshotTests(unittest.TestCase):
             self.assertIn('invalid compressed source', result.stdout)
             self.assertNotIn('Traceback', result.stderr)
 
+    def test_blob_archive_path_is_refused_without_a_cli_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute("INSERT INTO literature_assets (id,item_id,kind,source_path,archive_path,file_hash,metadata_json) VALUES (1,'item','publisher_html',?,?,?,?)", ('historical', b'archive.gz', '0' * 64, '{}'))
+            before = (root / 'source.sqlite').read_bytes()
+            cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
+            result = subprocess.run([sys.executable, str(cli), 'snapshot', str(root / 'source.sqlite'),
+                                     str(root / 'snap'), '--root', f'vault={vault}'],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('invalid required asset reference', result.stdout)
+            self.assertNotIn('Traceback', result.stderr)
+            self.assertFalse((root / 'snap').exists())
+            self.assertEqual(before, (root / 'source.sqlite').read_bytes())
+
     def test_imported_raw_cannot_use_an_archive_in_place_of_its_file_authority(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
