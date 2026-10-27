@@ -417,7 +417,7 @@
         "28",
         "29"
       ],
-      "implementation_state": "R2 four fixes implemented; owner150focusedpasses, parent765full0fail0skip with0SQLite diagnostic matches; fresh R3 independent repair review pending; full T30 open",
+      "implementation_state": "R3 full-scope Standards1P2/Spec2P2: observer-drain omission and unguarded container mutations; parent small observer correction uncommitted; same-owner follow-up/native validation required; prior765passes candidate-only; fullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "dcd563805ab2d9c9fa1d3e7b88d880bac00d1124",
       "review_evidence": "docs/acceptance/t30-fixture-review-r3.md"

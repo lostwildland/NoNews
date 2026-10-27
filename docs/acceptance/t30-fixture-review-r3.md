@@ -16,10 +16,16 @@ The coordinator also reran the normal acceptance artifact's isolated-identity ve
 
 ## Standards
 
-Pending fresh independent assessment of the complete original-base fixture repair, including connected shared database and model callers. R2's findings are not cleared merely by passing tests.
+1 P2, full 43-path fixture scope inspected. Removing Account observers before draining can omit a later accepted folder subscription from OPML: the folder notification no longer marks clean OPML dirty, so flush skips it. The reviewer traced the real createFeed path and cited no-data-loss. This is source-derived, not runtime-reproduced. [Standards review](t3-thread://v1/thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t30-complete-standards-review-20261028-r3).
 
 ## Spec
 
-Pending separate fresh assessment against issue #32's fixture-repair contract and the scope recorded in the R1/R2 reports. Complete parity dependencies and final issue acceptance remain open.
+2 P2, full 43-path fixture scope inspected. Independently found the observer/drain omission through an accepted Feedly move rollback; also found direct Account/Folder container mutation methods accepting retained callers and emitting successful-change events after admission closes. Existing admitted dependent operations must remain permitted, while unrelated membership changes must refuse. Both are source-derived; deterministic regressions are required. [Spec review](t3-thread://v1/thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t30-complete-spec-review-20261028-r3).
+
+The coordinator re-read both completed reports and connected source, and moved observer removal after successful final OPML flush in the owner worktree. This small correction is uncommitted and unvalidated; the original owner must cover initially clean OPML with an admitted folder mutation/rollback, finish all container admission paths and perform final native validation before committing. No integration or acceptance follows from the prior 765 passes.
+
+## Main-thread warning localization
+
+The coordinator queried the final result's test tree and exact `ScriptingTests/testFeedExists()` details. The runtime warning is attached to that passed test, but no underlying method/source location is provided. Querying the earlier T02 native result `2026.10.28_03-02-21-+0800` finds the identical warning attached to the same test, before this fixture repair. This establishes that the diagnostic predates T30; it does not resolve it or certify UI responsiveness. No AppleScript or app UI was executed for this read-only result inspection.
 
 T30 released the serialized native resource. T02 may use it for the next complete streaming/CI/package validation after its source regressions pass. No current T02 memory correction is claimed.
