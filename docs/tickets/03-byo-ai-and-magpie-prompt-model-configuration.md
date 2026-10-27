@@ -6,6 +6,8 @@ https://github.com/lostwildland/NoNews/issues/1
 
 A reader configures a service and creates reusable Curator/Editor prompts that explicitly bind a model or gateway target.
 
+Native forms, coherent save/reference/history behavior, source-backed variable handling and run timing are specified in [native-processing-configuration.md](../specs/native-processing-configuration.md). This supplements the same ticket; its T02 dependency remains required.
+
 ## Acceptance criteria
 
 - [ ] Native Settings store secrets securely and validate nonsecret endpoint/target configuration; directory refresh performs no inference.
@@ -15,6 +17,7 @@ A reader configures a service and creates reusable Curator/Editor prompts that e
 - [ ] Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets.
 
 - [ ] Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.
+- [ ] Saving instructions and their service/target binding is coherent: a failed save leaves the prior configuration intact. Unchanged text does not grow history; Restore Text retains the visibly selected execution binding and never rewrites historical runs.
 
 ## Blocked by
 

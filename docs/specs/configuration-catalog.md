@@ -20,7 +20,7 @@ A complex category may use native list-detail forms and disclosure sections. Pri
 | Prompt name and role | reusable prompt | Split each legacy Kit role without losing identity/references | Processing > Prompts, Curator/Editor grouping; T03 |
 | Prompt content | versioned prompt | Saved database prompt remains execution authority; no hidden file or other-prompt fallback | Editor with declared input/output help; T03 |
 | Prompt model/target | prompt | Explicit bound connection/target; requested vs actual model retained | Same prompt editor; T03 |
-| Prompt history and restore | prompt | Existing history list and restore create a new current version; prior runs keep old version | Version list and Restore action; T03 |
+| Prompt history and restore | prompt text | Restore older text as a new current text version, retaining visible current execution binding; identical text is a no-op; prior runs keep old versions | Version list and Restore Text; T03 |
 | Supported input placeholders | role/material | Existing supported names preserved, including legacy description alias; invalid placeholders fail before sending | Discoverable variable help/insert controls and validation; T03/T11 |
 | Prompt references, copy and removal | prompt | Shared change shows affected sources; delete cannot leave silent broken references | Usage list, copy, replace/unbind choice; T03 |
 | Processing mode | feed | New/unconfigured feed disabled; Normal/Important retain current distinction | Source Inspector / Processing > Sources; T04 |

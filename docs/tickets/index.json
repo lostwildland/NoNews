@@ -72,7 +72,8 @@
       "Each prompt binds its service/target; no hidden inheritance, mandatory Kit pairing or per-feed model override.",
       "Invalid target/authentication/output errors remain distinct and never become zero scores or silent alternate providers.",
       "Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets.",
-      "Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request."
+      "Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.",
+      "Saving instructions and their service/target binding is coherent: failed saves preserve the prior configuration; unchanged text does not grow history, and Restore Text retains the visible execution binding and historical runs."
     ],
     "status": "planned",
     "body_file": "docs/tickets/03-byo-ai-and-magpie-prompt-model-configuration.md"
