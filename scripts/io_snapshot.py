@@ -2,8 +2,11 @@
 import argparse
 from contextlib import closing
 import hashlib
+import gzip
+import io
 import json
 import os
+import posixpath
 import re
 import sqlite3
 import stat
@@ -11,6 +14,7 @@ import tempfile
 import time
 from pathlib import Path
 from urllib.parse import quote
+from urllib.parse import unquote, urlsplit
 
 
 class SnapshotError(Exception):
@@ -87,7 +91,7 @@ def _inventory(root, copy_to=None):
     return result
 
 
-def _read_file(root, relative):
+def _read_file_identity(root, relative):
     fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
     try:
         parts = relative.split('/')
@@ -97,14 +101,23 @@ def _read_file(root, relative):
             fd = child
         child = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
         try:
-            if not stat.S_ISREG(os.fstat(child).st_mode):
+            info = os.fstat(child)
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                 raise SnapshotError('unsafe asset')
             with os.fdopen(os.dup(child), 'rb') as source:
-                return source.read()
+                data = source.read()
+            after = os.fstat(child)
+            if (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+                raise SnapshotError('asset changed during read')
+            return data, info
         finally:
             os.close(child)
     finally:
         os.close(fd)
+
+
+def _read_file(root, relative):
+    return _read_file_identity(root, relative)[0]
 
 
 def _db(path):
@@ -157,7 +170,7 @@ def _database(path):
 def _asset_bindings(path, assets, roots, asset_dirs):
     """Bind recognized operational file references without rewriting source rows."""
     bindings = []
-    def bind(table, column, identity, value, expected=None, size=None, relative_root=None):
+    def bind(table, column, identity, value, expected=None, size=None, relative_root=None, allow_reserved=False):
         if not isinstance(value, str) or not value or '\x00' in value or '\\' in value:
             raise SnapshotError('invalid required asset reference')
         if relative_root and not Path(value).is_absolute():
@@ -167,21 +180,66 @@ def _asset_bindings(path, assets, roots, asset_dirs):
             if not p.is_absolute() or any(part in ('.', '..') for part in value.split('/')):
                 raise SnapshotError('unresolved asset root')
             matches = [(name, p.relative_to(base).as_posix()) for name, base in roots.items() if p.is_relative_to(base) and p != base]
-            if len(matches) != 1:
+            if not matches:
                 raise SnapshotError('unresolved asset root')
-            root, relative = matches[0]
+            root, relative = sorted(matches, key=lambda item: (-len(roots[item[0]].parts), item[0]))[0]
         if any(part in ('', '.', '..') for part in relative.split('/')):
             raise SnapshotError('unsafe asset reference')
         evidence = assets.get(root, {}).get(relative)
         if not isinstance(evidence, dict):
+            if allow_reserved and relative not in assets.get(root, {}):
+                bindings.append({'table': table, 'column': column, 'id': identity, 'root': root, 'path': relative, 'sha256': None, 'state': 'reserved'})
+                return
             raise SnapshotError('required asset missing')
         if expected and evidence['sha256'] != expected:
             raise SnapshotError('required asset hash mismatch')
         if size is not None and evidence['size'] != size:
             raise SnapshotError('required asset size mismatch')
         bindings.append({'table': table, 'column': column, 'id': identity, 'root': root, 'path': relative, 'sha256': evidence['sha256']})
+    def markup(table, column, identity, text, document=None):
+        if re.search(r'!\[\[|!\[[^\]\n]*\]\s*\[|\bsrcset\s*=', text, re.I):
+            raise SnapshotError('unsupported image markup requires review')
+        pattern = r'''!\[[^\]\n]*\]\(\s*<?([^\s)>]+)>?[^)]*\)|<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>'''
+        remaining = re.sub(pattern, '', text, flags=re.I)
+        if re.search(r'!\[|<img\b|<picture\b|<source\b', remaining, re.I):
+            raise SnapshotError('unsupported image markup requires review')
+        for match in re.finditer(pattern, text, re.I):
+            target = match.group(1) or match.group(2)
+            parsed = urlsplit(target)
+            if parsed.scheme in ('http', 'https', 'data') or target.startswith('//'):
+                continue
+            if parsed.scheme or parsed.netloc:
+                raise SnapshotError('unsupported image reference scheme')
+            target = unquote(parsed.path)
+            if re.fullmatch(r'(?:\./)?images/[A-Za-z0-9_-][A-Za-z0-9_.-]{0,179}\.(?:png|jpe?g|gif|webp)', target, re.I):
+                root = 'paper_images'
+                relative = target.removeprefix('./').removeprefix('images/')
+                if document:
+                    vault_relative = posixpath.normpath(posixpath.join(posixpath.dirname(document), target))
+                    vault_col = column + '.vault:' + target
+                    if not any(b['table'] == table and b['column'] == vault_col and b['id'] == identity for b in bindings):
+                        bind(table, vault_col, identity, vault_relative, relative_root='vault')
+            elif document:
+                root = 'vault'
+                relative = posixpath.normpath(posixpath.join(posixpath.dirname(document), target)) if not target.startswith('/') else posixpath.normpath(target.lstrip('/'))
+                if relative == '..' or relative.startswith('../'):
+                    raise SnapshotError('image path escapes vault')
+            else:
+                raise SnapshotError('image reference has no document root')
+            col = column + '.' + target
+            if not any(b['table'] == table and b['column'] == col and b['id'] == identity for b in bindings):
+                bind(table, col, identity, relative, relative_root=root)
+                if root == 'paper_images':
+                    image = _read_file(asset_dirs[root], relative)
+                    if (len(image) > 4 * 1024 * 1024 or
+                        not (image.startswith((b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff', b'GIF87a', b'GIF89a')) or
+                             (image[:4] == b'RIFF' and image[8:12] == b'WEBP'))):
+                        raise SnapshotError('unsupported reader image')
     with closing(_db(path)) as db:
         tables = {r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        for table in ('raw_texts', 'draft_texts'):
+            if table in tables and db.execute(f'SELECT 1 FROM "{table}" LIMIT 1').fetchone():
+                raise SnapshotError('unsupported retained legacy table ' + table)
         for table, identity, column, digest, size, root in (
             ('literature_raws', 'snapshot_id', 'path', 'file_sha256', None, 'vault'),
             ('literature_drafts', 'draft_id', 'path', 'file_sha256', None, 'vault'),
@@ -201,7 +259,7 @@ def _asset_bindings(path, assets, roots, asset_dirs):
                 bind(table, column, row[0], row[1], row[2], row[3], root)
         if 'media_document_generations' in tables:
             for ident, value, digest, size, state, cleanup in db.execute('SELECT rowid, staging_path, document_hash, document_bytes, state, cleanup_state FROM media_document_generations'):
-                if state == 'committed' and cleanup in ('cleaned', 'reset-retired'):
+                if state == 'committed' and cleanup == 'cleaned':
                     continue
                 if not digest:
                     raise SnapshotError('document staging has no immutable byte evidence')
@@ -221,7 +279,20 @@ def _asset_bindings(path, assets, roots, asset_dirs):
             query = f'SELECT "{identity}", "{column}", ' + (f'"{digest}"' if digest else 'NULL') + f' FROM "{table}"'
             for ident, value, expected in db.execute(query):
                 if value:
-                    bind(table, column, ident, value, expected, relative_root=relative_root)
+                    compressed = table == 'literature_assets' and value.endswith('.gz')
+                    bind(table, column, ident, value, None if compressed else expected, relative_root=relative_root)
+                    if compressed:
+                        binding = bindings[-1]
+                        try:
+                            if assets[binding['root']][binding['path']]['size'] > 16 * 1024 * 1024:
+                                raise SnapshotError('compressed source exceeds limit')
+                            encoded = _read_file(asset_dirs[binding['root']], binding['path'])
+                            with gzip.GzipFile(fileobj=io.BytesIO(encoded)) as stream:
+                                data = stream.read(16 * 1024 * 1024 + 1)
+                            if len(data) > 16 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != expected:
+                                raise SnapshotError('compressed source hash mismatch')
+                        except (OSError, EOFError) as exc:
+                            raise SnapshotError('invalid compressed source') from exc
         if 'literature_assets' in tables:
             for ident, source, archive, digest in db.execute('SELECT id, source_path, archive_path, file_hash FROM literature_assets'):
                 if not archive:
@@ -256,17 +327,29 @@ def _asset_bindings(path, assets, roots, asset_dirs):
         if 'media_raw_activation_intents' in tables:
             columns = {r[1] for r in db.execute('PRAGMA table_info(media_raw_activation_intents)')}
             if {'id', 'preimage_json', 'quarantine_path', 'candidate_hash'} <= columns:
-                for ident, preimage, quarantine, candidate in db.execute('SELECT id, preimage_json, quarantine_path, candidate_hash FROM media_raw_activation_intents'):
+                for ident, preimage, quarantine, candidate, state in db.execute('SELECT id, preimage_json, quarantine_path, candidate_hash, state FROM media_raw_activation_intents'):
                     if quarantine:
-                        if not candidate:
+                        bind('media_raw_activation_intents', 'quarantine_path', ident, quarantine, candidate, allow_reserved=state == 'prepared')
+                        if bindings[-1].get('state') != 'reserved' and not candidate:
                             raise SnapshotError('quarantine has no immutable byte evidence')
-                        bind('media_raw_activation_intents', 'quarantine_path', ident, quarantine, candidate)
                     if preimage:
                         try:
                             data = json.loads(preimage)
                             bind('media_raw_activation_intents', 'preimage_json.staging_path', ident, data['staging_path'], data['document_hash'])
                         except (ValueError, TypeError, KeyError) as exc:
                             raise SnapshotError('invalid recovery preimage') from exc
+        for table, key in (('body_texts', 'snapshot_id'), ('draft_bodies', 'draft_id')):
+            if table in tables:
+                for ident, text in db.execute(f'SELECT "{key}", text FROM "{table}"'):
+                    markup(table, 'text', ident, text)
+        for binding in list(bindings):
+            if binding['table'] in ('literature_raws', 'literature_drafts', 'raw_snapshots', 'private_raw_sources'):
+                try:
+                    body = _read_file(asset_dirs[binding['root']], binding['path']).decode('utf-8')
+                except UnicodeDecodeError as exc:
+                    raise SnapshotError('referenced document is not UTF-8') from exc
+                markup(binding['table'], binding['column'], binding['id'], body,
+                       binding['path'] if binding['root'] == 'vault' else None)
         for table in tables:
             ident = '"' + table.replace('"', '""') + '"'
             for column in db.execute(f'PRAGMA table_info({ident})'):
@@ -292,7 +375,12 @@ def _asset_bindings(path, assets, roots, asset_dirs):
                                     elif isinstance(nested, str) and nested and (key.lower() == 'path' or key.lower().endswith('_path') or key.lower().endswith('path')):
                                         if table == 'media_raw_activation_intents' and key_path == 'preimage_json.staging_path':
                                             continue
-                                        bind(table, key_path, rowid, nested, relative_root='vault' if name in ('old_mapping_json', 'old_authority_json') else None)
+                                        reserved = False
+                                        if table == 'media_raw_activation_intents' and key_path == 'old_authority_json.path':
+                                            state = db.execute('SELECT state, preimage_json FROM media_raw_activation_intents WHERE rowid=?', (rowid,)).fetchone()
+                                            reserved = state == ('prepared', None)
+                                        digest = obj.get('file_hash') if key.lower() in ('archive_path', 'archivepath') else None
+                                        bind(table, key_path, rowid, nested, digest, relative_root='vault' if name in ('old_mapping_json', 'old_authority_json') else None, allow_reserved=reserved)
                                     else:
                                         visit(nested, key_path)
                             elif isinstance(obj, list):
@@ -433,28 +521,55 @@ def snapshot(database, roots, destination):
     if not roots or any(not re.fullmatch(r'[a-z][a-z0-9_]*', name) for name in roots):
         raise SnapshotError('explicit named asset roots required')
     roots = {name: Path(path) for name, path in roots.items()}
-    sources = [database.resolve(), *(p.resolve() for p in roots.values())]
-    if any(a == b or a in b.parents or b in a.parents for i, a in enumerate(sources) for b in sources[i + 1:]):
-        raise SnapshotError('source roots overlap')
+    if any(database.resolve().is_relative_to(p.resolve()) or p.resolve().is_relative_to(database.resolve()) for p in roots.values()):
+        raise SnapshotError('database overlaps asset roots')
+    resolved = {name: p.resolve() for name, p in roots.items()}
+    storage = {}
+    for name, path in resolved.items():
+        parent = min((n for n, p in resolved.items() if path.is_relative_to(p)), key=lambda n: (len(resolved[n].parts), n))
+        prefix = path.relative_to(resolved[parent]).as_posix()
+        storage[name] = {'root': parent, 'prefix': '' if prefix == '.' else prefix}
+    physical = {name: roots[name] for name in roots if storage[name] == {'root': name, 'prefix': ''}}
     destination = _check_destination(destination, [database, *roots.values()])
     with tempfile.TemporaryDirectory(prefix='.io-snapshot-', dir=destination.parent) as temp:
         stage = Path(temp)
         first = {name: _inventory(path) for name, path in roots.items()}
         _backup(database, stage / 'database.sqlite')
         evidence = _database(stage / 'database.sqlite')
+        if evidence['schema_version'] != '41':
+            version = evidence['schema_version']
+            safe_version = version if isinstance(version, str) and re.fullmatch(r'[0-9]{1,4}', version) else 'unknown'
+            raise SnapshotError('unsupported IO schema version ' + safe_version)
         root_bindings = {name: str(path.absolute()) for name, path in roots.items()}
         bindings = _asset_bindings(stage / 'database.sqlite', first, {name: Path(path) for name, path in root_bindings.items()}, roots)
         references = _references(stage / 'database.sqlite', first, bindings)
-        copied = {name: _inventory(root, stage / 'assets' / name) for name, root in roots.items()}
+        for name, path in physical.items():
+            _inventory(path, stage / 'assets' / name)
+        copied_dirs = _asset_dirs(stage, storage)
+        copied = {name: _inventory(copied_dirs[name]) for name in roots}
         second = {name: _inventory(path) for name, path in roots.items()}
         _backup(database, stage / 'check.sqlite')
         if first != copied or first != second or evidence != _database(stage / 'check.sqlite'):
             raise SnapshotError('source changed during snapshot; retry after writers pause')
         (stage / 'check.sqlite').unlink()
-        manifest = {'format': 2, 'database_sha256': _hash(stage / 'database.sqlite'), 'database': evidence, 'assets': first, 'remote_reference_counts': references, 'source_roots': root_bindings, 'asset_bindings': bindings, 'reference_coverage': _coverage(stage / 'database.sqlite')}
+        manifest = {'format': 3, 'database_sha256': _hash(stage / 'database.sqlite'), 'database': evidence, 'assets': first, 'remote_reference_counts': references, 'source_roots': root_bindings, 'asset_bindings': bindings, 'reference_coverage': _coverage(stage / 'database.sqlite'), 'asset_storage': storage}
         (stage / 'manifest.json').write_text(json.dumps(manifest, sort_keys=True), encoding='utf-8')
         verify(stage)
         _publish(stage, destination)
+
+
+def _asset_dirs(root, storage):
+    result = {}
+    for name, binding in storage.items():
+        if not isinstance(binding, dict) or set(binding) != {'root', 'prefix'}:
+            raise SnapshotError('invalid asset storage')
+        parent, prefix = binding['root'], binding['prefix']
+        if parent not in storage or storage[parent] != {'root': parent, 'prefix': ''} or not isinstance(prefix, str):
+            raise SnapshotError('invalid asset storage')
+        if prefix and any(part in ('', '.', '..') for part in prefix.split('/')):
+            raise SnapshotError('unsafe asset storage path')
+        result[name] = root / 'assets' / parent / prefix
+    return result
 
 
 def verify(directory):
@@ -464,22 +579,28 @@ def verify(directory):
         if set(p.split('/')[0] for p in inventory) != {'database.sqlite', 'manifest.json', 'assets'}:
             raise SnapshotError('unexpected snapshot contents')
         manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
-        if set(manifest) != {'format', 'database_sha256', 'database', 'assets', 'remote_reference_counts', 'source_roots', 'asset_bindings', 'reference_coverage'} or manifest['format'] != 2:
+        if set(manifest) != {'format', 'database_sha256', 'database', 'assets', 'remote_reference_counts', 'source_roots', 'asset_bindings', 'reference_coverage', 'asset_storage'} or manifest['format'] != 3:
             raise SnapshotError('invalid manifest')
         if not isinstance(manifest['assets'], dict) or not manifest['assets']:
             raise SnapshotError('invalid asset roots')
         names = manifest['assets'].keys()
         if any(not isinstance(n, str) or not re.fullmatch(r'[a-z][a-z0-9_]*', n) for n in names):
             raise SnapshotError('invalid asset root name')
-        if {p.name for p in (root / 'assets').iterdir()} != set(names):
+        storage = manifest['asset_storage']
+        if not isinstance(storage, dict) or set(storage) != set(names):
+            raise SnapshotError('asset storage differs')
+        dirs = _asset_dirs(root, storage)
+        if {p.name for p in (root / 'assets').iterdir()} != {v['root'] for v in storage.values()}:
             raise SnapshotError('asset roots differ')
         source_roots = manifest['source_roots']
         if not isinstance(source_roots, dict) or set(source_roots) != set(names) or any(not isinstance(p, str) or not Path(p).is_absolute() or '..' in Path(p).parts for p in source_roots.values()):
             raise SnapshotError('invalid source root bindings')
-        assets = {n: _inventory(root / 'assets' / n) for n in names}
+        assets = {n: _inventory(dirs[n]) for n in names}
+        if not isinstance(manifest['database'], dict) or manifest['database'].get('schema_version') != '41':
+            raise SnapshotError('unsupported IO schema version')
         if assets != manifest['assets'] or _hash(root / 'database.sqlite') != manifest['database_sha256'] or _database(root / 'database.sqlite') != manifest['database']:
             raise SnapshotError('snapshot integrity mismatch')
-        bindings = _asset_bindings(root / 'database.sqlite', assets, {n: Path(p) for n, p in source_roots.items()}, {n: root / 'assets' / n for n in names})
+        bindings = _asset_bindings(root / 'database.sqlite', assets, {n: Path(p) for n, p in source_roots.items()}, dirs)
         if bindings != manifest['asset_bindings'] or _coverage(root / 'database.sqlite') != manifest['reference_coverage'] or _references(root / 'database.sqlite', assets, bindings) != manifest['remote_reference_counts']:
             raise SnapshotError('reference evidence mismatch')
     except (OSError, ValueError, TypeError, KeyError, sqlite3.Error) as exc:
@@ -487,8 +608,7 @@ def verify(directory):
     return {'integrity_verified': True, 'coverage': 'incomplete', 'tables': len(manifest['database']['tables']), 'asset_roots': len(assets), 'remote_reference_counts': manifest['remote_reference_counts']}
 
 
-def read_asset(directory, table, column, identity):
-    """Read a recognized reference from the relocated tree after full validation."""
+def _recovery_read(directory, table, column, identity):
     root = Path(directory)
     verify(root)
     manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
@@ -496,10 +616,58 @@ def read_asset(directory, table, column, identity):
     if len(matches) != 1:
         raise SnapshotError('asset reference not uniquely bound')
     binding = matches[0]
-    data = _read_file(root / 'assets' / binding['root'], binding['path'])
+    if binding.get('state') == 'reserved':
+        raise SnapshotError('asset reference is reserved and has no bytes')
+    asset_root = _asset_dirs(root, manifest['asset_storage'])[binding['root']]
+    data, info = _read_file_identity(asset_root, binding['path'])
     if hashlib.sha256(data).hexdigest() != binding['sha256']:
         raise SnapshotError('asset changed during read')
+    current = {'path': str((asset_root / binding['path']).absolute()), 'sha256': binding['sha256'],
+               'size': len(data), 'device': info.st_dev, 'inode': info.st_ino}
+    return data, current
+
+
+def read_asset(directory, table, column, identity):
+    """Read a recognized reference from the relocated tree after full validation."""
+    return _recovery_read(directory, table, column, identity)[0]
+
+
+def recovery_binding(directory, table, column, identity):
+    """Return fresh restored-file identity for a recovery adapter, not audit data."""
+    return _recovery_read(directory, table, column, identity)[1]
+
+
+def read_recovery_asset(directory, table, column, identity, expected):
+    """Revalidate identity and hash immediately before a consumer uses the bytes."""
+    data, current = _recovery_read(directory, table, column, identity)
+    if current != expected:
+        raise SnapshotError('recovery asset identity changed')
     return data
+
+
+def recovery_adapter(directory, table, column, identity, record):
+    """Create ephemeral IO staging fields without changing the historical record."""
+    current = recovery_binding(directory, table, column, identity)
+    if not isinstance(record, dict) or record.get('document_hash') != current['sha256'] or record.get('document_bytes') != current['size']:
+        raise SnapshotError('recovery record does not match restored bytes')
+    return {**record, 'staging_path': current['path'], 'staging_device': current['device'], 'staging_inode': current['inode']}
+
+
+def remote_references(directory):
+    """Return remote object identities and expected hashes without fetching them."""
+    root = Path(directory)
+    verify(root)
+    with closing(_db(root / 'database.sqlite')) as db:
+        exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='media_objects'").fetchone()
+        if not exists:
+            return []
+        cols = {r[1] for r in db.execute('PRAGMA table_info(media_objects)')}
+        if not {'key', 'namespace', 'stored_sha256'} <= cols:
+            raise SnapshotError('unsupported remote object schema')
+        deleted = 'deleted_at' if 'deleted_at' in cols else 'NULL'
+        return [{'key': key, 'namespace': namespace, 'expected_sha256': digest,
+                 'status': 'deleted_record' if removed else 'requires_live_readback'}
+                for key, namespace, digest, removed in db.execute(f'SELECT key, namespace, stored_sha256, {deleted} FROM media_objects ORDER BY key')]
 
 
 def restore(source, destination):

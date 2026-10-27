@@ -1,4 +1,5 @@
 import hashlib
+import gzip
 from contextlib import closing
 import json
 import os
@@ -10,10 +11,143 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_asset
+from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_asset, recovery_binding, read_recovery_asset, recovery_adapter, remote_references
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_compressed_source_and_nested_retained_image_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            archive = root / 'archive'
+            archive.mkdir()
+            body, image = b'<html>synthetic</html>', b'picture'
+            (archive / 'source.html.gz').write_bytes(gzip.compress(body))
+            (archive / 'figure.png').write_bytes(image)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE literature_assets (id INTEGER PRIMARY KEY, source_path TEXT, archive_path TEXT, file_hash TEXT, metadata_json TEXT)')
+                metadata = {'local_images': [{'archive_path': str(archive / 'figure.png'), 'file_hash': hashlib.sha256(image).hexdigest()}]}
+                db.execute('INSERT INTO literature_assets VALUES (1,?,?,?,?)', ('old', str(archive / 'source.html.gz'), hashlib.sha256(body).hexdigest(), json.dumps(metadata)))
+            snapshot(root / 'source.sqlite', {'vault': vault, 'archive': archive}, root / 'snap')
+            (archive / 'figure.png').write_bytes(b'changed')
+            with self.assertRaisesRegex(SnapshotError, 'hash mismatch'):
+                snapshot(root / 'source.sqlite', {'vault': vault, 'archive': archive}, root / 'bad')
+
+    def test_unsupported_historical_schema_fails_with_version_and_preserves_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute("UPDATE schema_meta SET value='40' WHERE key='schema_version'")
+            with self.assertRaisesRegex(SnapshotError, 'unsupported IO schema version 40'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db:
+                self.assertEqual(db.execute('SELECT value FROM schema_meta').fetchone(), ('40',))
+
+    def test_populated_retired_body_table_is_reported_and_preserved(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript("CREATE TABLE raw_texts (id TEXT, text TEXT); INSERT INTO raw_texts VALUES ('legacy','synthetic');")
+            with self.assertRaisesRegex(SnapshotError, 'retained legacy table raw_texts'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db:
+                self.assertEqual(db.execute('SELECT * FROM raw_texts').fetchall(), [('legacy','synthetic')])
+
+    def test_reserved_quarantine_is_recorded_without_inventing_a_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            staging = root / 'staging'
+            staging.mkdir()
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE media_raw_activation_intents (id TEXT PRIMARY KEY, state TEXT, quarantine_path TEXT, candidate_hash TEXT, preimage_json TEXT)')
+                db.execute('INSERT INTO media_raw_activation_intents VALUES (?,?,?,?,?)', ('intent', 'prepared', str(staging / 'reserved.md'), 'a' * 64, None))
+            snapshot(root / 'source.sqlite', {'vault': vault, 'staging': staging}, root / 'snap')
+            manifest = json.loads((root / 'snap/manifest.json').read_text())
+            reserved = next(x for x in manifest['asset_bindings'] if x['column'] == 'quarantine_path')
+            self.assertEqual(reserved['state'], 'reserved')
+            restore(root / 'snap', root / 'out')
+            with self.assertRaisesRegex(SnapshotError, 'reserved'):
+                read_asset(root / 'out', 'media_raw_activation_intents', 'quarantine_path', 'intent')
+
+    def test_body_markup_image_is_resolved_after_source_disappears(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            images = root / 'images'
+            images.mkdir()
+            (images / 'fig.png').write_bytes(b'\x89PNG\r\n\x1a\nsynthetic')
+            body = 'synthetic ![figure](images/fig.png)'
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript('CREATE TABLE raw_snapshots(id INTEGER PRIMARY KEY,item_id TEXT,path TEXT); CREATE TABLE body_versions(snapshot_id INTEGER PRIMARY KEY,item_id TEXT,sha256 TEXT,authority TEXT,cleaned_at TEXT); CREATE TABLE body_texts(snapshot_id INTEGER PRIMARY KEY,text TEXT);')
+                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item',''))
+                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item',hashlib.sha256(body.encode()).hexdigest(),'database'))
+                db.execute('INSERT INTO body_texts VALUES (1,?)', (body,))
+            with self.assertRaises(SnapshotError):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'missing')
+            snapshot(root / 'source.sqlite', {'vault': vault, 'paper_images': images}, root / 'snap')
+            restore(root / 'snap', root / 'out')
+            os.rename(images, root / 'old-images')
+            self.assertEqual(read_asset(root / 'out', 'body_texts', 'text.images/fig.png', 1), b'\x89PNG\r\n\x1a\nsynthetic')
+
+    def test_unsupported_image_markup_is_not_silently_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            text = 'synthetic ![[figure.png]]'
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE draft_bodies (draft_id TEXT, text TEXT)')
+                db.execute('INSERT INTO draft_bodies VALUES (?,?)', ('draft', text))
+            with self.assertRaisesRegex(SnapshotError, 'unsupported image markup'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+
+    def test_recovery_binding_rejects_same_bytes_replaced_inode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE private_raw_sources (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, relative_path TEXT, sha256 TEXT, size_bytes INTEGER)')
+                db.execute('INSERT INTO private_raw_sources VALUES (1,?,?,?,?)', ('item','body',hashlib.sha256(b'synthetic').hexdigest(),9))
+            snapshot(root / 'source.sqlite', {'private_raw': vault}, root / 'snap')
+            restore(root / 'snap', root / 'out')
+            binding = recovery_binding(root / 'out', 'private_raw_sources', 'relative_path', 1)
+            self.assertEqual(read_recovery_asset(root / 'out', 'private_raw_sources', 'relative_path', 1, binding), b'synthetic')
+            original = {'staging_path': '/old/path', 'staging_device': 1, 'staging_inode': 2, 'document_hash': binding['sha256'], 'document_bytes': 9}
+            adapted = recovery_adapter(root / 'out', 'private_raw_sources', 'relative_path', 1, original)
+            self.assertEqual(original['staging_path'], '/old/path')
+            fd = os.open(adapted['staging_path'], os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                info = os.fstat(fd)
+                self.assertEqual((info.st_dev, info.st_ino, info.st_nlink), (adapted['staging_device'], adapted['staging_inode'], 1))
+                data = os.read(fd, 1024)
+                self.assertEqual((len(data), hashlib.sha256(data).hexdigest()), (adapted['document_bytes'], adapted['document_hash']))
+            finally:
+                os.close(fd)
+            target = Path(binding['path'])
+            replacement = target.with_name('replacement')
+            replacement.write_bytes(b'synthetic')
+            os.replace(replacement, target)
+            with self.assertRaisesRegex(SnapshotError, 'identity changed'):
+                read_recovery_asset(root / 'out', 'private_raw_sources', 'relative_path', 1, binding)
+
+    def test_overlapping_roles_share_one_tree_and_restore(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            private = vault / 'nested'
+            private.mkdir()
+            (private / 'raw').write_bytes(b'raw')
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE private_raw_sources (snapshot_id INTEGER PRIMARY KEY, item_id TEXT, relative_path TEXT, sha256 TEXT, size_bytes INTEGER)')
+                db.execute('INSERT INTO private_raw_sources VALUES (1,?,?,?,?)', ('item','raw',hashlib.sha256(b'raw').hexdigest(),3))
+            snapshot(root / 'source.sqlite', {'vault': vault, 'private_raw': private}, root / 'snap')
+            restore(root / 'snap', root / 'out')
+            os.rename(vault, root / 'old-vault')
+            self.assertEqual(read_asset(root / 'out', 'private_raw_sources', 'relative_path', 1), b'raw')
+            self.assertEqual(len(list((root / 'out/assets').iterdir())), 1)
+
     def test_cleanup_backup_manifest_and_versions_are_relocated(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -47,14 +181,17 @@ class SnapshotTests(unittest.TestCase):
             staging.mkdir()
             body = b'synthetic staged document'
             (staging / 'document').write_bytes(body)
+            (staging / 'retired').write_bytes(body)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
                 db.execute('CREATE TABLE media_document_generations (item_id TEXT, generation INTEGER, staging_path TEXT, document_hash TEXT, document_bytes INTEGER, state TEXT, cleanup_state TEXT)')
                 db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('item', 1, str(staging / 'document'), hashlib.sha256(body).hexdigest(), len(body), 'pending', 'pending'))
                 db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('other', 1, str(staging / 'already-cleaned'), 'old-hash', 1, 'committed', 'cleaned'))
+                db.execute('INSERT INTO media_document_generations VALUES (?,?,?,?,?,?,?)', ('retired', 1, str(staging / 'retired'), hashlib.sha256(body).hexdigest(), len(body), 'committed', 'reset-retired'))
             snapshot(root / 'source.sqlite', {'vault': vault, 'staging': staging}, root / 'snap')
             restore(root / 'snap', root / 'out')
             os.rename(staging, root / 'removed-staging')
             self.assertEqual(read_asset(root / 'out', 'media_document_generations', 'staging_path', 1), body)
+            self.assertEqual(read_asset(root / 'out', 'media_document_generations', 'staging_path', 3), body)
             with self.assertRaises(SnapshotError):
                 read_asset(root / 'out', 'media_document_generations', 'staging_path', 2)
 
@@ -273,6 +410,8 @@ class SnapshotTests(unittest.TestCase):
             snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             report = verify(root / 'snap')
             self.assertEqual(report['remote_reference_counts'], {'media_objects': 1, 'media_receipts': 1, 'media_upload_intents': 1})
+            remote = remote_references(root / 'snap')
+            self.assertEqual(remote, [{'key': 'object', 'namespace': 'test', 'expected_sha256': 'hash', 'status': 'requires_live_readback'}])
             coverage = json.loads((root / 'snap/manifest.json').read_text())['reference_coverage']
             self.assertIn(['literature_cleanup_backups', 'path', 'bound'], coverage)
             self.assertIn(['media_document_generations', 'provenance_json', 'recursive_path_keys'], coverage)
