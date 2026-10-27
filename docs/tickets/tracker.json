@@ -10,8 +10,11 @@
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/t00-native-acceptance-build",
-      "last_reported_head": "e47d0a08f61f59510dcde68cbf7a2cb409c8cb6f",
-      "implementation_state": "native revalidation; round-3 review pending"
+      "last_reported_head": "2de470e84603e9fa41ed998e42257ea096a5dc9e",
+      "implementation_state": "accepted; integrated; tracker closure pending",
+      "accepted_implementation_head": "2de470e84603e9fa41ed998e42257ea096a5dc9e",
+      "integration_head": "7a8a5b9",
+      "review_evidence": "docs/acceptance/t00-review-r3.md"
     },
     "01": {
       "url": "https://github.com/lostwildland/NoNews/issues/3",
@@ -22,8 +25,8 @@
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
-      "last_reported_head": "6b5ba95d24c189080f85e629c87c15e0a9601fbd",
-      "implementation_state": "partial; owner continuation"
+      "last_reported_head": "3afa4c15a14b70757d9a0ceb247687bc99d2ee31",
+      "implementation_state": "partial; current-source image parser continuation"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -35,8 +38,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "a61d4f8c44f3083c37e064103e605ec1c82fd9bc",
-      "implementation_state": "partial; backend/native continuation"
+      "last_reported_head": "64c9877e7154132e19bf678231cfbaab92d1335c",
+      "implementation_state": "partial; native lifecycle checkpoint"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",

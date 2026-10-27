@@ -13,7 +13,7 @@
       "Existing package tests and applicable build/typecheck evidence are recorded, with original failures distinguished from new ones.",
       "Document signing/CloudKit entitlement and simulator prerequisites without inventing a team ID; do not weaken release security to obtain a green local build."
     ],
-    "status": "planned",
+    "status": "accepted",
     "body_file": "docs/tickets/00-native-clean-profile-build-and-launch-baseline.md"
   },
   {
