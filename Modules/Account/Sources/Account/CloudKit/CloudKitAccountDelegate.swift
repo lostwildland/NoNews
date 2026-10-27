@@ -705,6 +705,8 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 
 	}
 
+	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
+
 	func closeDatabases() async -> Bool {
 		await syncInitialization?.value
 		return await syncDatabase.close()

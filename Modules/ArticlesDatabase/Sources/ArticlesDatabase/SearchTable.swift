@@ -92,7 +92,7 @@ final class SearchTable: DatabaseTable, @unchecked Sendable {
 		guard !articleIDs.isEmpty else {
 			return
 		}
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: {}) { database in
 			self.ensureIndexedArticles(articleIDs, database)
 		}
 	}

@@ -64,6 +64,7 @@ import Articles
 
 	@MainActor public var name: String? {
 		didSet {
+			guard account?.acceptsFixtureWork == true else { name = oldValue; return }
 			if name != oldValue {
 				postDisplayNameDidChangeNotification()
 			}
@@ -88,6 +89,7 @@ import Articles
 			return s
 		}
 		set {
+			guard settings.acceptsWork else { return }
 			if newValue != editedName {
 				if let valueToSet = newValue, !valueToSet.isEmpty {
 					settings.editedName = valueToSet
@@ -209,6 +211,7 @@ import Articles
 
 	public func rename(to newName: String, completion: @escaping (Result<Void, Error>) -> Void) {
 		guard let account else {
+			completion(.failure(CancellationError()))
 			return
 		}
 		Task { @MainActor in
@@ -228,6 +231,7 @@ import Articles
 			account?.unreadCount(for: self) ?? 0
 		}
 		set {
+			guard account?.acceptsFixtureWork == true else { return }
 			if unreadCount == newValue {
 				return
 			}

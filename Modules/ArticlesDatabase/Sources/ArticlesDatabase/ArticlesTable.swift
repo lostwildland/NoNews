@@ -113,7 +113,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Fetching Counts Async
 
 	func fetchArticleCountsAsync(_ feedIDs: Set<String>, _ completion: @escaping @Sendable (ArticleCounts) -> Void) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(ArticleCounts(totalCount: 0, unreadCount: 0, starredCount: 0, statusesCount: 0)) } }) { database in
 			let counts = self.articleCounts(feedIDs: feedIDs, database: database)
 			DispatchQueue.main.async {
 				completion(counts)
@@ -124,7 +124,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Fetching Last Update Dates
 
 	func fetchLastUpdateDatesAsync(_ completion: @escaping @Sendable ([String: Date]) -> Void) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([:]) } }) { database in
 			let lastUpdateDates = self.fetchLastUpdateDates(database)
 			DispatchQueue.main.async {
 				completion(lastUpdateDates)
@@ -225,7 +225,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		// 8. Delete Articles in database no longer present in the feed.
 		// 9. Update search index.
 
-		self.queue.runInTransaction { database in
+		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: CancellationError())) } }) { database in
 
 			let articleIDs = parsedItems.articleIDs()
 
@@ -300,7 +300,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		// 7. Call back with new and updated Articles.
 		// 8. Update search index.
 
-		self.queue.runInTransaction { database in
+		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: CancellationError())) } }) { database in
 
 			var articleIDs = Set<String>()
 			for (_, parsedItems) in feedIDsAndItems {
@@ -345,7 +345,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	public func delete(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
-		self.queue.runInTransaction { database in
+		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion?() } }) { database in
 			self.removeArticles(articleIDs, database)
 			DispatchQueue.main.async {
 				completion?()
@@ -357,7 +357,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	/// Calls `completion` with nil if the query fails, so a failure doesn’t zero every unread count.
 	func fetchAllUnreadCounts(_ completion: @escaping @Sendable (UnreadCountDictionary?) -> Void) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(nil) } }) { database in
 			let sql = "select distinct feedID, count(*) from articles natural join statuses where read=0 group by feedID;"
 
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: nil) else {
@@ -383,7 +383,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([:]) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select distinct feedID, count(*) from articles natural join statuses where feedID in \(placeholders) and read=0 group by feedID;"
 
@@ -413,7 +413,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
 			let (whereClause, parameters) = self.sinceWhereClauseAndParameters(feedIDs, since)
 			let sql = "select count(*) from articles natural join statuses where \(whereClause) and read=0;"
 
@@ -431,7 +431,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and read=0 and starred=1;"
 			let parameters = Array(feedIDs) as [Any]
@@ -451,7 +451,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
 			let (whereClause, parameters) = self.sinceWhereClauseAndParameters(feedIDs, cutoffDate)
 			let sql = "select count(*) from articles natural join statuses where \(whereClause);"
 
@@ -469,7 +469,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and starred=1;"
 			let parameters = Array(feedIDs) as [Any]
@@ -501,7 +501,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
 			let changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
 			DispatchQueue.main.async {
 				completion(changedArticleIDs)
@@ -510,7 +510,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
 			let newStatusIDs = self.statusesTable.markAndFetchNew(articleIDs, statusKey, flag, database)
 			DispatchQueue.main.async {
 				completion(newStatusIDs)
@@ -524,7 +524,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			return
 		}
 
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion() } }) { database in
 			self.statusesTable.ensureStatusesForArticleIDs(articleIDs, true, database)
 			DispatchQueue.main.async {
 				completion()
@@ -536,7 +536,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func indexUnindexedArticles() {
 		guard !indexingStopped.withLock({ $0 }) else { return }
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			let sql = "select articleID from articles where searchRowID is null limit 500;"
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: nil) else {
 				return
@@ -564,7 +564,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func emptyCaches() {
-		queue.runInDatabase { _ in
+		queue.runInDatabase(onRejected: {}) { _ in
 			self.articlesCache.withLock { $0 = [String: Article]() }
 		}
 	}
@@ -584,7 +584,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func deleteOldArticles() {
 		precondition(retentionStyle == .syncSystem)
 
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: {}) { database in
 			func deleteOldArticles(cutoffDate: Date) {
 				let sql = "delete from articles where articleID in (select articleID from articles natural join statuses where dateArrived<? and read=1 and starred=0);"
 				let parameters = [cutoffDate] as [Any]
@@ -610,7 +610,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	/// Delete old statuses.
 	func deleteOldStatuses() {
-		queue.runInTransaction { database in
+		queue.runInTransaction(onRejected: {}) { database in
 			let sql: String
 			let cutoffDate: Date
 
@@ -641,7 +641,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		if feedIDs.isEmpty {
 			return
 		}
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select articleID from articles where feedID not in \(placeholders);"
 			let parameters = Array(feedIDs) as [Any]
@@ -683,7 +683,7 @@ nonisolated private extension ArticlesTable {
 	}
 
 	private func fetchArticlesAsync(_ fetchMethod: @escaping ArticlesFetchMethod, _ completion: @escaping ArticleSetResultBlock) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
 			let articles = fetchMethod(database)
 			DispatchQueue.main.async {
 				completion(articles)

@@ -837,6 +837,8 @@ import Secrets
 		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
 	}
 
+	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
+
 	func closeDatabases() async -> Bool {
 		await syncInitialization?.value
 		return await syncDatabase.close()

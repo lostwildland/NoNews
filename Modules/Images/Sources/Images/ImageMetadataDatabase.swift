@@ -47,7 +47,7 @@ import RSDatabaseObjC
 		loadCachesFromDatabase()
 
 		let cutoff = Date().timeIntervalSince1970 - TimeInterval(days: Self.failureRetentionDays)
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			DownloadFailureTable.removeExpired(olderThan: cutoff, database: database)
 			database.vacuumIfNeeded()
 		}
@@ -77,7 +77,7 @@ import RSDatabaseObjC
 			homePagesWithNoFavicon.insert(homePageURL)
 			homePageToFaviconURL.removeValue(forKey: homePageURL)
 		}
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			HomePageFaviconTable.save(homePageURL: homePageURL, faviconURL: faviconURL, database: database)
 		}
 	}
@@ -90,7 +90,7 @@ import RSDatabaseObjC
 
 	public func saveFeedIconURL(feedURL: String, iconURL: String) {
 		feedURLToIconURL[feedURL] = iconURL
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			FeedIconURLTable.save(feedURL: feedURL, iconURL: iconURL, database: database)
 		}
 	}
@@ -106,7 +106,7 @@ import RSDatabaseObjC
 
 	public func recordFailure(url: String, statusCode: Int?) {
 		failureDates[url] = Date()
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			DownloadFailureTable.save(url: url, statusCode: statusCode, database: database)
 		}
 	}
@@ -115,7 +115,7 @@ import RSDatabaseObjC
 		guard failureDates.removeValue(forKey: url) != nil else {
 			return
 		}
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: {}) { database in
 			DownloadFailureTable.clear(url: url, database: database)
 		}
 	}

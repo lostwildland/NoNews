@@ -7,12 +7,20 @@
 //
 
 import Foundation
+import Synchronization
 import os
 import RSCore
 import RSDatabase
 import RSDatabaseObjC
 
 public actor SyncDatabase {
+	private let admission = Mutex<(closing: Bool, accountID: String?, sealed: Bool)>((false, nil, false))
+	private nonisolated var acceptsWork: Bool { admission.withLock { !$0.sealed && (!$0.closing || ($0.accountID != nil && $0.accountID == DatabaseWork.current?.accountID && DatabaseWork.current?.isActive == true)) } }
+	public nonisolated func beginClosing(accountID: String? = nil) {
+		admission.withLock { state in
+			if !state.closing { state = (true, accountID, false) }
+		}
+	}
 	private let database: FMDatabase
 	public nonisolated let databasePath: String
 
@@ -30,60 +38,78 @@ public actor SyncDatabase {
 	// MARK: - API
 
 	public func vacuum() {
+		guard acceptsWork else { return }
 		database.vacuum()
 	}
 
-	public func insertStatuses(_ statuses: Set<SyncStatus>) {
+	@discardableResult public func insertStatuses(_ statuses: Set<SyncStatus>) -> Bool {
+		guard acceptsWork else { return false }
 		do {
 			try SyncStatusTable.insertStatuses(statuses, database: database)
+			return true
 		} catch {
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
+			return false
 		}
 	}
 
 	public func selectForProcessing(limit: Int? = nil) throws -> Set<SyncStatus> {
-		try SyncStatusTable.selectForProcessing(limit: limit, database: database)
+		guard acceptsWork else { throw CancellationError() }
+		return try SyncStatusTable.selectForProcessing(limit: limit, database: database)
 	}
 
 	public func selectPendingCount() throws -> Int {
-		try SyncStatusTable.selectPendingCount(database: database)
+		guard acceptsWork else { throw CancellationError() }
+		return try SyncStatusTable.selectPendingCount(database: database)
 	}
 
 	public func selectPendingReadStatusArticleIDs() throws -> Set<String> {
-		try SyncStatusTable.selectPendingReadStatusArticleIDs(database: database)
+		guard acceptsWork else { throw CancellationError() }
+		return try SyncStatusTable.selectPendingReadStatusArticleIDs(database: database)
 	}
 
 	public func selectPendingStarredStatusArticleIDs() throws -> Set<String> {
-		try SyncStatusTable.selectPendingStarredStatusArticleIDs(database: database)
+		guard acceptsWork else { throw CancellationError() }
+		return try SyncStatusTable.selectPendingStarredStatusArticleIDs(database: database)
 	}
 
 	nonisolated public func resetAllSelectedForProcessing() {
+		guard acceptsWork else { return }
 		Task { await resetAllSelectedForProcessingAndWait() }
 	}
 
 	public func resetAllSelectedForProcessingAndWait() {
+		guard acceptsWork else { return }
 		_resetAllSelectedForProcessing()
 	}
 
 	public func close() -> Bool {
-		database.close()
+		beginClosing()
+		admission.withLock { $0.sealed = true }
+		return database.close()
 	}
 
 	/// Pass `key` when sending one status kind at a time. A nil key matches all kinds —
 	/// correct only when every queued kind for these articleIDs was sent together.
-	public func resetSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) {
+	@discardableResult public func resetSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) -> Bool {
+		guard acceptsWork else { return false }
 		do {
 			try SyncStatusTable.resetSelectedForProcessing(articleIDs, key: key, database: database)
+			return true
 		} catch {
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
+			return false
 		}
 	}
 
-	public func deleteSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) {
+	@discardableResult public func deleteSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) -> Bool {
+		guard acceptsWork else { return false }
 		do {
 			try SyncStatusTable.deleteSelectedForProcessing(articleIDs, key: key, database: database)
+			return true
 		} catch {
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
+			return false
 		}
 	}
 }

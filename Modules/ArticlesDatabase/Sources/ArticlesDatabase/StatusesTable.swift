@@ -141,7 +141,7 @@ final class StatusesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticleIDsAsync(_ statusKey: ArticleStatus.Key, _ value: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
 			var sql = "select articleID from statuses where \(statusKey.rawValue)="
 			sql += value ? "1" : "0"
 			sql += ";"
@@ -161,7 +161,7 @@ final class StatusesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticleIDsForStatusesWithoutArticlesNewerThan(_ cutoffDate: Date, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInDatabase { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
 			let sql = "select articleID from statuses s where (starred=1 or dateArrived>?) and not exists (select 1 from articles a where a.articleID = s.articleID);"
 			let articleIDs: Set<String>
 			if let resultSet = database.executeQuery(sql, withArgumentsIn: [cutoffDate]) {

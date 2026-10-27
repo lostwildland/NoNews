@@ -59,6 +59,7 @@ import Secrets
 	func accountWillBeDeleted()
 
 	func closeDatabases() async -> Bool
+	func beginClosing()
 
 	static func validateCredentials(credentials: Credentials, endpoint: URL?) async throws -> Credentials?
 
@@ -73,4 +74,5 @@ import Secrets
 
 extension AccountDelegate {
 	func closeDatabases() async -> Bool { true }
+	func beginClosing() {}
 }

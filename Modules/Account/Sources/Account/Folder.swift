@@ -60,6 +60,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	public func rename(to name: String, completion: @escaping (Result<Void, Error>) -> Void) {
 		guard let account else {
+			completion(.failure(CancellationError()))
 			return
 		}
 		Task { @MainActor in

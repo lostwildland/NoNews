@@ -241,6 +241,11 @@ public enum FetchType {
 	private var needsRefetchAllUnreadCounts = false
 	var areUnreadCountsInitialized = false
 	private var isClosing = false
+	var acceptsFixtureWork: Bool { !isClosing || (DatabaseWork.current?.isActive == true && DatabaseWork.current?.accountID == accountID) }
+	private var initializationWork: DatabaseWork?
+	#if DEBUG
+	var onFixtureClosingForTesting: (() -> Void)?
+	#endif
 	private var backgroundTasks = [UUID: Task<Void, Never>]()
 	private var activeOperations = 0
 	private var operationsDrained: CheckedContinuation<Void, Never>?
@@ -334,7 +339,7 @@ public enum FetchType {
 		defaultName = type.displayName
 
 		let feedSettingsDatabasePath = (dataFolder as NSString).appendingPathComponent("FeedSettings.db")
-		self.feedSettingsDatabase = FeedSettingsDatabase(databasePath: feedSettingsDatabasePath)
+		self.feedSettingsDatabase = FeedSettingsDatabase(databasePath: feedSettingsDatabasePath, accountID: accountID)
 
 		self.settings = AccountSettings(accountID: accountID, dataFolder: dataFolder)
 
@@ -358,7 +363,9 @@ public enum FetchType {
 		}
 
 		delegate.account = self
-		delegate.accountDidInitialize()
+		let initializationWork = DatabaseWork(accountID: accountID)
+		self.initializationWork = initializationWork
+		DatabaseWork.$current.withValue(initializationWork) { delegate.accountDidInitialize() }
 	}
 
 	// MARK: - Credentials
@@ -583,6 +590,12 @@ public enum FetchType {
 		}
 		isClosing = true
 		isDeleted = true
+		database.beginClosing()
+		feedSettingsDatabase.beginClosing()
+		delegate.beginClosing()
+		#if DEBUG
+		onFixtureClosingForTesting?()
+		#endif
 		NotificationCenter.default.removeObserver(self)
 		NotificationCenter.default.removeObserver(delegate)
 		delegate.suspendNetwork()
@@ -595,6 +608,7 @@ public enum FetchType {
 				for task in tasks { await task.value }
 			}
 			let syncClosed = await delegate.closeDatabases()
+			initializationWork?.finish()
 			let articlesClosed = await database.close()
 			let settingsClosed = await feedSettingsDatabase.close()
 			let closed = syncClosed && articlesClosed && settingsClosed
@@ -608,7 +622,7 @@ public enum FetchType {
 	}
 
 	private func withOperation<T>(_ operation: () async throws -> T) async throws -> T {
-		guard !isClosing else { throw CancellationError() }
+		guard acceptsFixtureWork else { throw CancellationError() }
 		activeOperations += 1
 		defer {
 			activeOperations -= 1
@@ -617,14 +631,18 @@ public enum FetchType {
 				operationsDrained = nil
 			}
 		}
-		return try await operation()
+		let work = DatabaseWork(accountID: accountID)
+		defer { work.finish() }
+		return try await DatabaseWork.$current.withValue(work) { try await operation() }
 	}
 
 	@discardableResult func startBackground(_ operation: @escaping @MainActor () async -> Void) -> Bool {
 		guard !isClosing else { return false }
 		let id = UUID()
+		let work = DatabaseWork(accountID: accountID)
 		backgroundTasks[id] = Task { @MainActor in
-			await operation()
+			await DatabaseWork.$current.withValue(work) { await operation() }
+			work.finish()
 			backgroundTasks[id] = nil
 		}
 		return true
@@ -871,6 +889,7 @@ public enum FetchType {
 	// MARK: - Fetching Articles
 
 	public func fetchArticles(_ fetchType: FetchType) -> Set<Article> {
+		guard acceptsFixtureWork else { return [] }
 		switch fetchType {
 		case .starred(let limit):
 			return _fetchStarredArticles(limit: limit)
@@ -896,6 +915,7 @@ public enum FetchType {
 	}
 
 	public func fetchArticlesAsync(_ fetchType: FetchType) async -> Set<Article> {
+		guard acceptsFixtureWork else { return [] }
 		switch fetchType {
 		case .starred(let limit):
 			return await _fetchStarredArticlesAsync(limit: limit)
@@ -1001,6 +1021,7 @@ public enum FetchType {
 		precondition(type == .onMyMac || type == .cloudKit)
 
 		let articleChanges = await database.updateAsync(parsedItems: parsedItems, feedID: feedID, deleteOlder: deleteOlder)
+		guard articleChanges.error == nil else { return articleChanges }
 		sendNotificationAbout(articleChanges)
 		return articleChanges
 	}
@@ -1015,6 +1036,7 @@ public enum FetchType {
 		}
 
 		let newAndUpdatedArticles = await database.updateAsync(feedIDsAndItems: feedIDsAndItems, defaultRead: defaultRead)
+		guard newAndUpdatedArticles.error == nil else { return newAndUpdatedArticles }
 		sendNotificationAbout(newAndUpdatedArticles)
 		return newAndUpdatedArticles
 	}
@@ -1041,10 +1063,11 @@ public enum FetchType {
 	/// All created statuses will be marked as read and not starred.
 	/// Sends a .StatusesDidChange notification.
 	func createStatusesIfNeededAsync(articleIDs: Set<String>) async {
+		guard acceptsFixtureWork else { return }
 		guard !articleIDs.isEmpty else {
 			return
 		}
-		await database.createStatusesIfNeededAsync(articleIDs: articleIDs)
+		guard await database.createStatusesIfNeededAsync(articleIDs: articleIDs) else { return }
 		noteStatusesForArticleIDsDidChange(articleIDs)
 	}
 
@@ -1053,6 +1076,7 @@ public enum FetchType {
 	/// Will create statuses in the database and in memory as needed. Sends a .StatusesDidChange notification.
 	/// Returns a set of new article statuses.
 	func markAndFetchNewAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async -> Set<String> {
+		guard acceptsFixtureWork else { return [] }
 		guard !articleIDs.isEmpty else {
 			return Set<String>()
 		}

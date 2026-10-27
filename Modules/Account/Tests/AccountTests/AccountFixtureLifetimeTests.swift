@@ -4,15 +4,91 @@ import SQLite3
 import Testing
 import RSWeb
 import SyncDatabase
+import Articles
+import Synchronization
+import RSCore
 @testable import Account
 
 @Suite(.isolatedWebserviceResponses) @MainActor struct AccountFixtureLifetimeTests {
 	private enum FixtureError: Error, Equatable { case expected }
+	private final class NotificationCounter: Sendable { let count = Mutex(0) }
+
+	@Test func retainedModelsCompleteRenameAfterAccountIsReleased() async throws {
+		let manager = TestAccountManager()
+		var account: Account? = manager.createAccount(type: .onMyMac)
+		let feed = try #require(account?.createFeed(with: "Original", url: "https://example.com/released", feedID: "released", homePageURL: nil))
+		let folder = try #require(account?.ensureFolder(with: "Original"))
+		try await manager.deleteAccount(try #require(account))
+		account = nil
+		#expect(feed.account == nil)
+		#expect(folder.account == nil)
+		let feedResult: Result<Void, Error> = await withCheckedContinuation { continuation in
+			feed.rename(to: "Rejected") { continuation.resume(returning: $0) }
+		}
+		let folderResult: Result<Void, Error> = await withCheckedContinuation { continuation in
+			folder.rename(to: "Rejected") { continuation.resume(returning: $0) }
+		}
+		if case .failure(let error) = feedResult { #expect(error is CancellationError) } else { Issue.record("Feed rename unexpectedly succeeded") }
+		if case .failure(let error) = folderResult { #expect(error is CancellationError) } else { Issue.record("Folder rename unexpectedly succeeded") }
+	}
+
+	@Test func admissionStopsDuringCloseWhileAcceptedWorkFinishes() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let feed = account.createFeed(with: "Original", url: "https://example.com/during", feedID: "during", homePageURL: nil)
+		let path = account.dataFolder
+		let (started, startSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		account.startBackground {
+			feed.editedName = "Before"
+			startSignal.yield(())
+			for await _ in release { break }
+			feed.editedName = "Admitted"
+			let changed = await account.database.markAndFetchNewAsync(articleIDs: ["admitted"], statusKey: .starred, flag: true)
+			#expect(changed == ["admitted"])
+		}
+		for await _ in started { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		let notifications = NotificationCounter()
+		let observer = NotificationCenter.default.addObserver(forName: .feedSettingDidChange, object: feed, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		let displayObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: feed, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		feed.editedName = "Rejected"
+		#expect(feed.editedName == "Before")
+		#expect(notifications.count.withLock { $0 } == 0)
+		NotificationCenter.default.removeObserver(observer)
+		NotificationCenter.default.removeObserver(displayObserver)
+		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
+		let rejected = await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
+		#expect(rejected.isEmpty)
+		let created = await account.database.createStatusesIfNeededAsync(articleIDs: ["rejected"])
+		let deleted = await account.database.deleteAsync(articleIDs: ["admitted"])
+		#expect(!created && !deleted)
+		#expect(FileManager.default.fileExists(atPath: path))
+		releaseSignal.yield(())
+		let closed = await close.value
+		#expect(closed)
+		#expect(feed.editedName == "Admitted")
+		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'during'") == "Admitted")
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT starred FROM statuses WHERE articleID = 'admitted'") == "1")
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT starred FROM statuses WHERE articleID = 'rejected'") == nil)
+		try await manager.deleteAccount(account)
+		#expect(!FileManager.default.fileExists(atPath: path))
+	}
 
 	@Test func failedAccountCloseCanBeRetried() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .feedbin)
 		let path = account.dataFolder
+		let feed = account.createFeed(with: "Original", url: "https://example.com/fixture", feedID: "fixture-feed", homePageURL: nil)
+		feed.editedName = "Accepted"
+		let sync = try #require(account.delegate as? FeedbinAccountDelegate).syncDatabase
 		let settingsIdentity = try identity(path + "/FeedSettings.db")
 		var destination: OpaquePointer?
 		guard sqlite3_open(":memory:", &destination) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }
@@ -27,6 +103,17 @@ import SyncDatabase
 		#expect(!results.0 && !results.1)
 		#expect(FileManager.default.fileExists(atPath: path))
 		#expect(hasOpenFile(settingsIdentity))
+		feed.editedName = "Rejected"
+		#expect(feed.editedName == "Accepted")
+		let settingsWrite = account.feedSettingsDatabaseForTesting.setString("Rejected", for: feed.url, column: .editedName)
+		#expect(!settingsWrite)
+		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
+		await #expect(throws: CancellationError.self) {
+			try await sync.selectPendingCount()
+		}
+		let inserted = await sync.insertStatuses([SyncStatus(articleID: "rejected", key: .starred, flag: true)])
+		#expect(!inserted)
+		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'fixture-feed'") == "Accepted")
 		let finishResult = sqlite3_backup_finish(backup)
 		#expect(finishResult == SQLITE_OK)
 		try await manager.deleteAccount(account)
@@ -62,6 +149,7 @@ import SyncDatabase
 		let manager = TestAccountManager()
 		try await manager.withAccount(type: .onMyMac) { account in
 			let feed = account.createFeed(with: "Original", url: "https://example.com/feed", feedID: "fixture", homePageURL: nil)
+			let files = try ["DB.sqlite3", "FeedSettings.db"].map { try identity(account.dataFolder + "/" + $0) }
 			feed.editedName = "Before close"
 			let closed = await account.closeForFixtureRemoval()
 			#expect(closed)
@@ -69,6 +157,8 @@ import SyncDatabase
 			#expect(feed.editedName == "Before close")
 			let articles = await account.fetchArticlesAsync(.feed(feed))
 			#expect(articles.isEmpty)
+			for file in files { #expect(!hasOpenFile(file)) }
+			#expect(try stringValue(in: account.dataFolder + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'fixture'") == "Before close")
 		}
 	}
 

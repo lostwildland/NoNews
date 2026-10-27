@@ -10,6 +10,7 @@ import Foundation
 import os
 import SQLite3
 import RSDatabaseObjC
+import Synchronization
 
 /// Manage a serial queue and a SQLite database.
 public final class DatabaseQueue: Sendable {
@@ -17,6 +18,7 @@ public final class DatabaseQueue: Sendable {
 	nonisolated(unsafe) private let database: FMDatabase // Used on serial dispatch queue only
 	private let databasePath: String
 	private let serialDispatchQueue: DispatchQueue
+	private let closing = Mutex(false)
 
 	private static let logger = Logger(subsystem: logSubsystem, category: "DatabaseQueue")
 
@@ -37,41 +39,65 @@ public final class DatabaseQueue: Sendable {
 	/// potentially for a while, depending on how long it takes to execute
 	/// the DatabaseBlock *and* depending on how many other calls have been
 	/// scheduled on the queue. Use sparingly — prefer async versions.
-	public func runInDatabaseSync(_ databaseBlock: DatabaseBlock) {
-		serialDispatchQueue.sync {
-			self._runInDatabase(databaseBlock, false)
+	@discardableResult public func runInDatabaseSync(_ databaseBlock: @escaping DatabaseBlock) -> Bool {
+		let completed = DispatchSemaphore(value: 0)
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async {
+				self._runInDatabase(databaseBlock, false)
+				completed.signal()
+			}
+			return true
 		}
+		if accepted { completed.wait() }
+		return accepted
 	}
 
 	/// Run a DatabaseBlock asynchronously.
-	public func runInDatabase(_ databaseBlock: @escaping DatabaseBlock) {
-		serialDispatchQueue.async {
-			self._runInDatabase(databaseBlock, false)
+	@discardableResult public func runInDatabase(onRejected: @Sendable () -> Void, _ databaseBlock: @escaping DatabaseBlock) -> Bool {
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async { self._runInDatabase(databaseBlock, false) }
+			return true
 		}
+		if !accepted { onRejected() }
+		return accepted
 	}
 
 	/// Run a DatabaseBlock wrapped in a transaction synchronously.
 	/// Transactions help performance significantly when updating the database.
 	/// Nevertheless, it’s best to avoid this because it will block the main thread —
 	/// prefer the async `runInTransaction` instead.
-	public func runInTransactionSync(_ databaseBlock: @escaping DatabaseBlock) {
-		serialDispatchQueue.sync {
-			self._runInDatabase(databaseBlock, true)
+	@discardableResult public func runInTransactionSync(_ databaseBlock: @escaping DatabaseBlock) -> Bool {
+		let completed = DispatchSemaphore(value: 0)
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async {
+				self._runInDatabase(databaseBlock, true)
+				completed.signal()
+			}
+			return true
 		}
+		if accepted { completed.wait() }
+		return accepted
 	}
 
 	/// Run a DatabaseBlock wrapped in a transaction asynchronously.
 	/// Transactions help performance significantly when updating the database.
-	public func runInTransaction(_ databaseBlock: @escaping DatabaseBlock) {
-		serialDispatchQueue.async {
-			self._runInDatabase(databaseBlock, true)
+	@discardableResult public func runInTransaction(onRejected: @Sendable () -> Void, _ databaseBlock: @escaping DatabaseBlock) -> Bool {
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async { self._runInDatabase(databaseBlock, true) }
+			return true
 		}
+		if !accepted { onRejected() }
+		return accepted
 	}
 
 	/// Run all the lines that start with "create".
 	/// Use this to create tables, indexes, etc.
-	public func runCreateStatements(_ statements: String) {
-		runInDatabaseSync { database in
+	@discardableResult public func runCreateStatements(_ statements: String) -> Bool {
+		return runInDatabaseSync { database in
 			Self.logger.debug("DatabaseQueue: runCreateStatements")
 
 			statements.enumerateLines { (line, stop) in
@@ -89,7 +115,7 @@ public final class DatabaseQueue: Sendable {
 	/// since the last vacuum() call.
 	public func vacuum() async {
 		await withCheckedContinuation { continuation in
-			runInDatabase { database in
+			runInDatabase(onRejected: { continuation.resume() }) { database in
 				database.vacuum()
 				continuation.resume()
 			}
@@ -98,8 +124,11 @@ public final class DatabaseQueue: Sendable {
 
 	public func close() async -> Bool {
 		await withCheckedContinuation { continuation in
-			serialDispatchQueue.async {
-				continuation.resume(returning: self.database.close())
+			closing.withLock { closing in
+				closing = true
+				serialDispatchQueue.async {
+					continuation.resume(returning: self.database.close())
+				}
 			}
 		}
 	}
