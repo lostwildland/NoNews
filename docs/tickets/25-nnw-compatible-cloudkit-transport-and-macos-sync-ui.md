@@ -14,6 +14,10 @@ A configured owner synchronizes IO data between native Mac clients with a suppor
 - [ ] Transport works with real authorized accounts for acceptance; signed-out/local accounts have honest non-synced status.
 - [ ] Actual draft/material availability and asset transfers are verified, not metadata-only claims.
 
+## Implementation contract
+
+[IO sync ownership and continuity](../specs/io-sync-ownership.md). Keep retained IO content independent of NNW cache cleanup; expose separate sync/asset/credential availability and prove the authorized container rather than the isolated no-iCloud acceptance profile.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/26

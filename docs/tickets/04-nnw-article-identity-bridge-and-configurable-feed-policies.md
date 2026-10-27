@@ -14,6 +14,10 @@ A native subscription can be mapped to IO observations and configured for media,
 - [ ] Shared setting changes disclose affected sources; job snapshots stay coherent and historical rerun requires explicit preview.
 - [ ] An article appears in the native list with actual bridge data, not a separate reader.
 
+## Implementation contract
+
+[IO sync ownership and continuity](../specs/io-sync-ownership.md), especially canonical content versus device/account observation identity. This adds concrete checks to the existing identity/parity requirement, not runtime evidence.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/5

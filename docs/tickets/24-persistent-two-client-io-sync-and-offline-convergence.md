@@ -13,6 +13,10 @@ Two separately stored clients synchronize IO settings, decisions and result refe
 - [ ] Reject precedence and adopted-version protection survive delayed remote operations; do not duplicate paid work on replay.
 - [ ] Tests exercise actual persistent public adapters; fake transport tests are labeled separately from cloud verification.
 
+## Implementation contract
+
+[IO sync ownership and continuity](../specs/io-sync-ownership.md). Preserve execution ownership, causal decision guards and receipt evidence; replication alone must not replay paid or external work. Its public schedules supplement the existing persistent two-client checks.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/6

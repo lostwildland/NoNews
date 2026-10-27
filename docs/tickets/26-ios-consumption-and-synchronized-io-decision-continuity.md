@@ -13,6 +13,10 @@ An iPhone running the shared app can resume synchronized Curator/Draft/material 
 - [ ] Missing/offline assets are explicit; no device pretends that reading metadata proves complete content transfer.
 - [ ] Two-client/device continuity and original read/star sync are evidenced; unavailable physical-account checks remain pending.
 
+## Implementation contract
+
+[IO sync ownership and continuity](../specs/io-sync-ownership.md). Exercise actual Draft/material bytes, an unavailable source account and device-specific credentials/access; metadata arrival alone is not readable/offline continuity.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/27
