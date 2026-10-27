@@ -8,6 +8,8 @@ NNW accounts retain their subscription, read/unread and Star behavior. IO settin
 
 The same canonical content can be observed through different accounts/providers and on different devices. Preserve every observation-to-content mapping and the original imported identifiers. NNW article IDs, local account IDs and SQL row numbers alone do not establish global content identity. Use the T04 identity bridge and verified DOI/arXiv/video/normalized-URL identities where supported; preserve unresolved observations rather than merging by title. Independently created records for the same verified content must converge without losing their separate prompt contexts or histories.
 
+The concrete native binding/context rules and their source limitations are in [native-source-identity.md](native-source-identity.md). Source-policy sharing and content deduplication are distinct: matching content is not evidence that two local account configurations should share settings automatically.
+
 No IO fields are encoded as synthetic read/Star changes. Local-only RSS accounts remain local-only for those original account facts even if the user separately enables IO sync. iOS may display a synchronized IO item whose original RSS account or cached article is unavailable; show the available retained content and an honest source-availability state.
 
 ## Preserve content independently of RSS caches

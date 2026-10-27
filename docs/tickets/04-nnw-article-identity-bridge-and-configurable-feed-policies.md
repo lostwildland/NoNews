@@ -18,6 +18,8 @@ A native subscription can be mapped to IO observations and configured for media,
 
 [IO sync ownership and continuity](../specs/io-sync-ownership.md), especially canonical content versus device/account observation identity. This adds concrete checks to the existing identity/parity requirement, not runtime evidence.
 
+[Native source identity and processing contexts](../specs/native-source-identity.md) specifies namespaced native observation bindings, independent source contexts, coherent result selection, preserved legacy pins and the public bridge checks. Current IO's single per-item pin/latest-result lookup does not already implement these requirements.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/5

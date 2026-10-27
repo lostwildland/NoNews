@@ -18,3 +18,9 @@ Both findings are supported by the connected source paths. The coordinator clear
 ## Evidence limits and next validation
 
 The prior 99 targeted and 757 full native passes, and the parent's extraction of zero disk-I/O/unlink lines, remain evidence for the reviewed HEAD only. Neither reviewer reran those suites. Revised code needs behavioral retry and post-close submission tests, final native validation and fresh independent two-axis review. Production account deletion, migration, sync, UI and full T30 remain unaccepted.
+
+## Original-owner continuation checkpoint
+
+Owner HEAD `74a65617b399dc7ace96f34c7c401fca9da7aa9a` adds a real busy SQLite backup/account-owner regression, concurrent close callers, retained directory/inode on failure and successful retry/removal. That focused test passed in the recorded `2026.10.28_04-09-00` result bundle; it covers the coordinator's retry correction at the intended owner boundary.
+
+The complete admission boundary remains unimplemented. The enabled `retainedFeedRejectsChangesAfterClose` regression is still red, and the owner did not rerun the full plan. This pushed checkpoint is not accepted or integrated. The root has clarified the existing nonthrowing-read, setter and callback refusal behavior in the T30 ticket so the same owner can finish the repair without another requirements interview. No external blocker has been established.

@@ -15,6 +15,14 @@ The owner can use all prior IO abilities in NoNews and a new user can independen
 - [ ] Each completed ticket has commit and remote ref, review base/HEAD and test outcome; goal is not completed while live prerequisites remain pending.
 - [ ] Clean abandoned changes and deliver runnable app, migration/rollback guide and known limitations without award claims.
 
+## Native fixture shutdown contract
+
+The independently executable fixture repair must close admission before draining/removing its owned directory. Already accepted work completes and persists. Account/background initialization, retained Feed/FeedSettings, direct article/sync/settings database calls and callback paths must not submit SQL after closing. Keep owner-level retry after a real busy close; retain the failed handle/directory and coordinate concurrent close callers.
+
+Preserve existing nonthrowing native API signatures where possible. On a closing/closed account, synchronous or nonthrowing async reads may return their documented empty/nil/zero shape before invoking the database. Throwing/result-based APIs report a controlled closed/cancelled error. Every accepted or rejected callback/continuation completes exactly once. Retained property setters refuse the change without replacing the previously accepted in-memory value, posting a successful change notification, saving OPML or submitting SQL. A failed close remains closed to new application work while allowing close retry. Do not fake a reopened connection or simply drop queue blocks whose continuations still need completion.
+
+Implement rejection at real owner/database boundaries and inspect all callers. Add behavioral during-close and after-close checks, retain the existing red admission regression until green, preserve pre-close writes and the actual descriptor/inode checks. No test skips, sleeps, console suppression or broad directory cleanup. This repair does not claim to change or validate production AccountManager deletion; full T30 still requires the rest of its original acceptance.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/7
