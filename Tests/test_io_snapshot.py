@@ -15,6 +15,45 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_rowid_aliases_and_nonbinary_collations_are_refused(self):
+        for defect in ('rowid', '_rowid_', 'oid', 'collation'):
+            for operation in ('snapshot', 'verify'):
+                with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp)
+                    vault = self.make_simple(root)
+                    snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+                    database = root / ('source.sqlite' if operation == 'snapshot' else 'snap/database.sqlite')
+                    with closing(sqlite3.connect(database)) as db, db:
+                        if defect == 'collation':
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='items'").fetchone()[0]
+                            rows = db.execute('SELECT * FROM items').fetchall()
+                            indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL")]
+                            db.execute('DROP TABLE items')
+                            db.execute(ddl.replace('media_type TEXT NOT NULL', 'media_type TEXT COLLATE NOCASE NOT NULL'))
+                            for index in indexes:
+                                db.execute(index)
+                            db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)
+                        else:
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone()[0]
+                            indexes = [row[0] for row in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='processing_jobs' AND sql IS NOT NULL")]
+                            db.execute('DROP TABLE processing_jobs')
+                            db.execute(ddl.replace('error TEXT', 'error TEXT, "' + defect + '" TEXT'))
+                            for index in indexes:
+                                db.execute(index)
+                    before = database.read_bytes()
+                    if operation == 'verify':
+                        manifest_path = root / 'snap/manifest.json'
+                        manifest = json.loads(manifest_path.read_text())
+                        manifest['database_sha256'] = hashlib.sha256(before).hexdigest()
+                        manifest_path.write_text(json.dumps(manifest))
+                    with self.assertRaisesRegex(SnapshotError, 'rowid|collation'):
+                        if operation == 'snapshot':
+                            snapshot(database, {'vault': vault}, root / 'bad')
+                        else:
+                            verify(root / 'snap')
+                    self.assertFalse((root / 'bad').exists())
+                    self.assertEqual(database.read_bytes(), before)
+
     def test_constraint_conflict_policies_preserve_job_history(self):
         for policy in ('REPLACE','IGNORE','FAIL','ROLLBACK','ABORT'):
             for operation in (('snapshot',) if policy=='ABORT' else ('snapshot','verify')):
@@ -28,7 +67,7 @@ class SnapshotTests(unittest.TestCase):
                         self.assertIn('idempotency_key TEXT NOT NULL UNIQUE',definition)
                         indexes=[r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='processing_jobs' AND sql IS NOT NULL")]
                         db.execute('DROP TABLE processing_jobs')
-                        db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE','idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT '+policy))
+                        db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE','idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT '+policy).replace('stage TEXT NOT NULL', 'stage TEXT COLLATE BINARY NOT NULL'))
                         for index in indexes:
                             db.execute(index)
                     before=database.read_bytes()

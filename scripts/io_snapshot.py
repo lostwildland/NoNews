@@ -443,6 +443,9 @@ def _table_semantics(db, name):
     quoted = '"' + name.replace('"', '""') + '"'
     columns = db.execute(f'PRAGMA table_xinfo({quoted})').fetchall()
     affinities = {row[1].casefold(): _affinity(row[2]) for row in columns}
+    # IO queries SQLite row identifiers directly; added aliases would change those reads.
+    if {'rowid', '_rowid_', 'oid'} & affinities.keys():
+        raise SnapshotError('unsupported schema rowid shadow: ' + name)
     defaults = {row[1].casefold(): _normalized_expression(_sql_tokens(row[4])) for row in columns if row[4] is not None}
     primary = sorted(row[1].casefold() for row in columns if row[5])
     not_null = sorted(row[1].casefold() for row in columns if row[3])
@@ -488,6 +491,9 @@ def _table_semantics(db, name):
         foreign.append(group)
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
     tokens = _sql_tokens(sql)
+    for index, token in enumerate(tokens[:-1]):
+        if token.casefold() == 'collate' and _normalized_expression_tokens([tokens[index + 1]]) != ['binary']:
+            raise SnapshotError('unsupported schema collation: ' + name)
     for index, token in enumerate(tokens[:-2]):
         if token.casefold() == 'on' and tokens[index + 1].casefold() == 'conflict' and tokens[index + 2].casefold() != 'abort':
             raise SnapshotError('unsupported schema conflict policy: ' + name)

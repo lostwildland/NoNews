@@ -21,12 +21,12 @@
       "number": 3,
       "id": 6062369875,
       "title": "Lossless IO snapshot, manifest and independent restore",
-      "status": "closed",
+      "status": "open",
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
       "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
-      "implementation_state": "accepted current-schema developer interface with independent conflict-policy follow-up Standards0/Spec0 and51integrated tests; personal migration pending",
+      "implementation_state": "Reopenedsharedschemafollowup:nonBINARYcollations/rowidshadowguards,52snapshotspass;freshnarrowStandardsSpecpending",
       "review_evidence": "docs/acceptance/t02-review-r6.md",
       "accepted_implementation_head": "24675be3f146162aad6c48851780331da8bc2f1e",
       "integration_head": "1f4f5d9",
@@ -45,7 +45,7 @@
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
       "last_reported_head": "19bce6b82f0426946424002c0c2d19c3bfa2d295",
-      "implementation_state": "NativeScopes0/0;databaseStandards27/27zeroP1P2;latenttransactiondecoratorfixedbyroot19bce6b,48tests47pass1skip. Otheraxes/corrections/crossgroup/currentbundle/UI/remoteCIopen",
+      "implementation_state": "DBSpec27/27foundcollationandrowidshadowP2s;rootguardfixes48tests47pass1skipawaitreview. JobsStd8/8foundspillstacklatencyP2,ownerperformancefixrequired. Nativebothaxes0;currentbundle/UI/remoteCIpending",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,9 +417,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "R5bothaxesincomplete1P2released-ownerFeedSettingswrites. Rootweak-ownerguarduncommitted;originalownerregression/nativevalidationrequired. FullT30open",
+      "implementation_state": "Released-ownersettingsfix769full/153focusedownerpasses,finalnormalbuildfailedactualdiskfull. Cachelifetimecorrectionandcurrentbuild/freshsmallscopereviewsrequired;fullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "d60871121fdfc00f17c6091d49df71b7bffd3d8b",
+      "last_reported_head": "2d1b2733691a6fe46d2dabbe49f7ff5105f2c95d",
       "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
     }
   },
