@@ -144,6 +144,7 @@ import Darwin
 			try await wait(real) { $0 == .ready }
 			var cursor: String? = nil
 			var count = 0
+			var deepSeen = Set<String>()
 			var bytes = Data()
 			repeat {
 				let query: [String: Any] = cursor.map { ["cursor": $0] } ?? [:]
@@ -160,13 +161,20 @@ import Darwin
 					  let complete = object["recordComplete"] as? Bool else { fatalError("Invalid jobs frame") }
 				bytes.append(data)
 				if complete {
-					guard let job = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], job["id"] is String else { fatalError("Invalid job") }
+					guard let job = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], let id = job["id"] as? String else { fatalError("Invalid job") }
+					if id == "200" || id == "199" {
+						let deep = String(repeating: "[", count: 500_000) + "0" + String(repeating: "]", count: id == "200" ? 500_000 : 499_999)
+						let expected = "{\"ignored\":" + deep + ",\"stages\":{\"curator\":{\"status\":\"failed\"}}}"
+						precondition(job["result_json"] as? String == expected)
+						precondition(job["resolved"] as? Bool == (id == "200"))
+						deepSeen.insert(id)
+					}
 					count += 1
 					bytes.removeAll()
 				}
 				cursor = object["next"] as? String
 			} while cursor != nil
-			precondition(count == 201 && bytes.isEmpty)
+			precondition(count == 201 && bytes.isEmpty && deepSeen == ["199", "200"])
 			real.stop()
 			try await wait(real) { $0 == .stopped }
 		}

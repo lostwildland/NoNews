@@ -184,24 +184,27 @@ class _AggregateJSON:
         # Container state uses one byte per nesting level and spills beyond 64 KiB.
         with tempfile.SpooledTemporaryFile(max_size=65536, mode='w+b', dir=self.directory) as stack:
             depth = 0
+            block = bytearray()
             results = {}
             keys = {}
             root = None
             complete = False
 
             def get_state():
-                stack.seek(depth - 1)
-                value = stack.read(1)[0]
+                value = block[-1]
                 return value & 7, value >> 3
 
             def set_state(state, role):
-                stack.seek(depth - 1)
-                stack.write(bytes((state | (role << 3),)))
+                block[-1] = state | (role << 3)
 
             def push(state, role):
                 nonlocal depth
-                stack.seek(depth)
-                stack.write(bytes((state | (role << 3),)))
+                if len(block) == 65536:
+                    stack.seek(depth - len(block))
+                    if stack.write(block) != len(block):
+                        raise OSError('incomplete aggregate stack write')
+                    block.clear()
+                block.append(state | (role << 3))
                 depth += 1
                 if state == 0 and role in (0, 1, 2):
                     results[depth] = {}
@@ -229,7 +232,14 @@ class _AggregateJSON:
                 nonlocal depth
                 value = results.pop(depth, None)
                 keys.pop(depth, None)
+                block.pop()
                 depth -= 1
+                if not block and depth:
+                    size = min(depth, 65536)
+                    stack.seek(depth - size)
+                    block.extend(stack.read(size))
+                    if len(block) != size:
+                        raise OSError('incomplete aggregate stack read')
                 deliver(value)
 
             def begin_value(role):

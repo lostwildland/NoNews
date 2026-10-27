@@ -275,6 +275,64 @@ class JobsPagingTest(unittest.TestCase):
                 process.stdin.close(); self.assertEqual(process.wait(timeout=10), 0)
                 process.stdout.close(); process.stderr.close()
 
+    def test_half_million_deep_history_responds_before_native_deadline(self):
+        import select
+        import time
+        engine = Path(__file__).resolve().parents[1]
+        token = 'a'*32
+        depth = 500000
+        stages = '"stages":{"curator":{"status":"failed"}}'
+        array = '['*depth+'0'+']'*depth
+        values = {'invalid': '{"ignored":'+array[:-1]+','+stages+'}',
+                  'valid': '{"ignored":'+array+','+stages+'}'}
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)/'data'
+            command = [str(engine/'.prepared/python/bin/python3'), str(engine/'stdio_service.py'), str(data)]
+            env = {'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'}
+            subprocess.run(command, input=json.dumps({'token':token})+'\n', text=True,
+                           capture_output=True, check=True, env=env, timeout=10)
+            with closing(sqlite3.connect(data/'information.sqlite')) as db, db:
+                db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','t','01','01','01','01')")
+                db.execute("INSERT INTO curator_runs(id,item_id,status,started_at,finished_at) VALUES ('success','item','succeeded','02','03')")
+                db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES ('older','item','curator','older','failed','01','01','01')")
+                db.executemany("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,result_json) VALUES (?,'item','auto',?,'failed','01','01','01',?)", [(k,k,v) for k,v in values.items()])
+            process=subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+            def send(message, timed=False):
+                started=time.monotonic()
+                process.stdin.write(json.dumps(message)+'\n'); process.stdin.flush()
+                if timed:
+                    self.assertTrue(select.select([process.stdout],[],[],7)[0], 'first frame exceeded 7 seconds')
+                reply=json.loads(process.stdout.readline())
+                return reply, time.monotonic()-started
+            try:
+                self.assertEqual(send({'token':token})[0], {'status':'ready'})
+                cursor=None; chunks=bytearray(); records={}; first_times=[]
+                while True:
+                    reply, elapsed=send({'id':1,'token':token,'method':'GET','path':'/api/jobs','query':{} if cursor is None else {'cursor':cursor}}, timed=not chunks)
+                    self.assertIn('result', reply, reply)
+                    if not chunks: first_times.append(elapsed)
+                    page=reply['result']; chunks.extend(base64.b64decode(page['chunk']))
+                    if page['recordComplete']:
+                        record=json.loads(chunks); chunks.clear(); records[record['id']]=record
+                    cursor=page['next']
+                    if cursor is None: break
+                self.assertEqual(set(records),set(values)|{'older'})
+                for name,value in values.items():
+                    self.assertEqual(records[name]['result_json'],value)
+                    self.assertEqual(records[name]['resolved'],name=='valid')
+                self.assertLess(max(first_times),7)
+                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})[0]['result']['schemaVersion'],41)
+            finally:
+                process.stdin.close()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.terminate()
+                    process.wait(timeout=10)
+                process.stdout.close(); process.stderr.close()
+            with closing(sqlite3.connect(data/'information.sqlite')) as db:
+                self.assertEqual(dict(db.execute("SELECT id,result_json FROM processing_jobs WHERE stage='auto'")),values)
+
     def test_deep_aggregate_history_remains_readable(self):
         engine = Path(__file__).resolve().parents[1]
         token = 'a'*32

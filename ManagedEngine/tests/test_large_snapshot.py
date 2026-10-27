@@ -184,6 +184,57 @@ sys.exit(stdio_service.main())
             with closing(sqlite3.connect(data/'information.sqlite')) as db:
                 self.assertEqual(db.execute('SELECT result_json FROM processing_jobs').fetchone()[0], stored)
 
+    def test_stack_spill_failures_do_not_stop_service(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            data=Path(temp)/'data'
+            subprocess.run([sys.executable,str(root/'stdio_service.py'),str(data)],
+                           input=json.dumps({'token':'a'*32})+'\n',text=True,capture_output=True,check=True)
+            stored='{"ignored":'+'['*70000+'0'+']'*70000+',"stages":{"curator":{"status":"failed"}}}'
+            with closing(sqlite3.connect(data/'information.sqlite')) as db, db:
+                db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','t','01','01','01','01')")
+                db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,result_json) VALUES ('job','item','auto','key','failed','01','01','01',?)", (stored,))
+            code="""import sys
+sys.path.insert(0,sys.argv[1])
+import backend.job_stream as stream
+mode=sys.argv[3]
+original=stream.tempfile.SpooledTemporaryFile
+count=0
+class Broken:
+ def __init__(self,*a,**k): self.file=original(*a,**k)
+ def __enter__(self): return self
+ def __exit__(self,*a): self.file.close()
+ def seek(self,*a): return self.file.seek(*a)
+ def write(self,*a):
+  if mode=='write': raise OSError('synthetic private diagnostic')
+  return self.file.write(*a)
+ def read(self,*a): return b'' if mode=='read' else self.file.read(*a)
+def factory(*a,**k):
+ global count
+ count+=1
+ return Broken(*a,**k) if count==1 else original(*a,**k)
+stream.tempfile.SpooledTemporaryFile=factory
+import stdio_service
+sys.argv=[sys.argv[0],sys.argv[2]]
+sys.exit(stdio_service.main())
+"""
+            token='a'*32
+            requests=[{'token':token},{'id':1,'token':token,'method':'GET','path':'/api/jobs'},
+                      {'id':2,'token':token,'method':'GET','path':'/api/status'},
+                      {'id':3,'token':token,'method':'GET','path':'/api/jobs'}]
+            for mode in ('write', 'read'):
+                with self.subTest(mode=mode):
+                    run=subprocess.run([sys.executable,'-c',code,str(root),str(data),mode],
+                                       input=''.join(json.dumps(x)+'\n' for x in requests),
+                                       text=True,capture_output=True,check=True,timeout=15)
+                    replies=[json.loads(x) for x in run.stdout.splitlines()]
+                    self.assertEqual(replies[1], {'id':1,'error':'operation failed'})
+                    self.assertEqual(replies[2]['result']['schemaVersion'], 41)
+                    self.assertIn('result', replies[3])
+                    self.assertEqual(run.stderr, '')
+            with closing(sqlite3.connect(data/'information.sqlite')) as db:
+                self.assertEqual(db.execute('SELECT result_json FROM processing_jobs').fetchone()[0], stored)
+
     def test_spool_write_failure_does_not_stop_service(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp:
