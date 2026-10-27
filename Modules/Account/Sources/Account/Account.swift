@@ -249,6 +249,11 @@ public enum FetchType {
 	private var initializationWork: DatabaseWork?
 	#if DEBUG
 	var onFixtureClosingForTesting: (() -> Void)?
+	func waitForFixtureBackgroundWorkForTesting() async {
+		while !backgroundTasks.isEmpty {
+			for task in Array(backgroundTasks.values) { await task.value }
+		}
+	}
 	#endif
 	private var backgroundTasks = [UUID: Task<Void, Never>]()
 	private var activeOperations = 0
@@ -1527,7 +1532,7 @@ private extension Account {
 	func populateFeedSettingsCache() {
 		let rows = feedSettingsDatabase.allRows()
 		for (feedURL, row) in rows {
-			feedSettingsCache[feedURL] = FeedSettings(feedURL: feedURL, row: row, database: feedSettingsDatabase)
+			feedSettingsCache[feedURL] = FeedSettings(feedURL: feedURL, row: row, database: feedSettingsDatabase, owner: self)
 		}
 	}
 
@@ -1535,7 +1540,7 @@ private extension Account {
 		if let d = feedSettingsCache[feedURL] {
 			return d
 		}
-		let d = FeedSettings(feedURL: feedURL, feedID: feedID, database: feedSettingsDatabase)
+		let d = FeedSettings(feedURL: feedURL, feedID: feedID, database: feedSettingsDatabase, owner: self)
 		feedSettingsCache[feedURL] = d
 		return d
 	}

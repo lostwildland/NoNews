@@ -13,6 +13,70 @@ import RSCore
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
 
+	@Test func retainedFeedRejectsSettingsWhenAccountIsReleasedWithoutClose() async throws {
+		let manager = TestAccountManager()
+		var account: Account? = manager.createAccount(type: .onMyMac)
+		let path = try #require(account).dataFolder
+		let url = "https://fixture.invalid/released-settings.xml"
+		let feed = try #require(account).createFeed(with: "Original", url: url, feedID: "released-settings", homePageURL: "https://fixture.invalid/original")
+		let database = try #require(account).feedSettingsDatabaseForTesting
+		let articles = try #require(account).database
+		let identities = try [identity(path + "/FeedSettings.db"), identity(path + "/DB.sqlite3")]
+		feed.editedName = "Open"
+		feed.homePageURL = "https://fixture.invalid/home"
+		feed.conditionalGetInfo = HTTPConditionalGetInfo(lastModified: nil, etag: "original-etag")
+		feed.newArticleNotificationsEnabled = true
+		feed.folderRelationship = ["Folder": "original-id"]
+		try #require(account).startBackground { feed.editedName = "Admitted" }
+		await account?.waitForFixtureBackgroundWorkForTesting()
+		#expect(feed.editedName == "Admitted")
+		let before = try #require(database.allRows()[url])
+		#expect(before.editedName == "Admitted")
+		#expect(before.homePageURL == "https://fixture.invalid/home")
+		#expect(before.conditionalGetInfo?.etag == "original-etag")
+		#expect(before.newArticleNotificationsEnabled)
+		#expect(before.folderRelationship == ["Folder": "original-id"])
+		weak var owner = account
+		account = nil
+		if let owner {
+			Issue.record("Account remained alive after its background work finished")
+			try await manager.deleteAccount(owner)
+			return
+		}
+		#expect(feed.account == nil)
+		let changes = NotificationCounter()
+		let settingsObserver = NotificationCenter.default.addObserver(forName: .feedSettingDidChange, object: feed, queue: nil) { _ in
+			changes.count.withLock { $0 += 1 }
+		}
+		let displayObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: feed, queue: nil) { _ in
+			changes.count.withLock { $0 += 1 }
+		}
+		feed.editedName = "Rejected"
+		feed.homePageURL = "https://fixture.invalid/rejected"
+		feed.conditionalGetInfo = HTTPConditionalGetInfo(lastModified: nil, etag: "rejected-etag")
+		feed.newArticleNotificationsEnabled = false
+		feed.folderRelationship = ["Folder": "rejected-id"]
+		#expect(feed.editedName == "Admitted")
+		#expect(feed.homePageURL == "https://fixture.invalid/home")
+		#expect(feed.conditionalGetInfo?.etag == "original-etag")
+		#expect(feed.newArticleNotificationsEnabled)
+		#expect(feed.folderRelationship == ["Folder": "original-id"])
+		#expect(changes.count.withLock { $0 } == 0)
+		let after = try #require(database.allRows()[url])
+		#expect(after.editedName == before.editedName && after.homePageURL == before.homePageURL)
+		#expect(after.conditionalGetInfo == before.conditionalGetInfo && after.conditionalGetInfoDate == before.conditionalGetInfoDate)
+		#expect(after.newArticleNotificationsEnabled == before.newArticleNotificationsEnabled && after.folderRelationship == before.folderRelationship)
+		NotificationCenter.default.removeObserver(settingsObserver)
+		NotificationCenter.default.removeObserver(displayObserver)
+		let articlesClosed = await articles.close()
+		let settingsClosed = await database.close()
+		guard articlesClosed && settingsClosed && !identities.contains(where: hasOpenFile) else {
+			Issue.record("Fixture databases did not close")
+			return
+		}
+		try FileManager.default.removeItem(atPath: path)
+	}
+
 	@Test func callbacksSubmittedBeforeCloseFinishAndPersist() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)

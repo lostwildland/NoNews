@@ -12,13 +12,14 @@ import Articles
 @MainActor final class FeedSettings {
 	private let feedURL: String
 	private let database: FeedSettingsDatabase
+	private weak var owner: Account?
 	weak var feed: Feed?
-	var acceptsWork: Bool { database.acceptsWork }
+	var acceptsWork: Bool { owner?.acceptsFixtureWork == true && database.acceptsWork }
 
 	// Reassign only before a Feed is created from these settings — Feed copies feedID at init and hashes on it.
 	var feedID: String {
 		didSet {
-			guard database.acceptsWork else { feedID = oldValue; return }
+			guard acceptsWork else { feedID = oldValue; return }
 			if feedID != oldValue {
 				database.setString(feedID, for: feedURL, column: .feedID)
 				postSettingDidChange(.feedID)
@@ -28,7 +29,7 @@ import Articles
 
 	var homePageURL: String? {
 		didSet {
-			guard database.acceptsWork else { homePageURL = oldValue; return }
+			guard acceptsWork else { homePageURL = oldValue; return }
 			if homePageURL != oldValue {
 				database.setString(homePageURL, for: feedURL, column: .homePageURL)
 				postSettingDidChange(.homePageURL)
@@ -38,7 +39,7 @@ import Articles
 
 	var iconURL: String? {
 		didSet {
-			guard database.acceptsWork else { iconURL = oldValue; return }
+			guard acceptsWork else { iconURL = oldValue; return }
 			if iconURL != oldValue {
 				database.setString(iconURL, for: feedURL, column: .iconURL)
 				postSettingDidChange(.iconURL)
@@ -48,7 +49,7 @@ import Articles
 
 	var faviconURL: String? {
 		didSet {
-			guard database.acceptsWork else { faviconURL = oldValue; return }
+			guard acceptsWork else { faviconURL = oldValue; return }
 			if faviconURL != oldValue {
 				database.setString(faviconURL, for: feedURL, column: .faviconURL)
 				postSettingDidChange(.faviconURL)
@@ -58,7 +59,7 @@ import Articles
 
 	var editedName: String? {
 		didSet {
-			guard database.acceptsWork else { editedName = oldValue; return }
+			guard acceptsWork else { editedName = oldValue; return }
 			if editedName != oldValue {
 				database.setString(editedName, for: feedURL, column: .editedName)
 				postSettingDidChange(.editedName)
@@ -68,7 +69,7 @@ import Articles
 
 	var contentHash: String? {
 		didSet {
-			guard database.acceptsWork else { contentHash = oldValue; return }
+			guard acceptsWork else { contentHash = oldValue; return }
 			if contentHash != oldValue {
 				database.setString(contentHash, for: feedURL, column: .contentHash)
 				postSettingDidChange(.contentHash)
@@ -78,7 +79,7 @@ import Articles
 
 	var newArticleNotificationsEnabled = false {
 		didSet {
-			guard database.acceptsWork else { newArticleNotificationsEnabled = oldValue; return }
+			guard acceptsWork else { newArticleNotificationsEnabled = oldValue; return }
 			if newArticleNotificationsEnabled != oldValue {
 				database.setBool(newArticleNotificationsEnabled, for: feedURL, column: .newArticleNotificationsEnabled)
 				postSettingDidChange(.newArticleNotificationsEnabled)
@@ -88,7 +89,7 @@ import Articles
 
 	var readerViewAlwaysEnabled = false {
 		didSet {
-			guard database.acceptsWork else { readerViewAlwaysEnabled = oldValue; return }
+			guard acceptsWork else { readerViewAlwaysEnabled = oldValue; return }
 			if readerViewAlwaysEnabled != oldValue {
 				database.setBool(readerViewAlwaysEnabled, for: feedURL, column: .readerViewAlwaysEnabled)
 				postSettingDidChange(.readerViewAlwaysEnabled)
@@ -98,7 +99,7 @@ import Articles
 
 	var authors: Set<Author>? {
 		didSet {
-			guard database.acceptsWork else { authors = oldValue; return }
+			guard acceptsWork else { authors = oldValue; return }
 			if authors != oldValue {
 				database.setAuthors(authors, for: feedURL)
 				postSettingDidChange(.authors)
@@ -108,7 +109,7 @@ import Articles
 
 	var conditionalGetInfo: HTTPConditionalGetInfo? {
 		didSet {
-			guard database.acceptsWork else { conditionalGetInfo = oldValue; return }
+			guard acceptsWork else { conditionalGetInfo = oldValue; return }
 			if conditionalGetInfo != oldValue {
 				database.setConditionalGetInfo(conditionalGetInfo, for: feedURL)
 				postSettingDidChange(.conditionalGetInfo)
@@ -123,7 +124,7 @@ import Articles
 
 	var conditionalGetInfoDate: Date? {
 		didSet {
-			guard database.acceptsWork else { conditionalGetInfoDate = oldValue; return }
+			guard acceptsWork else { conditionalGetInfoDate = oldValue; return }
 			if conditionalGetInfoDate != oldValue {
 				database.setDate(conditionalGetInfoDate, for: feedURL, column: .conditionalGetInfoDate)
 				postSettingDidChange(.conditionalGetInfoDate)
@@ -133,7 +134,7 @@ import Articles
 
 	var cacheControlInfo: CacheControlInfo? {
 		didSet {
-			guard database.acceptsWork else { cacheControlInfo = oldValue; return }
+			guard acceptsWork else { cacheControlInfo = oldValue; return }
 			if cacheControlInfo != oldValue {
 				database.setCacheControlInfo(cacheControlInfo, for: feedURL)
 				postSettingDidChange(.cacheControlInfo)
@@ -143,7 +144,7 @@ import Articles
 
 	var externalID: String? {
 		didSet {
-			guard database.acceptsWork else { externalID = oldValue; return }
+			guard acceptsWork else { externalID = oldValue; return }
 			if externalID != oldValue {
 				database.setString(externalID, for: feedURL, column: .externalID)
 				postSettingDidChange(.externalID)
@@ -154,7 +155,7 @@ import Articles
 	// Folder Name: Sync Service Relationship ID
 	var folderRelationship: [String: String]? {
 		didSet {
-			guard database.acceptsWork else { folderRelationship = oldValue; return }
+			guard acceptsWork else { folderRelationship = oldValue; return }
 			if folderRelationship != oldValue {
 				database.setFolderRelationship(folderRelationship, for: feedURL)
 				postSettingDidChange(.folderRelationship)
@@ -166,7 +167,7 @@ import Articles
 	/// (Not necessarily a successful attempt.)
 	var lastCheckDate: Date? {
 		didSet {
-			guard database.acceptsWork else { lastCheckDate = oldValue; return }
+			guard acceptsWork else { lastCheckDate = oldValue; return }
 			if lastCheckDate != oldValue {
 				database.setDate(lastCheckDate, for: feedURL, column: .lastCheckDate)
 				postSettingDidChange(.lastCheckDate)
@@ -177,7 +178,7 @@ import Articles
 	/// HTTP status code from the most recent feed download attempt.
 	var lastResponseCode: Int? {
 		didSet {
-			guard database.acceptsWork else { lastResponseCode = oldValue; return }
+			guard acceptsWork else { lastResponseCode = oldValue; return }
 			if lastResponseCode != oldValue {
 				database.setInt(lastResponseCode, for: feedURL, column: .lastResponseCode)
 				postSettingDidChange(.lastResponseCode)
@@ -186,9 +187,10 @@ import Articles
 	}
 
 	/// Create from database row (bulk load at startup).
-	init(feedURL: String, row: FeedSettingsDatabase.Row, database: FeedSettingsDatabase) {
+	init(feedURL: String, row: FeedSettingsDatabase.Row, database: FeedSettingsDatabase, owner: Account) {
 		self.feedURL = feedURL
 		self.database = database
+		self.owner = owner
 		self.feedID = row.feedID
 		self.homePageURL = row.homePageURL
 		self.iconURL = row.iconURL
@@ -208,9 +210,10 @@ import Articles
 	}
 
 	/// Create for a new feed not yet in the database.
-	init(feedURL: String, feedID: String, database: FeedSettingsDatabase) {
+	init(feedURL: String, feedID: String, database: FeedSettingsDatabase, owner: Account) {
 		self.feedURL = feedURL
 		self.database = database
+		self.owner = owner
 		self.feedID = feedID
 		database.ensureFeedExists(feedURL, feedID: feedID)
 	}
