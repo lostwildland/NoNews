@@ -29,6 +29,7 @@ class PayloadSourceTest(unittest.TestCase):
             (self.source / name).write_text('Synthetic public resource: ' + name + '\n')
         self.payload = self.root / 'payload'
         self.payload.mkdir()
+        (self.payload / 'python').mkdir()
 
     def run_script(self, name, *args):
         return subprocess.run([sys.executable, str(self.source / name), *map(str, args)],
@@ -70,6 +71,17 @@ class PayloadSourceTest(unittest.TestCase):
         source.symlink_to(private)
         self.assertNotEqual(self.run_script('assemble_payload.py', self.payload).returncode, 0)
         self.assertFalse((self.payload / 'PAYLOAD-MANIFEST.json').exists())
+
+    def test_extra_staged_root_files_are_refused_after_manifest_rewrite(self):
+        self.assemble()
+        for name in ('.env', 'local-config.json'):
+            with self.subTest(name=name):
+                extra = self.payload / name
+                extra.write_text('Synthetic private root bytes')
+                self.assertEqual(self.run_script('payload_manifest.py', 'write', self.payload).returncode, 0)
+                self.assertEqual(self.run_script('payload_manifest.py', 'check', self.payload).returncode, 0)
+                self.assertNotEqual(self.run_script('verify_payload_source.py', self.payload).returncode, 0)
+                extra.unlink()
 
     def test_backend_directory_symlink_is_refused(self):
         self.assemble()

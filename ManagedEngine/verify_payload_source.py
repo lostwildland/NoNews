@@ -5,6 +5,8 @@ from payload_sources import BACKEND_SOURCES, ROOT_SOURCES
 
 source = Path(__file__).resolve().parent
 payload = Path(sys.argv[1]).resolve()
+if not payload.is_dir() or {path.name for path in payload.iterdir()} != set(ROOT_SOURCES) | {'backend', 'python', 'PAYLOAD-MANIFEST.json'}:
+    raise SystemExit('Prepared payload has unexpected root entries; prepare the payload again.')
 expected = {f'backend/{name}': source / 'backend' / name for name in BACKEND_SOURCES}
 expected.update({name: source / name for name in ROOT_SOURCES})
 backend = payload / 'backend'
