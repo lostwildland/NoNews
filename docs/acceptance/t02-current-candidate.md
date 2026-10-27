@@ -19,3 +19,9 @@ The owner completed R20 at `2aa0f6821148049e500912e6131ee9c07fc9ec70`; the artif
 The pre-T30 test log still contains 2,164 SQLite disk-I/O lines reported by the owner. These remain unresolved fixture diagnostics on this branch. The CI correction passes `CI_SOURCE_ROOT` to Xcode because Swift package targets have a different SRCROOT; its two changed configuration blobs need fresh packaging assessment. The heavyweight resource is released. Visible native Ready, complete independent scope/cross-group review and ticket acceptance remain open.
 
 The coordinator independently reran `bash ManagedEngine/tests/run_native_checks.sh` against the current prepared payload; public controller checks passed.
+
+## Jobs/streaming R21 and CI trigger investigation
+
+Both fresh scoped reviewers completed all eight jobs/streaming files and connected seams at `2aa0f68`. Standards: one P2; Spec: one P2. Both reproduced the same excessive aggregate nesting failure: recursive parsing raises RecursionError, causing a public history read to fail and block older records. Source preservation is intact, but public traversal is incomplete. A bounded parser correction and fresh scoped assessment are required; the scope is not clear.
+
+GitHub reports PR33 mergeable=false/dirty, no workflow runs for head2aa0f68, and Actions enabled. Local merge-tree identifies one add/add conflict in t00-native-baseline.md, caused by independently added T00 evidence plus T02 preparation instructions. [GitHub documents](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows) that pull_request workflows do not run while a merge conflict exists. The coordinator reconciles the documentation identically on both branches without importing unreviewed engine code or merging the accepted snapshot implementation into the T02 review range. Real CI remains pending after the correction.
