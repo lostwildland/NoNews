@@ -87,11 +87,18 @@ def main():
             correlation = {} if request_id is None else {'id': request_id}
             method, path = message.get('method'), message.get('path')
             body = message.get('body', {})
+            query = message.get('query', {})
             if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
                 send({**correlation, 'error': 'invalid operation'})
                 continue
+            if not isinstance(query, dict) or (path != '/api/jobs' and query) or (path == '/api/jobs' and
+                    (set(query) - {'cursor'} or ('cursor' in query and (not isinstance(query['cursor'], str) or len(query['cursor']) > 100)))):
+                send({**correlation, 'error': 'invalid query'})
+                continue
             try:
-                send({**correlation, 'result': app.handle(method, path, {}, body)})
+                send({**correlation, 'result': app.handle(method, path, query, body)})
+            except ValueError:
+                send({**correlation, 'error': 'invalid query'})
             except Exception:
                 send({**correlation, 'error': 'operation failed'})
     except Exception:

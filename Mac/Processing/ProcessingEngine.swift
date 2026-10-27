@@ -168,7 +168,7 @@ final class ProcessingEngine {
 		}
 	}
 
-	func request(method: String, path: String, body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
+	func request(method: String, path: String, query: [String: Any] = [:], body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		guard state == .ready || state == .starting, process?.isRunning == true, pending.count < 32,
 			  [("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
@@ -180,7 +180,7 @@ final class ProcessingEngine {
 		timers[id] = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
 			Task { @MainActor in self?.requestTimedOut(id) }
 		}
-		write(["id": id, "token": token, "method": method, "path": path, "body": body])
+		write(["id": id, "token": token, "method": method, "path": path, "query": query, "body": body])
 	}
 
 	private var isFailed: Bool {

@@ -2,6 +2,10 @@
 from pathlib import Path
 from contextlib import closing
 import sqlite3
+import base64
+import hashlib
+import json
+import re
 from . import causes, settings, schema
 from .core import InformationDB, utcnow
 from .jobs import JobQueue
@@ -44,12 +48,18 @@ class Application:
                     return {'processors': settings.save_processors(db.db, value, at=utcnow())}
                 raise ValueError('Unsupported processing settings method')
             if path == '/api/jobs' and method == 'GET':
-                try:
-                    limit = max(1, min(500, int(query.get('limit', [200])[0])))
-                except ValueError:
-                    limit = 200
+                cursor = query.get('cursor')
+                if cursor is None:
+                    row_id, offset, digest = 2**63 - 1, 0, '-'
+                else:
+                    match = re.fullmatch(r'([1-9][0-9]{0,18}):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
+                    if not match:
+                        raise ValueError('invalid cursor')
+                    row_id, offset, digest = int(match[1]), int(match[2]), match[3]
+                    if row_id > 2**63-1 or (offset == 0) != (digest == '-'):
+                        raise ValueError('invalid cursor')
                 rows = db.db.execute('''
-                    SELECT j.id,j.item_id,j.stage,j.status,j.attempts,j.error,j.batch_id,
+                    SELECT j.rowid AS cursor_rowid,j.id,j.item_id,j.stage,j.status,j.attempts,j.error,j.batch_id,
                            j.created_at,j.updated_at,j.available_at,j.result_json,
                            i.title,i.media_type,
                            (SELECT s.error FROM stage_state s
@@ -60,12 +70,17 @@ class Application:
                     FROM processing_jobs j JOIN items i ON i.id=j.item_id
                     LEFT JOIN failure_dismissals d
                            ON d.kind='job' AND d.id=j.id AND d.stamp=j.updated_at
-                    ORDER BY j.rowid DESC LIMIT ?''', (limit,)).fetchall()
+                    WHERE j.rowid <= ? ORDER BY j.rowid DESC LIMIT 1''', (row_id,)).fetchall()
                 queue = JobQueue(db)
+                if cursor is not None and rows and rows[0]['cursor_rowid'] != row_id:
+                    raise ValueError('stale cursor')
+                if not rows:
+                    if cursor is not None: raise ValueError('invalid cursor')
+                    return {'chunk': '', 'recordComplete': False, 'next': None}
                 jobs = []
                 for row in rows:
                     job = dict(row)
-                    job.pop('result_json')
+                    row_id = job.pop('cursor_rowid')
                     resolved = queue.failure_resolved(row)
                     retryable = queue.retryable(row)
                     retry_blocked = None
@@ -79,5 +94,17 @@ class Application:
                                resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
                                cause=causes.classify(_job_reason(row)))
                     jobs.append(job)
-                return {'jobs': jobs}
+                encoded = json.dumps(jobs[0], ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+                actual = hashlib.sha256(encoded).hexdigest()
+                if (offset and digest != actual) or offset >= len(encoded):
+                    raise ValueError('stale cursor')
+                end = min(len(encoded), offset + 24000)
+                complete = end == len(encoded)
+                if complete:
+                    following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
+                    next_cursor = f'{following[0]}:0:-' if following else None
+                else:
+                    next_cursor = f'{row_id}:{end}:{actual}'
+                return {'chunk': base64.b64encode(encoded[offset:end]).decode('ascii'),
+                        'recordComplete': complete, 'next': next_cursor}
             raise ValueError('Unsupported operation')

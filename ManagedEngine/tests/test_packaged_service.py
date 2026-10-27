@@ -1,4 +1,5 @@
 import json
+import base64
 from contextlib import closing
 from pathlib import Path
 import shutil
@@ -61,7 +62,7 @@ class PackagedServiceTest(unittest.TestCase):
             self.assertEqual(first[0], {'status': 'ready'})
             self.assertEqual(first[1]['error'], 'unauthorized')
             self.assertEqual(first[2]['error'], 'invalid operation')
-            self.assertEqual(first[3]['result']['jobs'], [])
+            self.assertEqual(first[3]['result']['next'], None)
             self.assertEqual(first[4]['result']['processors'], 3)
             with sqlite3.connect(data / 'information.sqlite') as db:
                 self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('41',))
@@ -75,8 +76,9 @@ class PackagedServiceTest(unittest.TestCase):
                 db.execute("INSERT INTO future_data VALUES ('preserved')")
             second = run([{'token': token}, {'id': 3, 'token': token, 'method': 'GET', 'path': '/api/settings/processing'}, {'id': 4, 'token': token, 'method': 'GET', 'path': '/api/jobs'}])
             self.assertEqual(second[1]['result']['processors'], 3)
-            self.assertEqual(second[2]['result']['jobs'][0]['id'], 'job')
-            self.assertFalse(second[2]['result']['jobs'][0]['retryable'])
+            job = json.loads(base64.b64decode(second[2]['result']['chunk']))
+            self.assertEqual(job['id'], 'job')
+            self.assertFalse(job['retryable'])
             with sqlite3.connect(data / 'information.sqlite') as db:
                 self.assertEqual(db.execute('SELECT value FROM future_data').fetchone(), ('preserved',))
                 self.assertEqual(db.execute('SELECT authority FROM body_versions').fetchone(), ('imported',))

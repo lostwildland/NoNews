@@ -117,6 +117,7 @@ class StartupStatusTest(unittest.TestCase):
             response = run([{'token':token},{'id':1,'token':token,'method':'GET','path':'/api/status'}])
             self.assertEqual(response[1], {'id':1, 'result':{'schemaVersion':41}})
             full = run([{'token':token},{'id':2,'token':token,'method':'GET','path':'/api/jobs'}])
-            self.assertEqual(full[1], {'id':2,'error':'response too large'})
+            self.assertLess(len(json.dumps(full[1])), 65536)
+            self.assertIsNotNone(full[1]['result']['next'])
             with sqlite3.connect(data / 'information.sqlite') as db:
                 self.assertEqual(db.execute('SELECT count(*) FROM processing_jobs').fetchone()[0], 201)

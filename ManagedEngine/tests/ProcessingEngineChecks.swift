@@ -142,6 +142,31 @@ import Darwin
 			let real = ProcessingEngine(testRuntime: runtime, entry: root.appendingPathComponent("ManagedEngine/.prepared/stdio_service.py"), dataRoot: URL(fileURLWithPath: CommandLine.arguments[2]), timeout: 4)
 			real.start()
 			try await wait(real) { $0 == .ready }
+			var cursor: String? = nil
+			var count = 0
+			var bytes = Data()
+			repeat {
+				let query: [String: Any] = cursor.map { ["cursor": $0] } ?? [:]
+				let frame: Data = try await withCheckedThrowingContinuation { continuation in
+					real.request(method: "GET", path: "/api/jobs", query: query) { result in
+						guard let object = try? result.get(), let encoded = try? JSONSerialization.data(withJSONObject: object) else {
+							continuation.resume(throwing: NSError(domain: "jobs", code: 1)); return
+						}
+						continuation.resume(returning: encoded)
+					}
+				}
+				guard let object = try JSONSerialization.jsonObject(with: frame) as? [String: Any],
+					  let chunk = object["chunk"] as? String, let data = Data(base64Encoded: chunk),
+					  let complete = object["recordComplete"] as? Bool else { fatalError("Invalid jobs frame") }
+				bytes.append(data)
+				if complete {
+					guard let job = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], job["id"] is String else { fatalError("Invalid job") }
+					count += 1
+					bytes.removeAll()
+				}
+				cursor = object["next"] as? String
+			} while cursor != nil
+			precondition(count == 201 && bytes.isEmpty)
 			real.stop()
 			try await wait(real) { $0 == .stopped }
 		}

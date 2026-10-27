@@ -9,7 +9,7 @@ import json
 source = Path(__file__).resolve().parent
 payload = Path(sys.argv[1]).resolve()
 shutil.copytree(source / 'backend', payload / 'backend', ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
-for name in ('stdio_service.py', 'PROVENANCE.md', 'requirements.lock'):
+for name in ('stdio_service.py', 'PROVENANCE.md', 'JOBS-IPC.md', 'requirements.lock'):
     shutil.copy2(source / name, payload / name)
 for cache in payload.rglob('__pycache__'):
     if cache.is_dir() and not cache.is_symlink():
