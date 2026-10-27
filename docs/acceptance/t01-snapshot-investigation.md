@@ -1,5 +1,13 @@
 # T01 snapshot investigation (incomplete)
 
+## Shared conflict-policy follow-up after T02 R5
+
+T02's independent Spec reviewer reproduced UNIQUE ON CONFLICT REPLACE passing the adapted structural gate and replacing an existing synthetic job. The original T01 signature had the same gap. This is a new known case after its round7 acceptance; issue3 is reopened until fresh independent review of this follow-up. No personal data or cutover used the affected path.
+
+The coordinator first reproduced REPLACE/IGNORE/FAIL/ROLLBACK policies passing public snapshot, and verify reporting only a generic manifest mismatch. Canonical-table token validation now conservatively refuses non-ABORT policies, including primary/NOT NULL cases covered by the engine tests. The existing tokenizer excludes comments and quoted strings. Explicit ABORT remains equivalent to default behavior: snapshot/restore succeeds, and a duplicate job key raises SQLite IntegrityError while retaining the first job. Negative cases assert no publication and unchanged source bytes.
+
+Full current snapshot suite:51tests passed with ResourceWarning as errors. Compilation and staged/full-diff whitespace checks passed. This is source/synthetic evidence; current private migration, native UI, live remote readback and fresh two-axis follow-up review remain pending. Historical round7 acceptance and50tests below remain evidence for their earlier scope, not this new case.
+
 ## Independent review round 6 coordinator corrections
 
 Reviewed HEAD `7580501f88a5cb9b21fcff96fd8ddd9a2168a9d3`. Standards reproduced one P2: deeply nested JSON metadata raised an uncaught RecursionError. Spec reproduced one P1 (HTML priority attributes hid independently loadable local images) and one P2 (extra restrictive schema constraints could break restored IO writes). These findings and corrections remain separate from acceptance.

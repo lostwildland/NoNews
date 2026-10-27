@@ -15,6 +15,47 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_constraint_conflict_policies_preserve_job_history(self):
+        for policy in ('REPLACE','IGNORE','FAIL','ROLLBACK','ABORT'):
+            for operation in (('snapshot',) if policy=='ABORT' else ('snapshot','verify')):
+                with self.subTest(policy=policy,operation=operation), tempfile.TemporaryDirectory() as tmp:
+                    root=Path(tmp)
+                    vault=self.make_simple(root)
+                    snapshot(root/'source.sqlite',{'vault':vault},root/'snap')
+                    database=root/('source.sqlite' if operation=='snapshot' else 'snap/database.sqlite')
+                    with closing(sqlite3.connect(database)) as db, db:
+                        definition=db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone()[0]
+                        self.assertIn('idempotency_key TEXT NOT NULL UNIQUE',definition)
+                        indexes=[r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='processing_jobs' AND sql IS NOT NULL")]
+                        db.execute('DROP TABLE processing_jobs')
+                        db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE','idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT '+policy))
+                        for index in indexes:
+                            db.execute(index)
+                    before=database.read_bytes()
+                    if operation=='verify':
+                        p=root/'snap/manifest.json'
+                        manifest=json.loads(p.read_text())
+                        manifest['database_sha256']=hashlib.sha256(before).hexdigest()
+                        p.write_text(json.dumps(manifest))
+                    if policy!='ABORT':
+                        with self.assertRaisesRegex(SnapshotError,'conflict policy'):
+                            if operation=='snapshot':
+                                snapshot(database,{'vault':vault},root/'bad')
+                            else:
+                                verify(root/'snap')
+                        self.assertFalse((root/'bad').exists())
+                        self.assertEqual(database.read_bytes(),before)
+                    elif operation=='snapshot':
+                        snapshot(database,{'vault':vault},root/'good')
+                        restore(root/'good',root/'out')
+                        with closing(sqlite3.connect(root/'out/database.sqlite')) as db, db:
+                            insert="INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES (?,'item','curator','same','pending','now','now','now')"
+                            db.execute(insert,('first',))
+                            db.commit()
+                            with self.assertRaises(sqlite3.IntegrityError):
+                                db.execute(insert,('second',))
+                            self.assertEqual(db.execute('SELECT id FROM processing_jobs').fetchall(),[('first',)])
+
     def test_extra_restrictive_constraints_are_refused(self):
         for defect in ('check', 'not_null', 'unique', 'foreign_keys', 'expression_index', 'partial_index', 'trigger'):
             for operation in ('snapshot', 'verify'):

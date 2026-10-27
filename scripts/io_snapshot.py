@@ -487,6 +487,10 @@ def _table_semantics(db, name):
         group['columns'].sort(key=lambda pair: (pair[0], pair[1] or ''))
         foreign.append(group)
     sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone()[0]
+    tokens = _sql_tokens(sql)
+    for index, token in enumerate(tokens[:-2]):
+        if token.casefold() == 'on' and tokens[index + 1].casefold() == 'conflict' and tokens[index + 2].casefold() != 'abort':
+            raise SnapshotError('unsupported schema conflict policy: ' + name)
     return {'primary_key': primary, 'rowid_alias': rowid_alias, 'affinities': affinities, 'defaults': defaults, 'not_null': not_null, 'unique': unique, 'foreign_keys': foreign, 'checks': _checks(sql)}
 
 

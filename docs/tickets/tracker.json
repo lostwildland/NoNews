@@ -21,15 +21,17 @@
       "number": 3,
       "id": 6062369875,
       "title": "Lossless IO snapshot, manifest and independent restore",
-      "status": "closed",
+      "status": "open",
       "native_parent": true,
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
       "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
-      "implementation_state": "accepted and integrated; issue closed",
-      "review_evidence": "docs/acceptance/t01-review-r7.md",
+      "implementation_state": "reopened for shared conflict-policy integrity follow-up;51snapshot tests pass; independent review pending",
+      "review_evidence": "docs/acceptance/t02-review-r5.md",
       "accepted_implementation_head": "24675be3f146162aad6c48851780331da8bc2f1e",
-      "integration_head": "1f4f5d9"
+      "integration_head": "1f4f5d9",
+      "followup_branch": "feature/nonews-io-parity",
+      "followup_base": "09b51fa5bf81cdb6d9dbfe694ff6499119e31ba3"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -41,9 +43,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "92554d7",
-      "implementation_state": "R4 constraint fix packaged at032f258; evidencec3741bf and EOF-only92554d7; current payload/source verified, fresh R5 review pending",
-      "review_evidence": "docs/acceptance/t02-review-r4.md"
+      "last_reported_head": "b9d2a22e2365163794e5dea16e2f9730b5ad2421",
+      "implementation_state": "R5 Standards0/Spec1P2; non-ABORT policy guard fixed;19Python tests18pass1skip and controller pass; current payload validation then R6 pending",
+      "review_evidence": "docs/acceptance/t02-review-r5.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",

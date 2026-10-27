@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 accepted;2of31closed. T02 constraint fix032f258 is packaged and smoke-tested; c3741bf records evidence and92554d7 normalizes helper EOF only. Parent verified r6 artifact signature/isolation/running processes, code scope and current prepared source/manifest. Fresh R5 two-axis reviews next. Native visualReady remains unavailable. T30 R1 was investigation-only; same owner now implements deterministic lifecycle cleanup with the serialized full-Xcode resource released byT02. No T30 fix/test pass is yet claimed. T03 awaits accepted engine APIs. All29remainingtickets and full migration/sync/UI acceptance stay open.
+T02 R5 found Standards0/Spec1P2: altered constraint conflict policies can replace history. Fixed in engineb9d2a22 and the root T01 follow-up from09b51fa;19engine tests18pass1skip, controller checks and51snapshot tests pass. T01 issue3 is reopened pending fresh independent follow-up review;1of31tickets closed. T02 current policy payload needs packaged verification, then R6 two-axis review covering both its full original-base change and the root T01 patch. T30 same owner continues deterministic lifecycle repair and owns heavyweight native validation. No competing Xcode/test host/main-app launch. Native visualReady, T03 dependencies, personal migration, sync and overall UX acceptance remain pending. Full goal unchanged.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
