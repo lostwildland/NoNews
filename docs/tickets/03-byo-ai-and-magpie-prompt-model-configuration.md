@@ -8,6 +8,8 @@ A reader configures a service and creates reusable Curator/Editor prompts that e
 
 Native forms, coherent save/reference/history behavior, source-backed variable handling and run timing are specified in [native-processing-configuration.md](../specs/native-processing-configuration.md). This supplements the same ticket; its T02 dependency remains required.
 
+Implementation may start only from independently reviewed, accepted and integrated T02 API commits. If that code boundary is accepted while native UI observation is unavailable, explicitly record the remaining T02 visual evidence as open rather than claiming ticket completion. Do not build against an unreviewed worker branch or treat T03 implementation as proof of either ticket's UI acceptance. Final acceptance still requires the original native evidence.
+
 ## Acceptance criteria
 
 - [ ] Native Settings store secrets securely and validate nonsecret endpoint/target configuration; directory refresh performs no inference.

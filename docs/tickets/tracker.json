@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "4985b2f4bfe634edd7a6f0ca62567b96d45c12a3",
-      "implementation_state": "R7 Standards1P2/Spec0; orphan-history projection fixed and20Python19pass1skip/native-controller pass; refreshed bundled evidence and fresh recheck pending",
+      "last_reported_head": "3e218ade1fae4c9ff5a459979b6a1b3c3f920037",
+      "implementation_state": "current signed r8bundle verified;parent signature/isolation/embeddedbytes/processreadback pass;current CUA cgWindowNotFound;fresh R8 review before API integration,UI gate open",
       "review_evidence": "docs/acceptance/t02-review-r7.md"
     },
     "03": {

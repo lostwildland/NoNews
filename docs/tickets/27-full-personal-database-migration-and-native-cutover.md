@@ -14,6 +14,10 @@ The existing owner imports the entire verified IO database/assets/configuration,
 - [ ] Full private-data reconciliation and independent restore evidence are local/redacted; source system remains intact and rollback demonstrable.
 - [ ] Resumed native workflow is exercised against actual authorized services without overwriting existing personal work.
 
+## Maintenance evidence preservation
+
+Preserve the [maintenance/helper evidence families](../research/io-maintenance-port-surfaces.md), including receipt schema/source/status, unverifiable fields, operation/backup bindings, prepared note provenance and private Raw mappings. A post-hoc record is not write-time completion; importing or syncing one performs no replay, release or cleanup. Source-only retired-table wrappers require verified historical-input handling when those inputs actually exist, not loss or silent default execution. A clean schema-41 fixture cannot stand in for the full personal manifest.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/3

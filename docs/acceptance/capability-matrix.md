@@ -4,6 +4,8 @@
 
 The [command-to-ticket audit](../research/io-command-ticket-coverage.md) classifies all 54 current `Application.handle` route fragments into implemented operations, aliases, guards and refused legacy surfaces. Use it with this matrix during implementation and T30 acceptance; it is source traceability, not runtime proof or a requirement to expose legacy HTTP routes.
 
+The [maintenance/helper follow-up](../research/io-maintenance-port-surfaces.md) expands E2/E3/F7 into the six evidence families below. It samples source entry points beyond HTTP; it does not claim exhaustive script or live-installation coverage. Source implementation and NoNews acceptance remain separate.
+
 | ID | Existing capability | Owning tickets | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | A1 | 接入持续更新的订阅 | [T02](https://github.com/lostwildland/NoNews/issues/4), [T04](https://github.com/lostwildland/NoNews/issues/6) | not implemented in NoNews | source inventory only; native verification pending |
@@ -47,6 +49,12 @@ The [command-to-ticket audit](../research/io-command-ticket-coverage.md) classif
 | F5 | 控制开销与处理失败 | [T20](https://github.com/lostwildland/NoNews/issues/22) | not implemented in NoNews | source inventory only; native verification pending |
 | F6 | 安全连接外部系统 | [T02](https://github.com/lostwildland/NoNews/issues/4), [T20](https://github.com/lostwildland/NoNews/issues/22) | not implemented in NoNews | source inventory only; native verification pending |
 | F7 | 历史资产归并、迁移、恢复证据 | [T01](https://github.com/lostwildland/NoNews/issues/3), [T21](https://github.com/lostwildland/NoNews/issues/23), [T22](https://github.com/lostwildland/NoNews/issues/24), [T27](https://github.com/lostwildland/NoNews/issues/29) | not implemented in NoNews | source inventory only; native verification pending |
+| MAINT-ASSET-PROOF | 精确资产／回执只读核验 | T21/T22/T27 | not implemented in NoNews | [source evidence and port cases](../research/io-maintenance-port-surfaces.md); proof is not a write permit |
+| MAINT-RECONCILE | 中断迁移分组核对与有据释放 | T20/T21/T22/T27 | not implemented in NoNews | same source follow-up; contradictory bytes remain held |
+| MAINT-POST-HOC | 保留事后回执的有限证明范围 | T21/T22/T27 | not implemented in NoNews | same source follow-up; never relabelled write-time/complete |
+| MAINT-PRIVATE-RAW | 私有 Raw 归档登记和精确回退 | T21/T22/T27 | not implemented in NoNews | same source follow-up; source tests read, not rerun |
+| MAINT-NOTE-RECONCILE | Zotero 子笔记版本与书目信息修复 | T16/T17/T22/T27 | not implemented in NoNews | same source follow-up; authored current draft/ownership preserved |
+| MAINT-VERIFIED-CLEANUP | 经核验的清理计划／备份／逐项回执 | T16/T21/T22/T27 | not implemented in NoNews | same source follow-up; cloud result differs from desktop/local readback |
 | NNW-BASE | Preserve native NNW accounts/read/Star/search and build | [T00](https://github.com/lostwildland/NoNews/issues/2), [T26](https://github.com/lostwildland/NoNews/issues/28), [T30](https://github.com/lostwildland/NoNews/issues/32) | build/launch baseline accepted; full journeys pending | T00 native build, 753 tests, focused regressions and two-axis review: [evidence](t00-review-r3.md); T26/T30 pending |
 | SYNC | New IO data cross-device sync, assets and offline merge | [T24](https://github.com/lostwildland/NoNews/issues/26), [T25](https://github.com/lostwildland/NoNews/issues/27), [T26](https://github.com/lostwildland/NoNews/issues/28), [T30](https://github.com/lostwildland/NoNews/issues/32) | pending | no acceptance evidence yet |
 | SNAPSHOT | Current-schema lossless snapshot/verify/restore developer interface | [T01](https://github.com/lostwildland/NoNews/issues/3) | accepted with reviewed conflict-policy follow-up | Earlier [full acceptance](t01-review-r7.md) plus [follow-up Standards0/Spec0](t02-review-r6.md),51 integrated-root tests; personal cutover remains pending |

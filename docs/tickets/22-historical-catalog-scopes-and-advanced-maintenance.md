@@ -13,6 +13,10 @@ An advanced user can continue the current history discovery, import, reconciliat
 - [ ] Advanced native command/tool entry executes actual operations with preview/progress/restore evidence.
 - [ ] Normal reading is not forced through maintenance setup; no capability is dropped because it is advanced.
 
+## Maintenance evidence and helper continuity
+
+The [maintenance/helper source follow-up](../research/io-maintenance-port-surfaces.md) refines existing capabilities: persisted-asset verification, interrupted-group reconciliation/release, post-hoc receipts, private Raw registration/rollback, prepared Zotero child-note/bibliography reconciliation and verified cleanup planning. Preserve their actual evidence/authority distinctions and configured helper outcomes. Do not replace these with a generic Retry or reinterpret a report as a write permit. Historical-only wrappers remain a separately verified migration concern; do not resurrect retired normal-reader surfaces.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/6
