@@ -4,13 +4,13 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 
 ## Phases
 - [x] Record ten answers and create durable active goal.
-- [ ] Publish full capability spec and dependency-linked vertical tickets.
+- [x] Publish full capability spec and 31 dependency-linked vertical tickets (91 native edges).
 - [ ] Execute frontier with one Terra high owner per ticket, isolated worktrees.
 - [ ] Independent Standards/Spec review, bounded UX review, commit/push per completed ticket.
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-Publish the concrete spec and tickets, checkpoint planning branch, then start foundational independent tickets.
+Dispatch T00 (#2) native build baseline and T01 (#3) lossless snapshot/restore to independent Terra high worktrees; when results return, run pinned Standards/Spec reviews and integrate accepted commits.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
