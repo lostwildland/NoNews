@@ -1,0 +1,451 @@
+{
+  "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
+  "candidate": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
+  "state": "Fixture-lifetime repair only; full T30 product/migration/sync/UI acceptance remains open. Previous broad reviews were incomplete. Each new group review must inspect every changed hunk and connected seam; unrelated unchanged lines are not the coverage criterion.",
+  "groups": {
+    "account": 16,
+    "storage": 14,
+    "fixtures": 13,
+    "harness": 11
+  },
+  "evidence": {
+    "full_native_plan_source": "2d1b2733691a6fe46d2dabbe49f7ff5105f2c95d",
+    "full_native_tests": 769,
+    "normal_build_source": "357f4632227e42a66eb2bd1fe2186145c0ca0e77",
+    "normal_build": "Coordinator independently verified isolated identity, deep strict signature and executable/debug-dylib hashes. Source-copy/cache cleanup is owner evidence. Full source review remains pending."
+  },
+  "files": [
+    {
+      "path": "Modules/Account/Sources/Account/Account.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "c311894d36b4bcd6ea771c63d0bf687201ea4fb1",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/AccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "415057384283d09cae62747b9bb4aa867484411b",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Container.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feed.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/FeedSettings.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "9fd42d8e1d63c5f1f97b2995c8475086761a5c66",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Folder.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "98daa7ce7c0bf766ba666b0313c891093c7ed564",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "553bf86139f5115dad7f173107375b45eb7b2119",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/OPMLFile.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "d132500bd6528202567e2cd24e151fb798236db3",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account",
+      "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "182e4b412cb8cc79d75c4761065d72e4b7171cc2",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "216ea6627c70ff9ff764e2329a83928b95ef3f19",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountOPMLLoadTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "60b7efd4f93e23060eabd19a0ea99a97e36bf300",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderContentsSyncTest.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "48de5b5a92642694f2d894e1bc0c73de41f86ef1",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderSyncTest.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "a262ba47a872b1c21370bf4297a86b945692e6aa",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinSyncTest.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "4084fb045957b3c9cef07e202e28898893688a8f",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/FeedbinFeedNameTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "14ac50768a45748a3ea3f7bce4ea8fbfd2f7a190",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/FeedbinStatusSendTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "14cddd87958b785a1ce5362c60cd62513e4772f8",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyFeedNameTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "325a0e0e981eabbd1057750b75486d97e0ec5eec",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyFolderReconciliationTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "fd2f4edcb18327759fd1299d47ebaea4c2b750db",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyReauthorizationTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "7a9717e29ad6338d9fe6ffbd0fa12df104c306c2",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/NewsBlur/NewsBlurFeedNameTests.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "ad23fadd56443b0fe8d56b022600bfe946f68d28",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/TestAccountManager.swift",
+      "previous_path": null,
+      "group": "fixtures",
+      "blob": "73d4578f2c87000c72090dd1b73b396b0803ba71",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "3e6d7960a3d69656e55721d3fadbe87f40046074",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "74674c0f5eefd1c93f119e3d72aeb375a55337ac",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/AuthorsSchemaMigration.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "1972f90f12b3ffee94d2bc7d89b5c902a060bc3a",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "db34db2fa7f8db207734b00b54577b5c503137ad",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "8ad956e3a60c9e4891f9d562bec9ce9a34e9305b",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/Images/Sources/Images/ImageMetadataDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "2c0b8cf06d744db7f2f1fa8c6e2838f1ec9e7205",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "93dd7777deb6f0442816ff419c1a0803227d10b1",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseWork.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "abf1dd6255cfb43e63b8cafd9c5da195ea25e804",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabaseObjC/FMDatabase.m",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "4a7b18f93997a2537bc2f1842a43afa037c8c502",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseCloseTests.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "9f503cd92a002061612b20621561c6c1b0073e9b",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseQueueShutdownTests.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "9024aa6a9404c920b5e4e51db79004ada01a468d",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/RSWeb/Sources/RSWeb/Downloader.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "a4139cca3c3484759eaefb8caefabe011510e57f",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "aebaa83bbb0f5cdf3f909c852c62d5cfbe574c05",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/ScriptingTests.swift",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "249595c3ce4cec07bdae87009018dd473052cc69",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.applescript",
+      "group": "harness",
+      "blob": "dea802e9542afcac15875d8d589a3195ce31623c",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.applescript",
+      "group": "harness",
+      "blob": "888d60247e0fafbd89a714bc39ad67e4e67415b7",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.applescript",
+      "group": "harness",
+      "blob": "b2f340c9232ff5cb57c10a3b8c6df3b6588f8886",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.applescript",
+      "group": "harness",
+      "blob": "241eb8a7adc0d2be59f23f3aa8ded70b9ee83e23",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.applescript",
+      "group": "harness",
+      "blob": "3e69a2f920cb1fe595dadf262a4aade473874d4d",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.txt",
+      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.applescript",
+      "group": "harness",
+      "blob": "ce8548918228275c90568c3ac2db6a1a18178f60",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "buildscripts/acceptance.sh",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "35148b7e29cb5a1af4bd7257b0ee2b5e97152c09",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "buildscripts/test_acceptance.py",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "3b0557ec904c2c30fd0e6243f352353a09031d40",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    },
+    {
+      "path": "docs/acceptance/t30-native-fixture-lifetime.md",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "de72cff7802fd9e7da6cdaf969d7c9efa50af3df",
+      "standards": "pending bounded scope review",
+      "spec": "pending bounded scope review"
+    }
+  ]
+}

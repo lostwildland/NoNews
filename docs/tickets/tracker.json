@@ -26,13 +26,13 @@
       "native_blockers": [],
       "implementation_branch": "t3/io-snapshot-restore",
       "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
-      "implementation_state": "Shared schema correction includes quoted BINARY support; 53 snapshot tests pass. Fresh narrow Standards/Spec review required; personal cutover remains open.",
+      "implementation_state": "R27 Standards clear; Spec equivalent CHECK annotation issue fixed and53 snapshot tests pass. Fresh delta review required; personal cutover open.",
       "review_evidence": "docs/acceptance/t02-review-r6.md",
       "accepted_implementation_head": "24675be3f146162aad6c48851780331da8bc2f1e",
       "integration_head": "1f4f5d9",
       "followup_branch": "feature/nonews-io-parity",
       "followup_base": "2e3edb06c79e73664f1e62958346a72134fdc820",
-      "followup_head": "eacdcd91fec1249debda34c0332b1adf28ff3e70"
+      "followup_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c"
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "3c9c2e79559d559d3689f9c27eaa5bfe67a08ee6",
-      "implementation_state": "Cached deep parser owner reports approximately 0.8s first frame; schema quote correction passes coordinator 50 tests plus one optional skip and native controller checks. Fresh scoped review/current bundle/cross-group acceptance pending.",
+      "last_reported_head": "91fdf89b306c53c65b97df2662348e81db80ce5e",
+      "implementation_state": "R27 Standards clear; Spec CHECK and commit-failure issues fixed. Coordinator final52 total/51pass/1optionalSkip and controller pass. Correction, jobs/packaging/cross-group review and current bundle pending.",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,9 +417,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Released-owner fix has owner 769 full/153 focused passes; per-invocation cache change has five synthetic passes. Final source normal build and smaller complete review scopes remain required; full T30 open.",
+      "implementation_state": "Final-source normal build357f463 passed isolated identity/deep signature; coordinator verified artifact/hash. Prior769 full tests remain scoped to2d1b273. New54-path ledger splits account16/storage14/fixtures13/harness11; review and fullT30 remain open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "357f4632227e42a66eb2bd1fe2186145c0ca0e77",
+      "last_reported_head": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
       "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
     }
   },
