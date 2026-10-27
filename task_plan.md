@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00 is integrated and closed. T01 round6 identified a P1 local-image omission and P2 restrictive-schema admission (Spec), plus a P2 deep-JSON crash (Standards). Coordinator corrections are pushed at24675be;50focusedtests pass, including legacy image-alias index compatibility. Fresh original-base round7 two-axis review is next. T02's same owner continues atomic fresh initialization, linear large-record framing and rollback-only real-settings readiness; its signed-cursor fix is588219c. Native Settings capture remains unavailable; operational window clarification is pending. Both tickets remain unaccepted; T03 stays blocked. T02 owns serialized full Xcode validation. T30 retains the inherited native test-fixture lifetime diagnostic work. Thirty tickets and the full goal remain open.
+T00 and T01 are accepted and integrated. T01 round7 Standards0/Spec0 and50integration-root snapshot tests passed at reviewed24675be/integrated1f4f5d9; personal cutover is not accepted. T02 R9 is pushed at30d4ba4 and requires independent round4 review plus native Settings evidence. T03 remains blocked until its engine API dependency is accepted. Native capture still reports cgWindowNotFound; operational window clarification is pending. The full Xcode resource is released. T30 retains the native fixture-lifetime diagnostics.29tickets and the full goal remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
