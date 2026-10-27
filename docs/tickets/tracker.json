@@ -44,9 +44,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "897f43c47f83f29efb2b240cb1373ad822c6d70c",
-      "implementation_state": "R8 Standards1P2/incomplete and Spec1P2;recorded-error and canonical-trigger corrections tested21Python20pass1skip/controller pass;corrected actualbundle and fresh complete review pending;UI gate open",
-      "review_evidence": "docs/acceptance/t02-review-r8.md"
+      "last_reported_head": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
+      "implementation_state": "R8 corrections packaged in signed relocated r9 app; parent verified identity, signatures and source hashes; fresh complete R9 Standards/Spec reviews pending; visual gate open",
+      "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
@@ -417,10 +417,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "admission candidate implemented;owner129targetedpasses,parent762full0fail0skip/zeroSQLite diagnostic readback;fresh independent repair review pending;fullT30open",
+      "implementation_state": "R2 Standards: 2 P2; Spec: 4 P2. Four shutdown interleavings require original-owner correction and deterministic tests; prior 762 passes do not cover them; full T30 open",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "ca087f58fb53acd94e6ab21ac0e7dd1168ef5806",
-      "review_evidence": "docs/acceptance/t30-fixture-review-r1.md"
+      "review_evidence": "docs/acceptance/t30-fixture-review-r2.md"
     }
   },
   "spec": {
