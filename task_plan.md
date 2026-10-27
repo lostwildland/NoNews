@@ -15,6 +15,7 @@ Dispatch T00 (#2) native build baseline and T01 (#3) lossless snapshot/restore t
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
 - Prior ADR/journey incorrectly accepted Draft preview and required reading before integrations; corrected before implementation.
+- Installed gh rejects combined --slurp/--jq; native subissue readback uses a single per_page=100 response instead.
 
 ## Constraints
 No capability omissions. No production writes or private data in public repo. Use latest user decisions over older phase-downscope suggestions. No extra requirements interview. Reviews pin each ticket base. Source originals remain untouched. Only user-authorized integration targets.
