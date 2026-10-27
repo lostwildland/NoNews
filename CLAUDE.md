@@ -77,3 +77,21 @@ Don’t do force unwrapping of optionals.
 ## Things to Know
 
 Just because unit tests pass doesn’t mean a given bug is fixed. It may not have a test. It may not even be testable — it may require manual testing.
+
+## Agent skills
+
+### Issue tracker
+
+Use GitHub Issues in `lostwildland/NoNews`. Before managing issues,
+specs, or wayfinding maps, read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels. Before triaging,
+read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `GLOSSARY.md` and `docs/adr/`.
+Before exploring domain concepts or architecture,
+read `docs/agents/domain.md`.
