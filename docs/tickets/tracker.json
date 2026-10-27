@@ -417,10 +417,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "R3 full-scope Standards1P2/Spec2P2: observer-drain omission and unguarded container mutations; parent small observer correction uncommitted; same-owner follow-up/native validation required; prior765passes candidate-only; fullT30open",
+      "implementation_state": "R3 closure/container fixes candidate; parent766fullpass0fail0skip/zeroSQLitediagnostics. Newly inspected pre-existing name-based scripting target needs exact-host harness correction before another full plan and fresh review; fullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "dcd563805ab2d9c9fa1d3e7b88d880bac00d1124",
-      "review_evidence": "docs/acceptance/t30-fixture-review-r3.md"
+      "last_reported_head": "38f48a749fccf2a7ab35a118a7cbdca9dc2b870c",
+      "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
     }
   },
   "spec": {
