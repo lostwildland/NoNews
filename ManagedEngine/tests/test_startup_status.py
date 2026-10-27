@@ -10,6 +10,30 @@ import unittest
 
 
 class StartupStatusTest(unittest.TestCase):
+    def test_binary_collation_quote_spellings_start_without_losing_data(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        for spelling in ('BINARY', "'BINARY'", "'bInArY'", '"BINARY"', '`BINARY`', '[BINARY]'):
+            with self.subTest(spelling=spelling), tempfile.TemporaryDirectory() as temp:
+                data = Path(temp) / 'data'
+                def launch():
+                    return subprocess.run([sys.executable, str(script), str(data)],
+                                          input=json.dumps({'token': 'a' * 32}) + '\n',
+                                          text=True, capture_output=True, timeout=10,
+                                          env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+                self.assertEqual(json.loads(launch().stdout), {'status': 'ready'})
+                database = data / 'information.sqlite'
+                with closing(sqlite3.connect(database)) as db, db:
+                    db.execute('ALTER TABLE items ADD COLUMN future TEXT COLLATE ' + spelling)
+                    db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at,future) VALUES ('item','news','Preserved','now','now','now','now','retained')")
+                    expected_schema = db.execute("SELECT sql FROM sqlite_master WHERE name='items'").fetchone()
+                result = launch()
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(json.loads(result.stdout), {'status': 'ready'})
+                self.assertEqual(result.stderr, '')
+                with closing(sqlite3.connect(database)) as db:
+                    self.assertEqual(db.execute('SELECT id,future FROM items').fetchall(), [('item', 'retained')])
+                    self.assertEqual(db.execute("SELECT sql FROM sqlite_master WHERE name='items'").fetchone(), expected_schema)
+
     def test_canonical_triggers_are_refused_before_settings_writes(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         for event in ('AFTER INSERT ON "APP_SETTINGS"', 'AFTER UPDATE ON app_settings',
@@ -66,6 +90,7 @@ class StartupStatusTest(unittest.TestCase):
             'primary_replace': ('processing_jobs', 'id TEXT PRIMARY KEY', 'id TEXT PRIMARY KEY ON CONFLICT REPLACE'),
             'null_replace': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0'),
             'collation': ('items', 'media_type TEXT NOT NULL', 'media_type TEXT COLLATE NOCASE NOT NULL'),
+            'quoted_collation': ('items', 'media_type TEXT NOT NULL', "media_type TEXT COLLATE 'NOCASE' NOT NULL"),
             'rowid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, rowid TEXT'),
             'oid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, oid TEXT'),
             'rowid_alias_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, _rowid_ TEXT'),
