@@ -13,6 +13,7 @@ A complex category may use native list-detail forms and disclosure sections. Pri
 | Group / field | Scope | Existing contract / migration behavior | Native presentation and owning ticket |
 | --- | --- | --- | --- |
 | NNW General and reading appearance | app/device | Existing NNW values preserved | Existing General; T00/T29 |
+| Timeline swipe actions | device interaction | New NNW-first install retains Read/Star; optional Decisions mapping is right Yep/left Nope; IO migration defaults to its existing decision gestures and preserves any actually saved input preference | General > Article actions; equivalent menu/buttons remain, see native-decisions.md; T13/T27 |
 | Accounts, credentials and subscriptions | account | Existing account semantics; local accounts still differ from cloud services | Existing Accounts and Keychain; T00/T25 |
 | AI service name/endpoint | service | Source Magpie URL preserved; BYO direct service additional supported path | Processing > Services; T03 |
 | Authentication | service/device security | Secure reference; never plain synced settings or prompt export | Native secure fields/Keychain; T03/T25 |
