@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "4be1246ef430e2166dd06ed2c9e808de4dbd709f",
-  "state": "Current source passes 44 Python tests with 1 optional comparison skipped. Current bundle/CI, complete remaining groups and cross-group review are pending; no whole-ticket clearance.",
+  "candidate": "2aa0f6821148049e500912e6131ee9c07fc9ec70",
+  "state": "Current signed source4be1246 and local CI-plan747passes verified; candidate2aa0f68 adds CI entitlement-root fix and evidence. Actual GitHub CI, complete remaining group/cross-group and visual acceptance are pending.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -26,16 +26,18 @@
     {
       "path": ".github/macos-ci-signing.xcconfig",
       "group": "packaging",
-      "blob": "06e2051dd68a6ea33223999bb0d75f5cae198cc5",
+      "blob": "8f15db80f0ec786429fc47d64308caf1d898c0fa",
       "standards": "pending current candidate review",
-      "spec": "pending current candidate review"
+      "spec": "pending current candidate review",
+      "previous_blob": "06e2051dd68a6ea33223999bb0d75f5cae198cc5"
     },
     {
       "path": ".github/workflows/ci.yml",
       "group": "packaging",
-      "blob": "b114be49a133f5555c4f6818778152f297a24823",
+      "blob": "8cde69f6da54ed4f71194639b4101f0fc79a086c",
       "standards": "pending current candidate review",
-      "spec": "pending current candidate review"
+      "spec": "pending current candidate review",
+      "previous_blob": "b114be49a133f5555c4f6818778152f297a24823"
     },
     {
       "path": ".gitignore",
@@ -504,10 +506,10 @@
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "e8dbeef9afd480181e03bdf668b29e59c9bb856d",
+      "blob": "6fe4ad82b1142862e10be72e58855de756158983",
       "standards": "pending current candidate review",
       "spec": "pending current candidate review",
-      "previous_blob": "41ebe4b3be226d4bebb421420bd87791a30a01de"
+      "previous_blob": "e8dbeef9afd480181e03bdf668b29e59c9bb856d"
     }
   ],
   "scope_reviews": {

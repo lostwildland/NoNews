@@ -20,6 +20,7 @@ Implementation may start only from independently reviewed, accepted and integrat
 
 - [ ] Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.
 - [ ] Saving instructions and their service/target binding is coherent: a failed save leaves the prior configuration intact. Unchanged text does not grow history; Restore Text retains the visibly selected execution binding and never rewrites historical runs.
+- [ ] Native save/read/copy/history/restore preserve prompts up to the inclusive 200,000 UTF-8 byte bound, including multibyte and escaped text, across restart. Extend the bounded T02 transport rather than silently reducing the product limit; oversize refusal preserves saved state and unrelated processing.
 - [ ] Existing Magpie legacy-routing preview, pause/drain/apply and unresolved pending-work behavior remain accessible through explicit configured actions; no inference, historical requeue, completed-provenance rewrite or queued Editor target substitution occurs on save/migration.
 - [ ] Prompt output preferences preserve imported Chinese-title/typography behavior while new prompts can follow their own language instructions without automatic Chinese formatting; coherent save/copy/restore and run binding follow [native-output-preferences.md](../specs/native-output-preferences.md).
 

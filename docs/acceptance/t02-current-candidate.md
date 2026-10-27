@@ -11,3 +11,11 @@ Packaging correction reviews: Spec fully inspected `36fc3ae..eb6a156` with zero 
 Current-source native signed bundle and CI-path validation remain pending. The r9 installed bundle is stale. The historical 753-test native run applies to `b95cffa`, before later Python-only corrections. Native Settings Ready is unobserved; repeated CUA `cgWindowNotFound` is not evidence of broken UI. Complete native/database/jobs/current packaging and final cross-group reviews remain pending. T02 is open and unintegrated.
 
 Draft PR: https://github.com/lostwildland/NoNews/pull/33 into `feature/nonews-io-parity`, opened to exercise actual CI. It remains a draft while review and current signed-bundle evidence are pending; no issue is auto-closed.
+
+## Current signed bundle and local CI-path validation
+
+The owner completed R20 at `2aa0f6821148049e500912e6131ee9c07fc9ec70`; the artifact uses application/service source `4be1246`, with subsequent changes limited to CI entitlement-path configuration and evidence. The local run uses Xcode 27.1 and the `NetNewsWire-CI` plan, excluding old name-targeted ScriptingTests. Coordinator read `/tmp/nonews-t02-r10-ci-fixed.xcresult`: 747 passed, zero failed/skipped, and independently checked the relocated normal app's deep strict signature and isolated sandbox identity. Owner reports the warning gate passed and ten sandboxed installed-payload harness tests passed. Actual GitHub CI after the push is unknown; a local equivalent is not cloud CI proof.
+
+The pre-T30 test log still contains 2,164 SQLite disk-I/O lines reported by the owner. These remain unresolved fixture diagnostics on this branch. The CI correction passes `CI_SOURCE_ROOT` to Xcode because Swift package targets have a different SRCROOT; its two changed configuration blobs need fresh packaging assessment. The heavyweight resource is released. Visible native Ready, complete independent scope/cross-group review and ticket acceptance remain open.
+
+The coordinator independently reran `bash ManagedEngine/tests/run_native_checks.sh` against the current prepared payload; public controller checks passed.
