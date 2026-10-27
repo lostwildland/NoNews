@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
   "candidate": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
-  "state": "Review plan only; both R9 whole-change reviews incomplete. No API clearance.",
+  "state": "Packaging Standards scope inspected at pinned candidate with 1 P2 CI finding; no whole-ticket clearance. Correction and remaining scopes need review.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -20,7 +20,7 @@
       "path": ".gitignore",
       "group": "packaging",
       "blob": "e422a19d79e9f54adde1be9468ba0cbf0ccd1e82",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
@@ -62,14 +62,14 @@
       "path": "ManagedEngine/PROVENANCE.md",
       "group": "packaging",
       "blob": "fd007c83ac339d9ea5930c879d6016bb93c8df02",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "ManagedEngine/assemble_payload.py",
       "group": "packaging",
       "blob": "982208cb04de9fcd4f4fec9473c5d39e1517e297",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
@@ -265,21 +265,21 @@
       "path": "ManagedEngine/payload_manifest.py",
       "group": "packaging",
       "blob": "75ff77eab9f5bd1267627aea94e6e0365d0a3473",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "ManagedEngine/prepare_runtime.sh",
       "group": "packaging",
       "blob": "8b6c94cd92c86f1df46ee2eb636fb7f165a29ab7",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "ManagedEngine/requirements.lock",
       "group": "packaging",
       "blob": "4e1a8c7d671a5a872fefd66ed455f387ee25e57d",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
@@ -349,21 +349,21 @@
       "path": "ManagedEngine/tests/test_packaged_service.py",
       "group": "packaging",
       "blob": "2c3daa159aa028bbddeb748c0a32f9f45f01500a",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "ManagedEngine/tests/test_payload_manifest.py",
       "group": "packaging",
       "blob": "2f1d5710001e48ee69ba4f644fbd5b85b450831c",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "ManagedEngine/tests/test_runtime.py",
       "group": "packaging",
       "blob": "e4f8f58bc90f7bfb575a201087223899edd37577",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
@@ -384,71 +384,81 @@
       "path": "ManagedEngine/verify_payload_source.py",
       "group": "packaging",
       "blob": "a7db9cdbdf94c2a3e2d47c9e77e5704384802a75",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "NetNewsWire.xcodeproj/project.pbxproj",
       "group": "packaging",
       "blob": "8a33dc2d005c598a97823af5ab15214f34177857",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/acceptance.entitlements",
       "group": "packaging",
       "blob": "38da9a976819359ce83aff27dbd6341393655029",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/acceptance.sh",
       "group": "packaging",
       "blob": "cbf6a9fcb5cff467d3f91eaa6aeba038644856c9",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/embed-processing-engine.sh",
       "group": "packaging",
       "blob": "854b38aa228b495b123d429c0f640ade9ea75f98",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/processing-engine.entitlements",
       "group": "packaging",
       "blob": "688a512932d8dee975cafb670fb14ee0e67ae7b4",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/test_acceptance.py",
       "group": "packaging",
       "blob": "c1a1ce87de931e8180b1bdfd270c6404c57e511c",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "buildscripts/verify_acceptance.py",
       "group": "packaging",
       "blob": "0813b241c81088a819589a6516644bfc36bda37d",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "docs/acceptance/t00-native-baseline.md",
       "group": "packaging",
       "blob": "0fa3eb9cd5a0671944c938bc657680ad8a9a46d6",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     },
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
       "blob": "41ebe4b3be226d4bebb421420bd87791a30a01de",
-      "standards": "pending",
+      "standards": "inspected at pinned blob; group has unresolved CI finding",
       "spec": "pending"
     }
-  ]
+  ],
+  "scope_reviews": {
+    "packaging": {
+      "standards": {
+        "candidate": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
+        "state": "complete inspection, 1 P2; CI correction not yet reviewed",
+        "evidence": "t02-packaging-review-r10.md"
+      },
+      "spec": "pending"
+    }
+  }
 }

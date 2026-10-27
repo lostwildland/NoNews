@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 remain the only accepted tickets (2/31). T02 R9 returned incomplete on both axes: Standards found one P2 pre-limit whole-record memory amplification; Spec reported no finding only in inspected scope. Continue the original owner for bounded input/streamed spool construction, complete large-record and capacity tests, then actual payload validation and explicitly complete review coverage before integration/T03. T30 original owner is fixing four R2 shutdown interleavings and owns the serialized Xcode resource. Do not integrate ca087f5 or d21a38d as accepted. Visible Settings Ready, full personal migration, integrations, sync and final UX remain open.
+T00/T01 remain the only accepted tickets (2/31). T30 fixture candidate dcd5638 fixes four R2 schedules; parent verified765fullpasses and zero SQLite diagnostics. Dispatch fresh original-base R3 Standards/Spec review without closing full T30. Native resource is released to T02. Continue the same T02 owner beyond its partial uncommitted streaming implementation; large errors/auto results still fail allocation checks. Parent CI correction36fc3ae also needs actual signed CI-path validation. Complete the62-path per-axis review ledger, including changed/new blobs and cross-group seams, before API integration/T03. Native UI, complete migration, integrations and sync remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

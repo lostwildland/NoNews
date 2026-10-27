@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
-      "implementation_state": "R9 Standards: 1 P2 and incomplete; Spec incomplete with no finding in inspected portions. Original-owner bounded-memory history fix and explicit complete review coverage required; UI gate open",
+      "last_reported_head": "36fc3ae6b057a5fe07e1b831e88c90b62958cded",
+      "implementation_state": "R16 partial streaming remains uncommitted: non-auto result memory test passes, large error/auto regressions red. Packaging Standards scope complete with 1 P2 CI correction pushed at36fc3ae; runtime validation/fresh review pending; all API/UI gates open",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,10 +417,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "R2 Standards: 2 P2; Spec: 4 P2. Four shutdown interleavings require original-owner correction and deterministic tests; prior 762 passes do not cover them; full T30 open",
+      "implementation_state": "R2 four fixes implemented; owner150focusedpasses, parent765full0fail0skip with0SQLite diagnostic matches; fresh R3 independent repair review pending; full T30 open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "ca087f58fb53acd94e6ab21ac0e7dd1168ef5806",
-      "review_evidence": "docs/acceptance/t30-fixture-review-r2.md"
+      "last_reported_head": "dcd563805ab2d9c9fa1d3e7b88d880bac00d1124",
+      "review_evidence": "docs/acceptance/t30-fixture-review-r3.md"
     }
   },
   "spec": {

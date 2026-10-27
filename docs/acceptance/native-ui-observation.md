@@ -11,3 +11,9 @@ The bounded current-build CUA selection `cua.getApp('/tmp/nonews-t02-r8-installe
 No permission, display, account or security setting was changed. No AppleScript/JXA/shell screenshot or alternate native-input workaround was used. Do not infer a locked screen or a particular permission failure from this error. The prior operational user question remains unanswered; do not repeat it or treat elapsed time as an answer.
 
 Native UI/accessibility/Impeccable acceptance remains open. Subsequent native tests may gracefully stop this exact isolated app after rechecking process identities; the listed PIDs are observations, not permanent authority. Meaningful implementation and review work can continue while this UI evidence is unavailable. No goal completion or blanket ticket acceptance follows from this record.
+
+## Source inspection, without rendered acceptance
+
+The coordinator inspected pinned T02 `d21a38d` ProcessingPreferencesViewController and ProcessingEngine using the Impeccable native audit guidance; the one-time context script was not rerun. This macOS AppKit surface uses standard labels/buttons, system font and semantic appearances, state-driven Start/Stop/Retry controls and NotificationCenter updates. Lifecycle/readiness work is asynchronous; Stop is disabled while ownership is being released, and a failed child becomes retryable only after exit.
+
+These are implementation observations, not a visual/platform-conformance score. The mobile-native audit reference cannot justify scoring a macOS window against phone-specific targets. Focus order, keyboard/escape behavior, VoiceOver state announcements, actual status wrapping, supported appearances, contrast and native material rendering still need the retained batched runtime inspection. No speculative accessibility/contrast defect is promoted to a confirmed finding from source alone, and no repeated capture or UI workaround was attempted during native test ownership.
