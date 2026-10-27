@@ -46,3 +46,5 @@ NoNews streaming checkpoint: `job_stream.py` is new NoNews code for bounded SQLi
 NoNews deep-aggregate correction: the incremental aggregate projection uses an iterative, spillable one-byte-per-container state stack rather than Python recursion; it retains source status and duplicate-key semantics while allowing deep valid or malformed results to remain readable.
 
 Extraction correction: the shared `core.transaction` generator retains its source `@contextmanager` decorator. Public InformationDB transaction tests prove commit, nested rollback and BaseException rollback; ordinary current startup still does not activate legacy rebuild helpers.
+
+Schema admission follow-up: canonical schema41 uses BINARY comparisons and unshadowed SQLite row identifiers. The gate conservatively refuses non-BINARY COLLATE declarations and columns named rowid, _rowid_ or oid on canonical tables; unknown data and schema remain untouched for verified migration. Explicit BINARY declarations and ordinary additional columns/tables remain supported. The matching snapshot validator is updated separately.

@@ -255,3 +255,9 @@ After refreshing only the generated prepared backend and manifest, `python3 Mana
 ## Coordinator transaction extraction correction
 
 The database Standards reviewer found the source contextmanager decorator missing from the retained core.transaction helper. Coordinator reproduced TypeError from pinned26071ee in a private temporary extraction, restored the existing imported decorator, and added a public InformationDB transaction regression covering commit, nested rollback and KeyboardInterrupt rollback without open transactions. Ordinary current startup still skips legacy rebuild helpers. Five focused initialization/probe tests pass; the full lightweight suite reports48total,47passed,oneoptionalcomparison skipped,zero failures in33.567seconds. PublicSwiftcontroller, stagedsource and manifest checks pass after refreshing the prepared core/provenance. No native build or current signed bundle is claimed by this correction.
+
+## Coordinator canonical-schema guard follow-up
+
+Database Spec at19bce6b reproduced non-BINARY CHECK weakening and rowid shadowing. Matching conservative guards now refuse non-BINARY COLLATE and rowid/_rowid_/oid columns on canonical tables before writable startup. The public startup map reproduced four failures before the correction, then passed; explicit BINARY remains accepted. Input database bytes and extra data are preserved on refusal. The same correction is applied to the snapshot validator, whose T01 issue is reopened for narrow review.
+
+The initial full suites overlapped the host's actual disk exhaustion: snapshot35errors and engine1error were not green validation. After releasing only inactive ignored test module caches, full snapshot52tests pass in19.197seconds and full engine48tests(47pass,oneoptionalskip) pass in29.059seconds. No private or production data was read. Current signedr10artifact predates these guards and the iterative parser; native bundle refresh remains pending.

@@ -65,6 +65,10 @@ class StartupStatusTest(unittest.TestCase):
             'rollback': ('processing_jobs', 'idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT ROLLBACK'),
             'primary_replace': ('processing_jobs', 'id TEXT PRIMARY KEY', 'id TEXT PRIMARY KEY ON CONFLICT REPLACE'),
             'null_replace': ('processing_jobs', 'attempts INTEGER NOT NULL DEFAULT 0', 'attempts INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0'),
+            'collation': ('items', 'media_type TEXT NOT NULL', 'media_type TEXT COLLATE NOCASE NOT NULL'),
+            'rowid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, rowid TEXT'),
+            'oid_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, oid TEXT'),
+            'rowid_alias_shadow': ('processing_jobs', 'error TEXT', 'error TEXT, _rowid_ TEXT'),
             'partial_index': None,
         }
         for defect, change in changes.items():
@@ -164,7 +168,7 @@ class StartupStatusTest(unittest.TestCase):
                 definition = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone()[0]
                 indexes = [r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='processing_jobs' AND sql IS NOT NULL")]
                 db.execute('DROP TABLE processing_jobs')
-                db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT ABORT'))
+                db.execute(definition.replace('idempotency_key TEXT NOT NULL UNIQUE', 'idempotency_key TEXT NOT NULL UNIQUE ON CONFLICT ABORT').replace('stage TEXT NOT NULL', 'stage TEXT COLLATE BINARY NOT NULL'))
                 for index in indexes:
                     db.execute(index)
             self.assertEqual(json.loads(launch(extra).stdout), {'status':'ready'})
