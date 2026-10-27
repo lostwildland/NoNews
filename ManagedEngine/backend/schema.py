@@ -1,0 +1,102 @@
+"""One versioned schema pass per database, instead of DDL on every request.
+
+Every owner used to create its tables in ``__init__``. Those constructors run on
+every HTTP request and on every worker iteration, and SQLite takes the write lock
+for ``CREATE TABLE IF NOT EXISTS`` even when the table already exists: measured
+against a writer holding ``BEGIN IMMEDIATE``, a construction blocked for the whole
+30s busy timeout and then failed with "database is locked". The work now happens
+once, recorded in ``schema_meta.schema_version``; afterwards opening the database
+costs one indexed read.
+
+Each owner exposes ``ensure_schema(db)``, which is idempotent by construction: it
+only creates or alters what is missing. The pass is therefore safe to re-run after
+a crash that happened before the version was stamped.
+"""
+from __future__ import annotations
+
+import sqlite3
+
+# Bump when any ensure_schema below changes shape. A database already at this
+# version skips the whole pass.
+# 36: ai_feed_settings.subscription_state -- a feed FreshRSS still holds but the
+# GReader subscription list no longer returns stays on the source list.
+# 37: ai_feed_settings.contract_origin -- history seeding may fill a feed's
+# media type/Kit from IO's identity, but must never re-derive one a person
+# saved (an explicit clear has to stay cleared).
+# 38: Magpie per-draft provenance and pending-job mapping blocks.
+# 39: immutable Editor-only Magpie target pin on a processing job.
+# 40: Reject image cleanup progress and object deletion generations.
+# 41: daily deletion keeps no image backup paths.
+SCHEMA_VERSION = 41
+_VERSION_KEY = "schema_version"
+
+
+def version(db: sqlite3.Connection) -> int:
+    """The recorded schema version, or 0 for a database that predates it."""
+    try:
+        row = db.execute("SELECT value FROM schema_meta WHERE key=?", (_VERSION_KEY,)).fetchone()
+    except sqlite3.OperationalError:
+        return 0
+    if row is None:
+        return 0
+    try:
+        return int(row[0])
+    except (TypeError, ValueError):
+        return 0
+
+
+def stamp(db: sqlite3.Connection, value: int = SCHEMA_VERSION) -> None:
+    db.execute("""INSERT INTO schema_meta(key,value) VALUES (?,?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value""", (_VERSION_KEY, str(value)))
+
+
+def ensure(db: sqlite3.Connection, *, artifacts=None) -> bool:
+    """Bring the database to ``SCHEMA_VERSION``. True when this call did the work."""
+    if version(db) > SCHEMA_VERSION:
+        raise ValueError("Database schema is newer than this engine")
+    from . import (content_store, core, delivery, feed_settings, folders, jobs,
+                   legacy_content_migration, literature, media_jobs, media_raw_activation,
+                   media_store, news_media, pipeline, projection, reading_notes,
+                   reconciliation, reject_cleanup, service, settings, zotero)
+    # Retiring the two body tables is not part of the version bump, because a
+    # live database can still hold a body row when the bump runs (an older
+    # process finishing a write). The drop is conditional on the table being
+    # empty, so it has to be re-attempted on a later start instead of never
+    # happening. Both calls are idempotent and cost one lookup when the table is
+    # already gone.
+    core.retire_body_table(db, "raw_texts")
+    service.retire_body_table(db, "draft_texts")
+    if version(db) == SCHEMA_VERSION:
+        return False
+
+    core.ensure_schema(db)
+    settings.ensure_schema(db)
+    service.ensure_schema(db, artifacts=artifacts)
+    # Bodies and draft versions live in the database; the store's tables reference
+    # ``raw_snapshots`` and ``editor_drafts``, so they are created after both.
+    content_store.ensure_schema(db)
+    # The migration ledger records what was imported from the old vault files. It
+    # stores evidence, never body text, so it is created with the rest of the
+    # schema and costs one lookup when it already exists.
+    legacy_content_migration.ensure_schema(db)
+    jobs.ensure_schema(db)
+    delivery.ensure_schema(db)
+    projection.ensure_schema(db)
+    pipeline.ensure_schema(db)
+    zotero.ensure_schema(db)
+    reconciliation.ensure_schema(db)
+    folders.ensure_schema(db)
+    # Feed-level processing settings are the routing authority; the folder table
+    # above survives as navigation and bulk-edit metadata only.
+    feed_settings.ensure_schema(db)
+    literature.ensure_schema(db)
+    media_store.ensure_schema(db)
+    media_jobs.ensure_schema(db)
+    media_raw_activation.ensure_schema(db)
+    news_media.ensure_schema(db)
+    reading_notes.ensure_schema(db)
+    # Reject cleanup progress/audit and explicit maintenance backup records.
+    # Requests live in core because the human decision creates them atomically.
+    reject_cleanup.ensure_schema(db)
+    stamp(db)
+    return True

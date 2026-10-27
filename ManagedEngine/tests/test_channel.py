@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -23,15 +24,17 @@ class Application:
         if path == "/api/jobs": return {"jobs": ["x" * 65536]}
         return {"processors": 1}
 ''')
+            script = root / 'stdio_service.py'
+            shutil.copy2(project / 'stdio_service.py', script)
             token = 'a' * 32
             messages = [{'token': token}, {'token': 'wrong', 'method': 'GET', 'path': '/api/jobs'},
                         {'id': 'bad', 'token': token, 'method': 'GET', 'path': '/api/jobs'},
                         {'id': 1, 'token': token, 'method': 'GET', 'path': '/invalid'},
                         {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/jobs'}]
-            result = subprocess.run([str(python), str(project / 'stdio_service.py'), str(root / 'data')],
+            result = subprocess.run([str(python), str(script), str(root / 'data')],
                                     input=''.join(json.dumps(x) + '\n' for x in messages), text=True,
                                     capture_output=True, timeout=15, check=True,
-                                    env={'PYTHONPATH': str(root), 'INFORMATION_OS_RAW_VAULT': str(root / 'outside')})
+                                    env={'PYTHONPATH': str(root), 'PYTHONDONTWRITEBYTECODE': '1', 'INFORMATION_OS_RAW_VAULT': str(root / 'outside')})
             replies = [json.loads(line) for line in result.stdout.splitlines()]
             self.assertEqual(replies, [{'status': 'ready'}, {'error': 'unauthorized'},
                                        {'error': 'invalid request id'}, {'id': 1, 'error': 'invalid operation'},
@@ -44,7 +47,7 @@ class Application:
         with tempfile.TemporaryDirectory() as root:
             process = subprocess.run([str(python), str(project / 'stdio_service.py'), root],
                                      input='x' * 65537 + '\n', text=True, capture_output=True,
-                                     timeout=15, env={'PATH': '/usr/bin:/bin'})
+                                     timeout=15, env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
             self.assertNotEqual(process.returncode, 0)
             self.assertEqual(process.stdout, '')
             self.assertEqual(process.stderr, '')

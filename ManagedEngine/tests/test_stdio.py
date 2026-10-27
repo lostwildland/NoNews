@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -14,9 +15,11 @@ class ManagedServiceTest(unittest.TestCase):
         source = os.environ['IO_TEST_SOURCE']
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         with tempfile.TemporaryDirectory() as root:
+            isolated_script = Path(root) / "stdio_service.py"
+            shutil.copy2(script, isolated_script)
             def session(requests):
                 environment = {'PYTHONPATH': source, 'PYTHONDONTWRITEBYTECODE': '1'}
-                process = subprocess.run([python, str(script), root], input='\n'.join(map(json.dumps, requests)) + '\n',
+                process = subprocess.run([python, str(isolated_script), root], input='\n'.join(map(json.dumps, requests)) + '\n',
                                          text=True, capture_output=True, env=environment, timeout=30, check=True)
                 return [json.loads(line) for line in process.stdout.splitlines()]
             token = 'a' * 32
