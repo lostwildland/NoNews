@@ -1,5 +1,13 @@
 # T01 snapshot investigation (incomplete)
 
+## Independent review round 1 and coordinator corrections
+
+Reviewed HEAD `7c0f8c76a3f0d6a5252e24794c520aca2e4d07b3`. Standards identified one P2: SQLite `mode=ro` can still write source WAL shared-memory coordination bytes, so the nonmutating-source guarantee needs a different read boundary and sidecar-byte tests. Spec identified two P1s: remote-only managed image bytes could be absent despite successful restore; an imported draft's database copy could be accepted without its authoritative file mapping. The two axes remain separate; T01 is not accepted.
+
+The coordinator fixed the two narrow asset-validation findings in the common snapshot/verify reference check. Every nondeleted managed object now needs an exact stored-hash/size match in a preserved root or its own preserved upload-intent payload. Remote-only metadata fails closed. Remote status/readback is still not proved; a verified local copy supplies independent preservation without a network request. Deleted-object tombstones retain their existing audit/retention meaning. An imported draft must have its matching item/file mapping; database authority continues to work without a literature-file mapping. Existing mapping hash and owner checks remain mandatory.
+
+New public snapshot/restore regression cases first failed (both file/database remote-preservation cases and the missing imported-draft mapping). After the shared validation changes they pass, including restored exact bytes after original assets are unavailable. The full-schema fixture's former placeholder object hash was replaced with the actual hash of its synthetic payload rather than weakening the new check. All 28 snapshot tests pass with ResourceWarning errors enabled; compilation and diff checks pass. The original owner continues the nontrivial WAL/source-sidecar correction. Personal cutover, real remote readback and native consumers remain unverified.
+
 - Ticket: #3, T01: Lossless IO snapshot, manifest and independent restore.
 - NoNews baseline: `775500c5b007c5917d46f2461544eb4ace8e21ae`.
 - Read-only Information OS source HEAD: `e9ba73f0b44a781ea68c0670114f9281f66f5cd3`; the checkout was dirty, so this SHA alone does not identify its working-tree contents.
