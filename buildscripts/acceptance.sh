@@ -34,5 +34,6 @@ xcodebuild -project "$source_snapshot/NetNewsWire.xcodeproj" -scheme NetNewsWire
   -destination 'platform=macOS' -derivedDataPath "$derived" \
   -clonedSourcePackagesDirPath "$root/.build/acceptance/SourcePackages" \
   ORGANIZATION_IDENTIFIER=org.nonews.acceptance DEVELOPMENT_TEAM= CODE_SIGN_IDENTITY=- \
+  'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) NNW_ACCEPTANCE_TESTS' \
   CODE_SIGN_STYLE=Manual CODE_SIGN_ENTITLEMENTS="$source_snapshot/buildscripts/acceptance.entitlements" \
   "$action"

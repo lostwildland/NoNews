@@ -1,7 +1,8 @@
+
 -- this script just tests that no error was generated from the script
 try
-	tell application "NetNewsWire"
-		{name, url} of every feed of every account
+	tell application id "__TEST_HOST_BUNDLE_ID__"
+		name of every folder of every account
 	end tell
 on error message
 	return {test_result:false, script_result:message}

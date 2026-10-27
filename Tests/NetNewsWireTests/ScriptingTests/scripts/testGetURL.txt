@@ -1,6 +1,6 @@
 try
-    tell application "NetNewsWire"
-	    open location "http://scripting.com/rss"
+    tell application id "__TEST_HOST_BUNDLE_ID__"
+	    open location "netnewswire://fixture-test"
     end tell
 on error message
     return {test_result:false, script_result:message}

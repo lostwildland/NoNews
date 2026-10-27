@@ -9,6 +9,26 @@
 import XCTest
 
 @MainActor final class ScriptingTests: AppleScriptXCTestCase {
+    func testFixtureSourcesBindToCurrentHost() throws {
+        let hostID = try currentTestHostID()
+        print("Scripting fixture host: \(hostID)")
+        #if NNW_ACCEPTANCE_TESTS
+        XCTAssertEqual(hostID, "org.nonews.acceptance.NetNewsWire-Evergreen-DEBUG")
+        #endif
+        for filename in ["testFeedExists", "testGetURL", "testNameAndUrlOfEveryFeed", "testNameOfAuthors", "testNameOfEveryFolder"] {
+            let source = try scriptSource(filename: filename, hostID: hostID)
+            XCTAssertTrue(source.contains("tell application id \"\(hostID)\""), filename)
+            XCTAssertFalse(source.contains("__TEST_HOST_BUNDLE_ID__"), filename)
+            XCTAssertFalse(source.contains("tell application \"NetNewsWire\""), filename)
+        }
+        let generic = try scriptSource(filename: "testGenericScript", hostID: hostID)
+        XCTAssertTrue(generic.contains("Geoducks!"))
+        XCTAssertFalse(generic.contains("tell application"))
+        XCTAssertThrowsError(try bindScriptSource("tell application \"NetNewsWire\"", filename: "testFeedExists", hostID: hostID))
+        XCTAssertThrowsError(try bindScriptSource("tell application id \"__TEST_HOST_BUNDLE_ID__\"", filename: "testFeedExists", hostID: "bad\"id"))
+        XCTAssertThrowsError(try scriptSource(filename: "missing", hostID: hostID))
+    }
+
     /*
         @function testGenericScript
         @brief  An example of how a script can be run as part of an XCTest
