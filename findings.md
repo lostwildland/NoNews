@@ -9,3 +9,6 @@
 - Apple Liquid Glass guidance: https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass and https://developer.apple.com/design/human-interface-guidelines/materials — native navigation/control layer with content readability; do not apply custom blur to all article content.
 - Previous Impeccable context ran earlier this session; do not rerun it. Product context now recorded from answered questions, not a new interview.
 - Terra catalog: codex/gpt-6.1-terra with reasoningEffort=high and serviceTier=default, available.
+
+- Current settings source confirms prompt history/restore and strict supported placeholder contracts; these are explicitly added to T03. Kit splitting must copy effective saved thresholds and retain old IDs/history, not replace them with seed defaults.
+- T01 first implementation attempt returned investigation only (326e7d3), no code/tests. It is not accepted. Owner continuation will be instructed to implement verifiable public snapshot/restore with explicit unresolved-asset failures rather than stop at uncertainty.

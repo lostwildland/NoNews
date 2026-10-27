@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-Dispatch T00 (#2) native build baseline and T01 (#3) lossless snapshot/restore to independent Terra high worktrees; when results return, run pinned Standards/Spec reviews and integrate accepted commits.
+Continue T01 implementation in the same owner worktree after investigation-only result; T00 remains delegated. Review actual implementation commits on two independent axes before integration.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

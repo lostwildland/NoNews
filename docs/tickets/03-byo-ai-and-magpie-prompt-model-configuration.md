@@ -14,6 +14,8 @@ A reader configures a service and creates reusable Curator/Editor prompts that e
 - [ ] Invalid target/authentication/output errors remain distinct and never become zero scores or silent alternate providers.
 - [ ] Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets.
 
+- [ ] Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.
+
 ## Blocked by
 
 - https://github.com/lostwildland/NoNews/issues/4

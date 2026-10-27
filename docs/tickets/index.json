@@ -73,7 +73,8 @@
       "Prompt create/edit/copy/rename/delete and references are functional; Curator and Editor are independently composable.",
       "Each prompt binds its service/target; no hidden inheritance, mandatory Kit pairing or per-feed model override.",
       "Invalid target/authentication/output errors remain distinct and never become zero scores or silent alternate providers.",
-      "Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets."
+      "Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets.",
+      "Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request."
     ],
     "status": "planned",
     "body_file": "docs/tickets/03-byo-ai-and-magpie-prompt-model-configuration.md"

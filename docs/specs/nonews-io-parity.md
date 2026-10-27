@@ -18,7 +18,7 @@ Extend the existing NNW application and shared data architecture with managed IO
 6. As an owner, I want source data and external edits preserved, so that I can roll back safely.
 7. As a reader of repeated sources, I want canonical identity recognition, so that duplicate observations do not require repeated judgment.
 8. As a reader using different standards, I want different prompt-context results retained for the same content, so that one evaluation does not overwrite another.
-9. As a user, I want reusable named Curator and Editor prompts with bound models, so that I can tailor judgment and writing independently.
+9. As a user, I want reusable named Curator and Editor prompts with bound models, version history and restore, so that I can tailor judgment and writing independently without losing past instructions.
 10. As a user, I want provider credentials stored centrally, so that sharing instructions does not share secrets.
 11. As a Magpie user, I want gateway targets and actual model provenance distinguished, so that my existing workflow continues honestly.
 12. As a direct-provider user, I want compatible BYO connections, so that I do not need Magpie.

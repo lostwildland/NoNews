@@ -13,3 +13,6 @@
 
 - Completed publication: spec #1, T00–T30 (#2–#32), 31 native subissues and 91 native blocking edges; local index matches all edges.
 - Frontier T00 (#2) and T01 (#3) assigned; next dispatch is Terra high in two separate T3 worktrees.
+
+- T00 and T01 were dispatched in isolated Terra high worktrees; initial delegation IDs recorded. T01 returned incomplete investigation only, so its ticket remains open and is being continued by the same owner.
+- Added source-backed native configuration catalog and made prompt history/restore and placeholder validation explicit T03 acceptance.
