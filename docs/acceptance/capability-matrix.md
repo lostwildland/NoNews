@@ -28,6 +28,7 @@ The [maintenance/helper follow-up](../research/io-maintenance-port-surfaces.md) 
 | C4 | 从材料得到可阅读的加工稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |
 | C5 | 明确重评或重写、比较多稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |
 | C6 | 配置与追溯 AI，而非盲信“成功” | [T03](https://github.com/lostwildland/NoNews/issues/5) | not implemented in NoNews | source inventory only; native verification pending |
+| OUTPUT-PREFERENCES | 保留中文标题／排版工作流，并让新用户选择输出语言与格式 | T03/T06/T11/T12/T16/T17/T27 | not implemented in NoNews | [source-derived output preference contract](../specs/native-output-preferences.md); original history immutable; no runtime evidence |
 | D1 | 分层阅读而不混淆证据 | [T12](https://github.com/lostwildland/NoNews/issues/14) | not implemented in NoNews | source inventory only; native verification pending |
 | D2 | 阅读论文复杂排版 | [T12](https://github.com/lostwildland/NoNews/issues/14) | not implemented in NoNews | source inventory only; native verification pending |
 | D3 | 按状态缩小注意力范围 | [T14](https://github.com/lostwildland/NoNews/issues/16) | not implemented in NoNews | source inventory only; native verification pending |

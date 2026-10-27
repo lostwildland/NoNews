@@ -42,6 +42,8 @@ Validate the template before interpolation and substitute once. Source material 
 
 Maintain the 200 KB nonempty text bound from IO. Preserve current Curator numeric-score/output validation, Editor output validation and truncated/malformed-response errors. Directory/network/authentication/invalid-target/material/output failures stay distinct; none become a zero score, a successful empty result or an alternate-provider retry.
 
+Personal output language and typography rules become explicit prompt preferences, with source-compatible imported defaults and language-independent new-user defaults. Follow [native-output-preferences.md](native-output-preferences.md); do not copy the source's Chinese-title and prose-formatting checks as universal requirements. Mandatory material/score/output integrity checks remain enforced.
+
 ## Configuration timing: preserve the IO boundary
 
 These are distinct boundaries, not one blanket promise that everything freezes when a queue entry is created:

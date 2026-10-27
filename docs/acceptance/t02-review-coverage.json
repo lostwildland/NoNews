@@ -1,0 +1,454 @@
+{
+  "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
+  "candidate": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
+  "state": "Review plan only; both R9 whole-change reviews incomplete. No API clearance.",
+  "rules": [
+    "Each axis needs explicit complete coverage of every group and connected seam.",
+    "Read git show of the pinned candidate when a worker is editing the live tree.",
+    "At final candidate, compare every blob against reviewed content. New or changed files need fresh review.",
+    "A group verdict is never a whole-ticket verdict. Include final cross-group interface assessment.",
+    "Previous test results, signatures and visual acceptance remain separately scoped."
+  ],
+  "groups": {
+    "packaging": 19,
+    "native": 10,
+    "database": 28,
+    "jobs": 5
+  },
+  "files": [
+    {
+      "path": ".gitignore",
+      "group": "packaging",
+      "blob": "e422a19d79e9f54adde1be9468ba0cbf0ccd1e82",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "Mac/AppDelegate.swift",
+      "group": "native",
+      "blob": "92f50b1835a800e3c7a4cb86af13e503445424da",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "Mac/Preferences/PreferencesWindowController.swift",
+      "group": "native",
+      "blob": "d12338b1698cdaeb76ffb6b3a200ca0771bc7551",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
+      "group": "native",
+      "blob": "f1d0657ec81b0e1c7f78d43b8ca1b237c6a8ccff",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "Mac/Processing/ProcessingEngine.swift",
+      "group": "native",
+      "blob": "108c1a0883559ef6d9335a988fe8f1a86e6f8558",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/JOBS-IPC.md",
+      "group": "jobs",
+      "blob": "cc9be181ae7cf16c953b5e7cfb7f3717744fa6c9",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/PROVENANCE.md",
+      "group": "packaging",
+      "blob": "fd007c83ac339d9ea5930c879d6016bb93c8df02",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/assemble_payload.py",
+      "group": "packaging",
+      "blob": "982208cb04de9fcd4f4fec9473c5d39e1517e297",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/__init__.py",
+      "group": "database",
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/causes.py",
+      "group": "database",
+      "blob": "cf6195b40b7dced2e1d42f7dae8d76b719c26dc2",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/content_store.py",
+      "group": "database",
+      "blob": "34a0bab256d3ee84af32445d4567c6bfd5fb2882",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/core.py",
+      "group": "database",
+      "blob": "cb7965bcbf902797c8402a0e73cd5bfbf7bbf9cd",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/delivery.py",
+      "group": "database",
+      "blob": "27019df30b3c65f8510d02b03d64165e93a51664",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/feed_settings.py",
+      "group": "database",
+      "blob": "de3a47b82819b16c768f8070822ed769408c598c",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/folders.py",
+      "group": "database",
+      "blob": "1efbb509011a0bfffd1f38a62a55acd3d8407c22",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/jobs.py",
+      "group": "database",
+      "blob": "6c068fc6e4e2fc698eb9c66ddd2bb06ff8fadd72",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/legacy_content_migration.py",
+      "group": "database",
+      "blob": "198e1846d8d7cd0cd7c8e664eb282b0b3c10ed3c",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/literature.py",
+      "group": "database",
+      "blob": "34e702f19ad0654af0deffcd867553523854e5fc",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/literature_mapping.py",
+      "group": "database",
+      "blob": "956c47311b2bb7fc3ee0d5f47a2fe2d081902804",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/media_jobs.py",
+      "group": "database",
+      "blob": "fba9f2166af86992d4d1d77fc8683b57f268267a",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/media_raw_activation.py",
+      "group": "database",
+      "blob": "dfc31687758a9cd10ec21aacdde749743a0fa70e",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/media_store.py",
+      "group": "database",
+      "blob": "9d8075435dae6c9aba73bf3c92d2901644192ff8",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/news_media.py",
+      "group": "database",
+      "blob": "6222c06c14f4fe1b8721244d73565e290597bdf3",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/pipeline.py",
+      "group": "database",
+      "blob": "2119992c8f6aac8766e8dd2ea62579343710249f",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/projection.py",
+      "group": "database",
+      "blob": "cc7ef6fb79a588c2892bfecff6817e186a971091",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/reading_notes.py",
+      "group": "database",
+      "blob": "67de0fa638fe01b6aa580418dfaf42c868944dd2",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/reconciliation.py",
+      "group": "database",
+      "blob": "670a2500a1bb58bbd4dbe28ac6f160ad7edd0899",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/reject_cleanup.py",
+      "group": "database",
+      "blob": "f3c7837766b60812e6d8b03ee8b501b9a94bbc61",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/reject_media_cleanup.py",
+      "group": "database",
+      "blob": "540ac85a29ac4120f726a505d0be4eae6ca3fb76",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/schema.py",
+      "group": "database",
+      "blob": "6416e4496c269aff561de30b181444e81988cd38",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/schema_semantics.py",
+      "group": "database",
+      "blob": "798ada1ec18132b2bed453e3304dbc288165c77f",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/server.py",
+      "group": "jobs",
+      "blob": "cd155f85bce650cfb63f3c550b363ab7a4624f45",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/service.py",
+      "group": "database",
+      "blob": "5d0a457c147343ce986b56159759b229f646a0f6",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/settings.py",
+      "group": "database",
+      "blob": "381e3beada9244a596616bbdb4f10da0414a8769",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/backend/zotero.py",
+      "group": "database",
+      "blob": "f87bfee153e80e78e309b4c9ae671364f28e2756",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/payload_manifest.py",
+      "group": "packaging",
+      "blob": "75ff77eab9f5bd1267627aea94e6e0365d0a3473",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/prepare_runtime.sh",
+      "group": "packaging",
+      "blob": "8b6c94cd92c86f1df46ee2eb636fb7f165a29ab7",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/requirements.lock",
+      "group": "packaging",
+      "blob": "4e1a8c7d671a5a872fefd66ed455f387ee25e57d",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/stdio_service.py",
+      "group": "native",
+      "blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
+      "group": "native",
+      "blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/make_large_fixture.py",
+      "group": "jobs",
+      "blob": "9910428df4d27e4bd40f400aae2c394e0d01d5e0",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/native_fixture.py",
+      "group": "native",
+      "blob": "f7d737f36685715ef346aa54567275d20d5b9142",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/run_native_checks.sh",
+      "group": "native",
+      "blob": "1868054762864c48f498eddd92a5dda2e247d137",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_channel.py",
+      "group": "native",
+      "blob": "ca45dfd66835df76b543f269d6d6592570baf85b",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_initialization_probe.py",
+      "group": "database",
+      "blob": "ac7fa6d9bb27df6221a051067d571709c5427b59",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_jobs_paging.py",
+      "group": "jobs",
+      "blob": "79faaf8f0445c703cd829debfa0fd87a8b2d9d9a",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_large_snapshot.py",
+      "group": "jobs",
+      "blob": "4e6835ced71fea31af070ef2a0247e5cacf03c5c",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_packaged_service.py",
+      "group": "packaging",
+      "blob": "2c3daa159aa028bbddeb748c0a32f9f45f01500a",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_payload_manifest.py",
+      "group": "packaging",
+      "blob": "2f1d5710001e48ee69ba4f644fbd5b85b450831c",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_runtime.py",
+      "group": "packaging",
+      "blob": "e4f8f58bc90f7bfb575a201087223899edd37577",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_startup_status.py",
+      "group": "database",
+      "blob": "529b5665ce2790d1f480146ec6d045d1bbc3e1f6",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/tests/test_stdio.py",
+      "group": "native",
+      "blob": "3ecd92d819113adc6800c63d459c1efe2586777a",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "ManagedEngine/verify_payload_source.py",
+      "group": "packaging",
+      "blob": "a7db9cdbdf94c2a3e2d47c9e77e5704384802a75",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "NetNewsWire.xcodeproj/project.pbxproj",
+      "group": "packaging",
+      "blob": "8a33dc2d005c598a97823af5ab15214f34177857",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/acceptance.entitlements",
+      "group": "packaging",
+      "blob": "38da9a976819359ce83aff27dbd6341393655029",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/acceptance.sh",
+      "group": "packaging",
+      "blob": "cbf6a9fcb5cff467d3f91eaa6aeba038644856c9",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/embed-processing-engine.sh",
+      "group": "packaging",
+      "blob": "854b38aa228b495b123d429c0f640ade9ea75f98",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/processing-engine.entitlements",
+      "group": "packaging",
+      "blob": "688a512932d8dee975cafb670fb14ee0e67ae7b4",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/test_acceptance.py",
+      "group": "packaging",
+      "blob": "c1a1ce87de931e8180b1bdfd270c6404c57e511c",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "buildscripts/verify_acceptance.py",
+      "group": "packaging",
+      "blob": "0813b241c81088a819589a6516644bfc36bda37d",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "docs/acceptance/t00-native-baseline.md",
+      "group": "packaging",
+      "blob": "0fa3eb9cd5a0671944c938bc657680ad8a9a46d6",
+      "standards": "pending",
+      "spec": "pending"
+    },
+    {
+      "path": "docs/acceptance/t02-managed-engine.md",
+      "group": "packaging",
+      "blob": "41ebe4b3be226d4bebb421420bd87791a30a01de",
+      "standards": "pending",
+      "spec": "pending"
+    }
+  ]
+}

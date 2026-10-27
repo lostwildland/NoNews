@@ -12,6 +12,7 @@ A reader receives an Editor draft via configured automation or explicit action a
 - [ ] Output contract remains media-appropriate; failed retries preserve previous successful drafts.
 - [ ] Native Draft detail supports versions, compare, explicit regenerate and protected-version deletion rules.
 - [ ] No new draft test-run feature or conversational editor is introduced.
+- [ ] Run-bound output preferences preserve configured language/typography, immutable prior outputs and mandatory media validation; see [native-output-preferences.md](../specs/native-output-preferences.md). English text is not automatically converted to Chinese punctuation.
 
 ## Blocked by
 

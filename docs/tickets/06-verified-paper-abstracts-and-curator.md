@@ -12,6 +12,7 @@ A paper displays identity-validated abstract-based Curator output or an honest m
 - [ ] No full-text fallback silently replaces a missing abstract for scoring; title-only and correction rules retain source behavior.
 - [ ] Native Abstract and Curator layers show the right material and result.
 - [ ] Regression fixtures include mismatched DOI/title, truncated abstract and valid identity.
+- [ ] Configured title-language requirements preserve the imported Chinese workflow without rejecting other-language new prompts; title-only material stays unscored under [native-output-preferences.md](../specs/native-output-preferences.md).
 
 ## Blocked by
 

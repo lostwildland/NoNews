@@ -20,6 +20,7 @@ A complex category may use native list-detail forms and disclosure sections. Pri
 | Target/model directory | service | Read-only refresh, no inference; stale/unavailable target distinct from valid configuration | Target picker with actual connection status; T03 |
 | Prompt name and role | reusable prompt | Split each legacy Kit role without losing identity/references | Processing > Prompts, Curator/Editor grouping; T03 |
 | Prompt content | versioned prompt | Saved database prompt remains execution authority; no hidden file or other-prompt fallback | Editor with declared input/output help; T03 |
+| Title language and generated-text typography | reusable prompt/run | New prompts follow instructions/preserve generated text; imported configurations retain applicable Chinese-title/editorial formatting requirements. Historical keys/results are immutable | Prompt editor > Advanced; [output contract](native-output-preferences.md); T03/T06/T11/T27 |
 | Prompt model/target | prompt | Explicit bound connection/target; requested vs actual model retained | Same prompt editor; T03 |
 | Prompt history and restore | prompt text | Restore older text as a new current text version, retaining visible current execution binding; identical text is a no-op; prior runs keep old versions | Version list and Restore Text; T03 |
 | Supported input placeholders | role/material | Existing supported names preserved, including legacy description alias; invalid placeholders fail before sending | Discoverable variable help/insert controls and validation; T03/T11 |
