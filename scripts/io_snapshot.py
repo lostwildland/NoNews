@@ -13,6 +13,7 @@ import stat
 import struct
 import tempfile
 import time
+import zlib
 from pathlib import Path
 from urllib.parse import quote
 from urllib.parse import unquote, urlsplit
@@ -470,7 +471,7 @@ def _asset_bindings(path, assets, roots, asset_dirs, image_aliases):
                                 data = stream.read(16 * 1024 * 1024 + 1)
                             if len(data) > 16 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != expected:
                                 raise SnapshotError('compressed source hash mismatch')
-                        except (OSError, EOFError) as exc:
+                        except (OSError, EOFError, zlib.error) as exc:
                             raise SnapshotError('invalid compressed source') from exc
         if 'literature_assets' in tables:
             for ident, source, archive, digest in db.execute('SELECT id, source_path, archive_path, file_hash FROM literature_assets'):
@@ -654,6 +655,9 @@ def _references(path, assets, bindings):
             if {'id', 'path'} <= cols:
                 for ident, path_value in db.execute('SELECT id, path FROM raw_snapshots'):
                     mapped = 'literature_raws' in tables and db.execute('SELECT 1 FROM literature_raws WHERE snapshot_id=?', (ident,)).fetchone()
+                    imported = 'body_versions' in tables and db.execute("SELECT 1 FROM body_versions WHERE snapshot_id=? AND authority='imported'", (ident,)).fetchone()
+                    if imported and not mapped:
+                        raise SnapshotError('imported raw has no authoritative file mapping')
                     private = 'private_raw_sources' in tables and db.execute('SELECT 1 FROM private_raw_sources WHERE snapshot_id=?', (ident,)).fetchone()
                     stored = 'body_versions' in tables and db.execute("SELECT 1 FROM body_versions WHERE snapshot_id=? AND authority='database'", (ident,)).fetchone()
                     bound = any(b['table'] == 'raw_snapshots' and b['id'] == ident for b in bindings)
