@@ -16,7 +16,7 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 class SnapshotTests(unittest.TestCase):
     def test_schema_semantic_constraints_are_required_for_snapshot_and_verify(self):
-        for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null', 'missing-rowid-alias', 'descending-primary-key') for op in ('snapshot', 'verify')):
+        for defect, operation in ((d, op) for d in ('missing-index', 'wrong-index', 'wrong-expression-index', 'missing-check', 'missing-primary-key', 'missing-unique', 'missing-foreign-key', 'missing-not-null', 'missing-rowid-alias', 'descending-primary-key', 'missing-default', 'wrong-default', 'wrong-affinity') for op in ('snapshot', 'verify')):
             with self.subTest(defect=defect, operation=operation), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
                 vault = self.make_simple(root)
@@ -42,6 +42,17 @@ class SnapshotTests(unittest.TestCase):
                             db.execute('DROP TABLE raw_snapshots')
                             replacement = 'id TEXT PRIMARY KEY' if defect == 'missing-rowid-alias' else 'id INTEGER PRIMARY KEY DESC'
                             db.execute(ddl.replace('id INTEGER PRIMARY KEY', replacement))
+                        elif defect in ('missing-default', 'wrong-default', 'wrong-affinity'):
+                            ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='items'").fetchone()[0]
+                            self.assertIn('starred INTEGER NOT NULL DEFAULT 0', ddl)
+                            rows = db.execute('SELECT * FROM items').fetchall()
+                            indexes = db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='items' AND sql IS NOT NULL").fetchall()
+                            db.execute('DROP TABLE items')
+                            replacement = {'missing-default': 'starred INTEGER NOT NULL', 'wrong-default': 'starred INTEGER NOT NULL DEFAULT 1', 'wrong-affinity': 'starred TEXT NOT NULL DEFAULT 0'}[defect]
+                            db.execute(ddl.replace('starred INTEGER NOT NULL DEFAULT 0', replacement))
+                            for (index,) in indexes:
+                                db.execute(index)
+                            db.executemany('INSERT INTO items VALUES (' + ','.join('?' for _ in rows[0]) + ')', rows)
                         elif defect == 'missing-primary-key':
                             db.execute('DROP TABLE app_settings')
                             db.execute('CREATE TABLE app_settings(key TEXT, value TEXT NOT NULL, updated_at TEXT NOT NULL)')
@@ -56,15 +67,16 @@ class SnapshotTests(unittest.TestCase):
                             self.assertIn('UNIQUE(owner_kind, owner_id, source_ref)', ddl)
                             db.execute('DROP TABLE media_pending')
                             db.execute(ddl.replace(',\n        UNIQUE(owner_kind, owner_id, source_ref)', ''))
+                    message = 'required schema invariant missing: items ' + ('affinities' if defect == 'wrong-affinity' else 'defaults') if defect in ('missing-default', 'wrong-default', 'wrong-affinity') else 'required schema invariant'
                     if destination:
-                        with self.assertRaisesRegex(SnapshotError, 'required schema invariant'):
+                        with self.assertRaisesRegex(SnapshotError, message):
                             snapshot(database, {'vault': vault}, destination)
                     else:
                         manifest_file = root / 'good/manifest.json'
                         manifest = json.loads(manifest_file.read_text())
                         manifest['database_sha256'] = hashlib.sha256(database.read_bytes()).hexdigest()
                         manifest_file.write_text(json.dumps(manifest))
-                        with self.assertRaisesRegex(SnapshotError, 'required schema invariant'):
+                        with self.assertRaisesRegex(SnapshotError, message):
                             verify(root / 'good')
 
     @staticmethod
@@ -144,7 +156,7 @@ class SnapshotTests(unittest.TestCase):
             vault = self.make_simple(root)
             with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
                 db.execute('DROP TABLE app_settings')
-                db.execute('CREATE TABLE app_settings (updated_at TEXT NOT NULL, value TEXT NOT NULL, key TEXT PRIMARY KEY, extra TEXT)')
+                db.execute('CREATE TABLE app_settings (updated_at TEXT NOT NULL, value VARCHAR(200) NOT NULL, key TEXT PRIMARY KEY, extra TEXT)')
                 db.execute("INSERT INTO app_settings (key,value,updated_at,extra) VALUES ('key','synthetic','now','extra')")
                 ddl = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='media_document_generations'").fetchone()[0]
                 self.assertIn("CHECK(state IN ('pending','committed'))", ddl)
@@ -264,10 +276,31 @@ class SnapshotTests(unittest.TestCase):
             snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
             restore(root / 'snap', root / 'restored')
             with closing(sqlite3.connect(root / 'restored/database.sqlite')) as db, db:
+                db.execute("INSERT INTO items(id,media_type,canonical_url,title,published_at,first_ingested_at,review_date,created_at,updated_at) VALUES ('fresh','news','https://example.invalid/fresh','Synthetic',NULL,'now','now','now','now')")
+                self.assertEqual(db.execute("SELECT starred,human_review_status,review_generation FROM items WHERE id='fresh'").fetchone(), (0, 'pending', 0))
                 for expected in (1, 2):
                     cursor = db.execute("INSERT INTO raw_snapshots(item_id,path,source_hash,retrieved_at,created_at) VALUES ('item','',?,'now','now')", (f'synthetic-{expected}',))
                     self.assertEqual(cursor.lastrowid, expected)
                     self.assertEqual(db.execute('SELECT id FROM raw_snapshots WHERE rowid=?', (cursor.lastrowid,)).fetchone(), (expected,))
+
+    def test_blob_asset_identity_is_refused_without_a_cli_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            artifact = vault / 'failure.txt'
+            artifact.write_text('synthetic artifact')
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute("INSERT INTO ingestion_failures(id,folder,artifact_path,error,updated_at) VALUES (?,'synthetic',?,'synthetic','now')", (b'identity', str(artifact)))
+            before = (root / 'source.sqlite').read_bytes()
+            cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
+            result = subprocess.run([sys.executable, str(cli), 'snapshot', str(root / 'source.sqlite'),
+                                     str(root / 'snap'), '--root', f'vault={vault}'], capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('invalid asset binding identity', result.stdout)
+            self.assertNotIn('Traceback', result.stderr)
+            self.assertFalse((root / 'snap').exists())
+            self.assertEqual(before, (root / 'source.sqlite').read_bytes())
+            self.assertEqual(artifact.read_text(), 'synthetic artifact')
 
     def test_imported_raw_cannot_use_an_archive_in_place_of_its_file_authority(self):
         with tempfile.TemporaryDirectory() as tmp:
