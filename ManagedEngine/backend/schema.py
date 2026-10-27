@@ -15,6 +15,7 @@ a crash that happened before the version was stamped.
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 
 # Bump when any ensure_schema below changes shape. A database already at this
 # version skips the whole pass.
@@ -68,7 +69,7 @@ def require_supported_database(db: sqlite3.Connection) -> None:
 
 def validate_structure(db: sqlite3.Connection) -> None:
     """Compare required current tables and columns without mutating the database."""
-    with sqlite3.connect(':memory:') as reference:
+    with closing(sqlite3.connect(':memory:')) as reference:
         ensure(reference)
         names = [row[0] for row in reference.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]

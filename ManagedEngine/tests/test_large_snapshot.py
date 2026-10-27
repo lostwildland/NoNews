@@ -1,3 +1,4 @@
+from contextlib import closing
 import base64
 import json
 from pathlib import Path
@@ -16,7 +17,7 @@ class LargeSnapshotTest(unittest.TestCase):
             token = 'a'*32
             script = root / 'stdio_service.py'
             bootstrap = subprocess.run([sys.executable,str(script),str(data)],input=json.dumps({'token':token})+'\n',text=True,capture_output=True,check=True)
-            with sqlite3.connect(data/'information.sqlite') as db:
+            with closing(sqlite3.connect(data/'information.sqlite')) as db, db:
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','old','now','now','now','now')")
                 db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,result_json) VALUES ('job','item','curator','key','succeeded','now','now','now',?)", ('x'*(8*1024*1024),))
             code = '''import sys,json

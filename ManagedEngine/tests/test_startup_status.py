@@ -45,7 +45,7 @@ class StartupStatusTest(unittest.TestCase):
             self.assertEqual(json.loads(launch(data).stdout), {'status': 'ready'})
             database = data / 'information.sqlite'
             for version, code in [('40', 'schema_migration_required'), ('999', 'schema_newer')]:
-                with sqlite3.connect(database) as db:
+                with closing(sqlite3.connect(database)) as db, db:
                     db.execute("UPDATE schema_meta SET value=? WHERE key='schema_version'", (version,))
                 p = launch(data)
                 self.assertNotEqual(p.returncode, 0)
@@ -54,26 +54,26 @@ class StartupStatusTest(unittest.TestCase):
             incomplete = root / 'incomplete'
             self.assertEqual(json.loads(launch(incomplete).stdout), {'status': 'ready'})
             incomplete_db = incomplete / 'information.sqlite'
-            with sqlite3.connect(incomplete_db) as db:
+            with closing(sqlite3.connect(incomplete_db)) as db, db:
                 db.execute('DROP TABLE body_versions')
                 db.execute('CREATE TABLE unknown_table (value TEXT)')
                 db.execute("INSERT INTO unknown_table VALUES ('keep')")
             before = incomplete_db.read_bytes()
             self.assertEqual(json.loads(launch(incomplete).stdout), {'status': 'error', 'code': 'schema_incomplete'})
             self.assertEqual(incomplete_db.read_bytes(), before)
-            with sqlite3.connect(incomplete_db) as db:
+            with closing(sqlite3.connect(incomplete_db)) as db, db:
                 self.assertEqual(db.execute('SELECT value FROM unknown_table').fetchone(), ('keep',))
             missing_column = root / 'missing-column'
             self.assertEqual(json.loads(launch(missing_column).stdout), {'status': 'ready'})
             column_db = missing_column / 'information.sqlite'
-            with sqlite3.connect(column_db) as db:
+            with closing(sqlite3.connect(column_db)) as db, db:
                 db.execute('ALTER TABLE media_raw_activation_intents DROP COLUMN quarantine_path')
             before_column = column_db.read_bytes()
             self.assertEqual(json.loads(launch(missing_column).stdout), {'status': 'error', 'code': 'schema_incomplete'})
             self.assertEqual(column_db.read_bytes(), before_column)
             extra = root / 'extra'
             self.assertEqual(json.loads(launch(extra).stdout), {'status': 'ready'})
-            with sqlite3.connect(extra / 'information.sqlite') as db:
+            with closing(sqlite3.connect(extra / 'information.sqlite')) as db, db:
                 db.execute('ALTER TABLE items ADD COLUMN future_field TEXT')
                 db.execute('CREATE TABLE future_extra (value TEXT)')
             self.assertEqual(json.loads(launch(extra).stdout), {'status': 'ready'})
@@ -111,7 +111,7 @@ class StartupStatusTest(unittest.TestCase):
                                    env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
                 return [json.loads(x) for x in p.stdout.splitlines()]
             run([{'token': token}])
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news',?,'2026','2026','2026','2026')", ('x'*20000,))
                 db.executemany("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error) VALUES (?,'item','curator',?,'failed','2026','2026','2026',?)", [(str(i), str(i), 'e'*20000) for i in range(201)])
             response = run([{'token':token},{'id':1,'token':token,'method':'GET','path':'/api/status'}])
@@ -119,5 +119,5 @@ class StartupStatusTest(unittest.TestCase):
             full = run([{'token':token},{'id':2,'token':token,'method':'GET','path':'/api/jobs'}])
             self.assertLess(len(json.dumps(full[1])), 65536)
             self.assertIsNotNone(full[1]['result']['next'])
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 self.assertEqual(db.execute('SELECT count(*) FROM processing_jobs').fetchone()[0], 201)

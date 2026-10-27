@@ -34,3 +34,5 @@ Source file SHA-256 (working-tree bytes):
 - `zotero.py`: `2caac0f26ed53d5827ea63034e9aa6f96c85697264cf1dead34120a24780cf27`
 
 Fresh schema creation uses a single SQLite transaction with statement-by-statement scripts to avoid implicit commits. Startup probes the actual processing setting inside a rollback-only transaction.
+
+NoNews startup correction: journal-mode conversion retries SQLITE_BUSY within the existing30second bound for concurrent first opens; all failed startup paths close their connection. Canonical in-memory validation closes its reference connection explicitly. The source schema/row preservation and atomic initialization boundaries remain unchanged.

@@ -64,7 +64,7 @@ class PackagedServiceTest(unittest.TestCase):
             self.assertEqual(first[2]['error'], 'invalid operation')
             self.assertEqual(first[3]['result']['next'], None)
             self.assertEqual(first[4]['result']['processors'], 3)
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('41',))
                 names = {x[0] for x in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 self.assertTrue({'items', 'feeds', 'body_versions', 'processing_jobs', 'app_settings', 'editor_drafts'} <= names)
@@ -79,12 +79,12 @@ class PackagedServiceTest(unittest.TestCase):
             job = json.loads(base64.b64decode(second[2]['result']['chunk']))
             self.assertEqual(job['id'], 'job')
             self.assertFalse(job['retryable'])
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 self.assertEqual(db.execute('SELECT value FROM future_data').fetchone(), ('preserved',))
                 self.assertEqual(db.execute('SELECT authority FROM body_versions').fetchone(), ('imported',))
                 db.execute("UPDATE schema_meta SET value='999' WHERE key='schema_version'")
             with self.assertRaises(subprocess.CalledProcessError):
                 run([{'token': token}])
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('999',))
                 self.assertEqual(db.execute('SELECT value FROM future_data').fetchone(), ('preserved',))

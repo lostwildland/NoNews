@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import sqlite3
+import time
 
 from typing import Callable
 
@@ -289,30 +290,34 @@ class InformationDB:
             self.db = sqlite3.connect(f'file:{Path(path).resolve()}?mode=ro', uri=True, timeout=30, isolation_level=None)
         else:
             self.db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
-        if not read_only:
-            try:
+        try:
+            if not read_only:
                 from .schema import require_supported_database
                 require_supported_database(self.db)
-            except Exception:
-                self.db.close()
-                raise
-        self.db.row_factory = sqlite3.Row
-        self.db.execute('PRAGMA foreign_keys=ON')
-        self.db.execute('PRAGMA busy_timeout=30000')
-        if not read_only:
-            self.db.execute('PRAGMA journal_mode=WAL')
-            self.db.execute('PRAGMA synchronous=NORMAL')
-            self.db.execute('PRAGMA cache_size=-65536')
-            self.db.execute('PRAGMA mmap_size=268435456')
-            self.db.execute('PRAGMA temp_store=MEMORY')
-            self.db.execute('PRAGMA journal_size_limit=67108864')
-        if not read_only:
-            try:
+            self.db.row_factory = sqlite3.Row
+            self.db.execute('PRAGMA foreign_keys=ON')
+            self.db.execute('PRAGMA busy_timeout=30000')
+            if not read_only:
+                deadline = time.monotonic() + 30
+                while True:
+                    try:
+                        self.db.execute('PRAGMA journal_mode=WAL')
+                        break
+                    except sqlite3.OperationalError as exc:
+                        # Competing journal-mode conversions may bypass SQLite's busy handler.
+                        if (exc.sqlite_errorcode & 0xff) != sqlite3.SQLITE_BUSY or time.monotonic() >= deadline:
+                            raise
+                        time.sleep(0.01)
+                self.db.execute('PRAGMA synchronous=NORMAL')
+                self.db.execute('PRAGMA cache_size=-65536')
+                self.db.execute('PRAGMA mmap_size=268435456')
+                self.db.execute('PRAGMA temp_store=MEMORY')
+                self.db.execute('PRAGMA journal_size_limit=67108864')
                 from . import schema as schema_pass
                 schema_pass.ensure(self.db)
-            except BaseException:
-                self.db.close()
-                raise
+        except BaseException:
+            self.db.close()
+            raise
 
     def transaction(self):
         """See :func:`transaction`. Reads better at the call site."""

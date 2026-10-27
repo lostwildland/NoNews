@@ -1,3 +1,4 @@
+from contextlib import closing
 import base64
 import json
 from pathlib import Path
@@ -17,7 +18,7 @@ class JobsPagingTest(unittest.TestCase):
             env = {'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'}
             subprocess.run(command, input=json.dumps({'token':token})+'\n', text=True, capture_output=True, check=True, env=env, timeout=10)
             values = [(2**63-1, 'max'), (1, 'positive'), (0, 'zero'), (-1, 'negative'), (-2**63, 'min')]
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','now','now','now','now')")
                 db.executemany("INSERT INTO processing_jobs(rowid,id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES (?,?,'item','curator',?,'succeeded','now','now','now')", [(rowid, name, name) for rowid, name in values])
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)
@@ -60,7 +61,7 @@ class JobsPagingTest(unittest.TestCase):
             title = '长😀\\"' * 20000
             error = '错误😀' * 24000
             stored_result = json.dumps({'detail': '结果😀' * 20000}, ensure_ascii=False)
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news',?,'2026','2026','2026','2026')", (title,))
                 db.executemany("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error) VALUES (?,'item','curator',?,'failed','2026','2026','2026',?)", [(str(i),str(i), error if i == 0 else 'error') for i in range(205)])
                 db.execute("UPDATE processing_jobs SET result_json=? WHERE id='0'", (stored_result,))
@@ -86,7 +87,7 @@ class JobsPagingTest(unittest.TestCase):
             first_frame = send({'id':3,'token':token,'method':'GET','path':'/api/jobs','query':{}})['result']
             saved = first_frame['next']
             self.assertIsNotNone(saved)
-            with sqlite3.connect(data / 'information.sqlite') as db:
+            with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
                 db.execute("UPDATE items SET title='changed' WHERE id='item'")
             old = bytearray(base64.b64decode(first_frame['chunk']))
             while saved:
@@ -99,5 +100,5 @@ class JobsPagingTest(unittest.TestCase):
             self.assertEqual(json.loads(base64.b64decode(fresh['chunk']))['title'], 'changed')
             process.stdin.close(); self.assertEqual(process.wait(timeout=10),0)
             process.stdout.close()
-            with sqlite3.connect(data/'information.sqlite') as db:
+            with closing(sqlite3.connect(data/'information.sqlite')) as db, db:
                 self.assertEqual(db.execute('SELECT count(*) FROM processing_jobs').fetchone()[0],205)
