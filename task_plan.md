@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00 passed fresh native validation and both round-3 reviews; reviewed code is integrated at 7a8a5b9. Publish acceptance and close only T00. T01 continues current-source image dependency coverage; T02 continues its native lifecycle/Settings checkpoint before connecting the packaged real backend. Both retain their original Terra high owners. T02 now owns the serialized full Xcode resource.
+T00 passed fresh native validation and both round-3 reviews; reviewed code is integrated at 7a8a5b9 and issue #2 is closed. T01 continues current-source image dependency coverage; T02 continues its native lifecycle/Settings checkpoint before connecting the packaged real backend. Both retain their original Terra high owners. T02 now owns the serialized full Xcode resource. Thirty tickets and the full goal remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
