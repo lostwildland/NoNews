@@ -58,9 +58,15 @@ public actor SyncDatabase {
 	}
 
 	nonisolated public func resetAllSelectedForProcessing() {
-		Task {
-			await _resetAllSelectedForProcessing()
-		}
+		Task { await resetAllSelectedForProcessingAndWait() }
+	}
+
+	public func resetAllSelectedForProcessingAndWait() {
+		_resetAllSelectedForProcessing()
+	}
+
+	public func close() -> Bool {
+		database.close()
 	}
 
 	/// Pass `key` when sending one status kind at a time. A nil key matches all kinds —

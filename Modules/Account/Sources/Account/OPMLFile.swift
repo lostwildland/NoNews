@@ -13,7 +13,7 @@ import RSParser
 
 @MainActor final class OPMLFile {
 	private let fileURL: URL
-	private let account: Account
+	private weak var account: Account?
 
 	private var isDirty = false {
 		didSet {
@@ -33,7 +33,7 @@ import RSParser
 	}
 
 	func load() {
-		guard let fileData = opmlFileData(), let opmlItems = parsedOPMLItems(fileData: fileData) else {
+		guard let account, let fileData = opmlFileData(), let opmlItems = parsedOPMLItems(fileData: fileData) else {
 			return
 		}
 
@@ -43,8 +43,8 @@ import RSParser
 	}
 
 	func save() {
-		guard !account.isDeleted else { return }
-		let opmlDocumentString = opmlDocument()
+		guard let account, !account.isDeleted else { return }
+		let opmlDocumentString = opmlDocument(account: account)
 
 		do {
 			try opmlDocumentString.write(to: fileURL, atomically: true, encoding: .utf8)
@@ -101,7 +101,7 @@ private extension OPMLFile {
 		return opmlDocument?.children
 	}
 
-	func opmlDocument() -> String {
+	func opmlDocument(account: Account) -> String {
 		let escapedTitle = account.nameForDisplay.escapingSpecialXMLCharacters
 		let openingText =
 		"""

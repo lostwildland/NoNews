@@ -58,6 +58,8 @@ import Secrets
 
 	func accountWillBeDeleted()
 
+	func closeDatabases() async -> Bool
+
 	static func validateCredentials(credentials: Credentials, endpoint: URL?) async throws -> Credentials?
 
 	func vacuumDatabases() async
@@ -67,4 +69,8 @@ import Secrets
 
 	/// Resume network activity after a previous `suspendNetwork()`.
 	func resume()
+}
+
+extension AccountDelegate {
+	func closeDatabases() async -> Bool { true }
 }

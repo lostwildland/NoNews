@@ -20,7 +20,7 @@ import Secrets
     }
 
 	override func tearDown() async throws {
-		TestAccountManager.shared.deleteAccount(account)
+		try await TestAccountManager.shared.deleteAccount(account)
     }
 
     func testCreateRetrieveDelete() {

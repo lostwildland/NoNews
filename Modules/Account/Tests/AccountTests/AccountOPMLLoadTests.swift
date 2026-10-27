@@ -13,50 +13,41 @@ import RSParser
 
 	private let accountManager = TestAccountManager()
 
-	@Test func restoringOwnFileSetsNameOnly() throws {
-		let account = accountManager.createAccount(type: .onMyMac)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func restoringOwnFileSetsNameOnly() async throws {
+		try await accountManager.withAccount(type: .onMyMac) { account in
+			account.loadOPMLItems(try opmlItems(title: "Feed One"), isManualImport: false)
+
+			let feed = try #require(account.flattenedFeeds().first)
+			#expect(feed.name == "Feed One")
+			#expect(feed.editedName == nil)
+			#expect(feed.nameForDisplay == "Feed One")
 		}
-
-		account.loadOPMLItems(try opmlItems(title: "Feed One"), isManualImport: false)
-
-		let feed = try #require(account.flattenedFeeds().first)
-		#expect(feed.name == "Feed One")
-		#expect(feed.editedName == nil)
-		#expect(feed.nameForDisplay == "Feed One")
 	}
 
-	@Test func importingSetsEditedNameSoTheTitleSurvivesRefreshes() throws {
-		let account = accountManager.createAccount(type: .onMyMac)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func importingSetsEditedNameSoTheTitleSurvivesRefreshes() async throws {
+		try await accountManager.withAccount(type: .onMyMac) { account in
+			account.loadOPMLItems(try opmlItems(title: "My Name For It"), isManualImport: true)
+
+			let feed = try #require(account.flattenedFeeds().first)
+			#expect(feed.name == "My Name For It")
+			#expect(feed.editedName == "My Name For It")
 		}
-
-		account.loadOPMLItems(try opmlItems(title: "My Name For It"), isManualImport: true)
-
-		let feed = try #require(account.flattenedFeeds().first)
-		#expect(feed.name == "My Name For It")
-		#expect(feed.editedName == "My Name For It")
 	}
 
-	@Test func restoringOwnFileLeavesAnExistingEditedNameAlone() throws {
-		let account = accountManager.createAccount(type: .onMyMac)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func restoringOwnFileLeavesAnExistingEditedNameAlone() async throws {
+		try await accountManager.withAccount(type: .onMyMac) { account in
+			// The user renamed this feed, so editedName is in the settings database already.
+			account.loadOPMLItems(try opmlItems(title: "Feed One"), isManualImport: false)
+			let renamedFeed = try #require(account.flattenedFeeds().first)
+			renamedFeed.editedName = "My Name For It"
+
+			// A later launch restores the file, which by then carries the edited name as its title.
+			let specifier = try #require(try opmlItems(title: "My Name For It").first?.feedSpecifier)
+			let restoredFeed = account.newFeed(with: specifier, isManualImport: false)
+
+			#expect(restoredFeed.name == "My Name For It")
+			#expect(restoredFeed.editedName == "My Name For It", "The rename lives in feed settings and should survive the restore.")
 		}
-
-		// The user renamed this feed, so editedName is in the settings database already.
-		account.loadOPMLItems(try opmlItems(title: "Feed One"), isManualImport: false)
-		let renamedFeed = try #require(account.flattenedFeeds().first)
-		renamedFeed.editedName = "My Name For It"
-
-		// A later launch restores the file, which by then carries the edited name as its title.
-		let specifier = try #require(try opmlItems(title: "My Name For It").first?.feedSpecifier)
-		let restoredFeed = account.newFeed(with: specifier, isManualImport: false)
-
-		#expect(restoredFeed.name == "My Name For It")
-		#expect(restoredFeed.editedName == "My Name For It", "The rename lives in feed settings and should survive the restore.")
 	}
 
 	// MARK: - Helpers

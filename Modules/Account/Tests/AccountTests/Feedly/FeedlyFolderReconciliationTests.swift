@@ -20,7 +20,7 @@ import XCTest
 
 	override func tearDown() async throws {
 		if let account {
-			accountManager.deleteAccount(account)
+			try await accountManager.deleteAccount(account)
 		}
 		try await super.tearDown()
 	}

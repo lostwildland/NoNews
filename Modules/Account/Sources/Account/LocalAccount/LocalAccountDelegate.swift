@@ -222,7 +222,7 @@ private extension LocalAccountDelegate {
 		feed.editedName = editedName
 		container.addFeedToTreeAtTopLevel(feed)
 
-		Task {
+		account.startBackground {
 			await account.updateAsync(feed: feed, parsedFeed: parsedFeed)
 		}
 

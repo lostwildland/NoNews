@@ -12,48 +12,42 @@ import Testing
 
 	private let accountManager = TestAccountManager()
 
-	@Test func missingTitleKeepsExistingName() throws {
-		let account = accountManager.createAccount(type: .feedly)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func missingTitleKeepsExistingName() async throws {
+		try await accountManager.withAccount(type: .feedly) { account in
+			let folder = try makeFolder(in: account)
+
+			syncTitle("Feed One", folder: folder, account: account)
+			syncTitle(nil, folder: folder, account: account)
+
+			#expect(folder.existingFeed(withFeedID: "feed/1")?.name == "Feed One")
 		}
-		let folder = try makeFolder(in: account)
-
-		syncTitle("Feed One", folder: folder, account: account)
-		syncTitle(nil, folder: folder, account: account)
-
-		#expect(folder.existingFeed(withFeedID: "feed/1")?.name == "Feed One")
 	}
 
-	@Test func emptyTitleKeepsExistingName() throws {
-		let account = accountManager.createAccount(type: .feedly)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func emptyTitleKeepsExistingName() async throws {
+		try await accountManager.withAccount(type: .feedly) { account in
+			let folder = try makeFolder(in: account)
+
+			syncTitle("Feed One", folder: folder, account: account)
+			syncTitle("", folder: folder, account: account)
+
+			#expect(folder.existingFeed(withFeedID: "feed/1")?.name == "Feed One")
 		}
-		let folder = try makeFolder(in: account)
-
-		syncTitle("Feed One", folder: folder, account: account)
-		syncTitle("", folder: folder, account: account)
-
-		#expect(folder.existingFeed(withFeedID: "feed/1")?.name == "Feed One")
 	}
 
-	@Test func serverRenameLeavesEditedNameAlone() throws {
-		let account = accountManager.createAccount(type: .feedly)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func serverRenameLeavesEditedNameAlone() async throws {
+		try await accountManager.withAccount(type: .feedly) { account in
+			let folder = try makeFolder(in: account)
+
+			syncTitle("Feed One", folder: folder, account: account)
+			let feed = try #require(folder.existingFeed(withFeedID: "feed/1"))
+			feed.editedName = "Edited Name"
+
+			syncTitle("Renamed On Feedly", folder: folder, account: account)
+
+			#expect(feed.editedName == "Edited Name")
+			#expect(feed.name == "Renamed On Feedly")
+			#expect(feed.nameForDisplay == "Edited Name")
 		}
-		let folder = try makeFolder(in: account)
-
-		syncTitle("Feed One", folder: folder, account: account)
-		let feed = try #require(folder.existingFeed(withFeedID: "feed/1"))
-		feed.editedName = "Edited Name"
-
-		syncTitle("Renamed On Feedly", folder: folder, account: account)
-
-		#expect(feed.editedName == "Edited Name")
-		#expect(feed.name == "Renamed On Feedly")
-		#expect(feed.nameForDisplay == "Edited Name")
 	}
 
 	// MARK: - Helpers

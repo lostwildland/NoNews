@@ -20,23 +20,21 @@ import Secrets
 	@Test func aRejectedRefreshTokenIsOnlyTriedOnce() async throws {
 		TestingURLProtocol.setResponse(.init(statusCode: 400), forURLContaining: Self.tokenEndpoint, httpMethod: HTTPMethod.post)
 
-		let account = TestAccountManager.shared.createAccount(type: .feedly)
-		defer {
-			TestAccountManager.shared.deleteAccount(account)
+		try await TestAccountManager.shared.withAccount(type: .feedly) { account in
+			let delegate = try #require(account.delegate as? FeedlyAccountDelegate)
+
+			// Unique per test — keychain entries are keyed by server and username.
+			let username = UUID().uuidString
+			try account.storeCredentials(Credentials(type: .oauthRefreshToken, username: username, secret: "rejected-token"))
+
+			let firstResult = await delegate.reauthorizeFeedlyAPICaller()
+			#expect(firstResult == false)
+			#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
+
+			let secondResult = await delegate.reauthorizeFeedlyAPICaller()
+			#expect(secondResult == false)
+			#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
 		}
-		let delegate = try #require(account.delegate as? FeedlyAccountDelegate)
-
-		// Unique per test — keychain entries are keyed by server and username.
-		let username = UUID().uuidString
-		try account.storeCredentials(Credentials(type: .oauthRefreshToken, username: username, secret: "rejected-token"))
-
-		let firstResult = await delegate.reauthorizeFeedlyAPICaller()
-		#expect(firstResult == false)
-		#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
-
-		let secondResult = await delegate.reauthorizeFeedlyAPICaller()
-		#expect(secondResult == false)
-		#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
 	}
 
 	/// The account has to recover when the user signs in again, rather than staying
@@ -44,22 +42,20 @@ import Secrets
 	@Test func newCredentialsAllowAnotherAttempt() async throws {
 		TestingURLProtocol.setResponse(.init(statusCode: 400), forURLContaining: Self.tokenEndpoint, httpMethod: HTTPMethod.post)
 
-		let account = TestAccountManager.shared.createAccount(type: .feedly)
-		defer {
-			TestAccountManager.shared.deleteAccount(account)
+		try await TestAccountManager.shared.withAccount(type: .feedly) { account in
+			let delegate = try #require(account.delegate as? FeedlyAccountDelegate)
+
+			// Unique per test — keychain entries are keyed by server and username.
+			let username = UUID().uuidString
+			try account.storeCredentials(Credentials(type: .oauthRefreshToken, username: username, secret: "rejected-token"))
+
+			_ = await delegate.reauthorizeFeedlyAPICaller()
+			#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
+
+			try account.storeCredentials(Credentials(type: .oauthAccessToken, username: username, secret: "fresh-token"))
+
+			_ = await delegate.reauthorizeFeedlyAPICaller()
+			#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 2)
 		}
-		let delegate = try #require(account.delegate as? FeedlyAccountDelegate)
-
-		// Unique per test — keychain entries are keyed by server and username.
-		let username = UUID().uuidString
-		try account.storeCredentials(Credentials(type: .oauthRefreshToken, username: username, secret: "rejected-token"))
-
-		_ = await delegate.reauthorizeFeedlyAPICaller()
-		#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 1)
-
-		try account.storeCredentials(Credentials(type: .oauthAccessToken, username: username, secret: "fresh-token"))
-
-		_ = await delegate.reauthorizeFeedlyAPICaller()
-		#expect(TestingURLProtocol.requestCount(forURLContaining: Self.tokenEndpoint) == 2)
 	}
 }

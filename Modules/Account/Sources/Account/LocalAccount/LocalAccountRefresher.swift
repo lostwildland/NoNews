@@ -304,8 +304,9 @@ import os
 			return
 		}
 
+		guard let account = feed.account else { return }
 		outstandingParseTasks += 1
-		Task { @MainActor in
+		if !account.startBackground({ [self] in
 			defer {
 				self.outstandingParseTasks -= 1
 				self.completeRefreshActivityIfReady()
@@ -356,6 +357,9 @@ import os
 			}
 
 			self.delegate?.localAccountRefresher(self, articleChanges: articleChanges)
+		}) {
+			outstandingParseTasks -= 1
+			completeRefreshActivityIfReady()
 		}
 	}
 

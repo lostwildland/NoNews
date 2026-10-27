@@ -82,6 +82,14 @@ final class FeedSettingsDatabase: Sendable {
 		}
 	}
 
+	func close() async -> Bool {
+		await withCheckedContinuation { continuation in
+			serialDispatchQueue.async {
+				continuation.resume(returning: self.database.close())
+			}
+		}
+	}
+
 	func vacuumIfNeeded() {
 		serialDispatchQueue.async {
 			self.database.vacuumIfNeeded()

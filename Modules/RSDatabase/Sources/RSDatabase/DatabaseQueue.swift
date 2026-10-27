@@ -95,6 +95,14 @@ public final class DatabaseQueue: Sendable {
 			}
 		}
 	}
+
+	public func close() async -> Bool {
+		await withCheckedContinuation { continuation in
+			serialDispatchQueue.async {
+				continuation.resume(returning: self.database.close())
+			}
+		}
+	}
 }
 
 private extension DatabaseQueue {

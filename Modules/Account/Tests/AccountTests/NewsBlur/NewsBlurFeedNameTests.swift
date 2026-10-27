@@ -14,35 +14,31 @@ import NewsBlur
 
 	private let accountManager = TestAccountManager()
 
-	@Test func emptyNameKeepsExistingName() throws {
-		let account = accountManager.createAccount(type: .newsBlur)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func emptyNameKeepsExistingName() async throws {
+		try await accountManager.withAccount(type: .newsBlur) { account in
+			let delegate = try #require(account.delegate as? NewsBlurAccountDelegate)
+
+			try syncName("Feed One", delegate: delegate, account: account)
+			try syncName("", delegate: delegate, account: account)
+
+			#expect(account.existingFeed(withFeedID: "1")?.name == "Feed One")
 		}
-		let delegate = try #require(account.delegate as? NewsBlurAccountDelegate)
-
-		try syncName("Feed One", delegate: delegate, account: account)
-		try syncName("", delegate: delegate, account: account)
-
-		#expect(account.existingFeed(withFeedID: "1")?.name == "Feed One")
 	}
 
-	@Test func serverRenameLeavesEditedNameAlone() throws {
-		let account = accountManager.createAccount(type: .newsBlur)
-		defer {
-			accountManager.deleteAccount(account)
+	@Test func serverRenameLeavesEditedNameAlone() async throws {
+		try await accountManager.withAccount(type: .newsBlur) { account in
+			let delegate = try #require(account.delegate as? NewsBlurAccountDelegate)
+
+			try syncName("Feed One", delegate: delegate, account: account)
+			let feed = try #require(account.existingFeed(withFeedID: "1"))
+			feed.editedName = "Edited Name"
+
+			try syncName("Renamed On NewsBlur", delegate: delegate, account: account)
+
+			#expect(feed.editedName == "Edited Name")
+			#expect(feed.name == "Renamed On NewsBlur")
+			#expect(feed.nameForDisplay == "Edited Name")
 		}
-		let delegate = try #require(account.delegate as? NewsBlurAccountDelegate)
-
-		try syncName("Feed One", delegate: delegate, account: account)
-		let feed = try #require(account.existingFeed(withFeedID: "1"))
-		feed.editedName = "Edited Name"
-
-		try syncName("Renamed On NewsBlur", delegate: delegate, account: account)
-
-		#expect(feed.editedName == "Edited Name")
-		#expect(feed.name == "Renamed On NewsBlur")
-		#expect(feed.nameForDisplay == "Edited Name")
 	}
 
 	// MARK: - Helpers

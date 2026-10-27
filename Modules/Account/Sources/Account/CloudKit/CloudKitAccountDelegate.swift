@@ -116,11 +116,12 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 	// CKAccountChanged can arrive on any thread.
 	@objc nonisolated func handleCKAccountChanged(_ note: Notification) {
 		Task { @MainActor in
+			guard let account else { return }
 			let wasUnavailable = iCloudAccountIsUnavailable
 			iCloudAccountIsUnavailable = false
 			if wasUnavailable {
 				Self.logger.info("CloudKitAccountDelegate: iCloud account changed — refreshing")
-				try? await refreshAll()
+				account.startBackground { [self] in try? await refreshAll() }
 			}
 		}
 	}
@@ -637,11 +638,13 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
 			// Flush in the background so marking doesn't block the caller
 			// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
-			Task { try? await sendArticleStatus() }
+			account.startBackground { [self] in try? await sendArticleStatus() }
 		}
 
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
 	}
+
+	private var syncInitialization: Task<Void, Never>?
 
 	func accountDidInitialize() {
 		guard let account else {
@@ -680,11 +683,11 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		accountZone.fetchChangesPageHandler = makePageHandler(kind: .refreshFeedList)
 		articlesZone.fetchChangesPageHandler = makePageHandler(kind: .refreshArticleStatuses)
 
-		syncDatabase.resetAllSelectedForProcessing()
+		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
 
 		// Check to see if this is a new account and initialize anything we need
 		if account.externalID == nil {
-			Task {
+			account.startBackground { [self] in
 				do {
 					let externalID = try await accountZone.findOrCreateAccount()
 					account.externalID = externalID
@@ -700,6 +703,11 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 			subscribeToZoneChangesWithActivity(account: account, zone: articlesZone)
 		}
 
+	}
+
+	func closeDatabases() async -> Bool {
+		await syncInitialization?.value
+		return await syncDatabase.close()
 	}
 
 	func accountWillBeDeleted() {
@@ -792,7 +800,7 @@ private extension CloudKitAccountDelegate {
 	/// visible — without it, a failed subscription means no future remote pushes.
 	func subscribeToZoneChangesWithActivity(account: Account, zone: any CloudKitZone) {
 		let zoneName = zone.zoneID.zoneName
-		Task { [weak self] in
+		account.startBackground { [weak self] in
 			guard let self else {
 				return
 			}
@@ -1067,7 +1075,7 @@ private extension CloudKitAccountDelegate {
 
 	func sendNewArticlesToTheCloud(_ account: Account, _ feed: Feed) {
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
-		Task {
+		account.startBackground { [self] in
 			// Completes createRSSFeed's fifth task.
 			// <https://github.com/Ranchero-Software/NetNewsWire/issues/4538>
 			defer {
@@ -1231,7 +1239,8 @@ private extension CloudKitAccountDelegate {
 extension CloudKitAccountDelegate: LocalAccountRefresherDelegate {
 
 	func localAccountRefresher(_ refresher: LocalAccountRefresher, articleChanges: ArticleChanges) {
-		Task {
+		guard let account else { return }
+		account.startBackground { [self] in
 			await storeArticleChanges(new: articleChanges.new,
 									  updated: articleChanges.updated,
 									  deleted: articleChanges.deleted)

@@ -56,6 +56,7 @@ public struct ArticleCounts: Sendable {
 	private let queue: DatabaseQueue
 	private let retentionStyle: RetentionStyle
 	private let accountID: String
+	private var authorsMigration: Task<Void, Never>?
 
 	nonisolated private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "ArticlesDatabase")
 
@@ -93,10 +94,16 @@ public struct ArticleCounts: Sendable {
 
 		// Backfill the authors JSON column cooperatively, yielding between batches
 		// so that other database work (fetches, etc.) can interleave.
-		Task.detached { [accountID, queue] in
+		self.authorsMigration = Task.detached { [accountID, queue] in
 			let migration = AuthorsSchemaMigration(accountID: accountID, queue: queue)
 			await migration.run()
 		}
+	}
+
+	public func close() async -> Bool {
+		articlesTable.stopIndexing()
+		await authorsMigration?.value
+		return await queue.close()
 	}
 
 	// MARK: - Vacuum

@@ -20,30 +20,28 @@ import RSWeb
 
 		TestingURLProtocol.setResponse("tags.json", file: "JSON/tags_add.json")
 		TestingURLProtocol.setResponse("subscriptions.json", file: "JSON/subscriptions_initial.json")
-		let account = TestAccountManager.shared.createAccount(type: .feedbin)
+		try await TestAccountManager.shared.withAccount(type: .feedbin) { account in
+			// Test initial folders
+			try await account.refreshAll()
 
-		// Test initial folders
-		try await account.refreshAll()
+			XCTAssertEqual(224, account.flattenedFeeds().count)
 
-		XCTAssertEqual(224, account.flattenedFeeds().count)
+			let daringFireball = account.idToFeedDictionary["1296379"]
+			XCTAssertEqual("Daring Fireball", daringFireball!.name)
+			XCTAssertEqual("https://daringfireball.net/feeds/json", daringFireball!.url)
+			XCTAssertEqual("https://daringfireball.net/", daringFireball!.homePageURL)
 
-		let daringFireball = account.idToFeedDictionary["1296379"]
-		XCTAssertEqual("Daring Fireball", daringFireball!.name)
-		XCTAssertEqual("https://daringfireball.net/feeds/json", daringFireball!.url)
-		XCTAssertEqual("https://daringfireball.net/", daringFireball!.homePageURL)
+			// Test Adding a Feed
+			TestingURLProtocol.setResponse("subscriptions.json", file: "JSON/subscriptions_add.json")
 
-		// Test Adding a Feed
-		TestingURLProtocol.setResponse("subscriptions.json", file: "JSON/subscriptions_add.json")
+			try await account.refreshAll()
 
-		try await account.refreshAll()
+			XCTAssertEqual(225, account.flattenedFeeds().count)
 
-		XCTAssertEqual(225, account.flattenedFeeds().count)
-
-		let bPixels = account.idToFeedDictionary["1096623"]
-		XCTAssertEqual("Beautiful Pixels", bPixels?.name)
-		XCTAssertEqual("https://feedpress.me/beautifulpixels", bPixels?.url)
-		XCTAssertEqual("https://beautifulpixels.com/", bPixels?.homePageURL)
-
-		TestAccountManager.shared.deleteAccount(account)
+			let bPixels = account.idToFeedDictionary["1096623"]
+			XCTAssertEqual("Beautiful Pixels", bPixels?.name)
+			XCTAssertEqual("https://feedpress.me/beautifulpixels", bPixels?.url)
+			XCTAssertEqual("https://beautifulpixels.com/", bPixels?.homePageURL)
+		}
 	}
 }

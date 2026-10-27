@@ -355,7 +355,7 @@ import os
 		if let name {
 			try await account.renameFeed(feed, name: name)
 		}
-		Task {
+		account.startBackground { [self] in
 			try? await initialFeedDownload(account: account, feed: feed)
 		}
 

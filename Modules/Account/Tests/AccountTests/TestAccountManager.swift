@@ -19,6 +19,7 @@ import Secrets
 	// Not Caches: macOS puts a `group:everyone deny delete` ACE on it, so test accounts
 	// created there can't be removed afterward.
 	private let accountsFolder = FileManager.default.temporaryDirectory.appendingPathComponent("NetNewsWireTestAccounts")
+	private var ownedFolders = Set<String>()
 
 	func createAccount(type: AccountType, username: String? = nil, password: String? = nil) -> Account {
 
@@ -33,11 +34,18 @@ import Secrets
 		}
 
 		let account = Account(dataFolder: accountFolder.path, type: type, accountID: accountID)
+		ownedFolders.insert(accountFolder.path)
 
 		return account
 	}
 
-	func deleteAccount(_ account: Account) {
+	func deleteAccount(_ account: Account) async throws {
+		guard ownedFolders.contains(account.dataFolder) else {
+			throw CocoaError(.fileNoSuchFile)
+		}
+		guard await account.closeForFixtureRemoval() else {
+			throw CocoaError(.fileWriteUnknown)
+		}
 
 		// Credentials live in the keychain, outside the account folder removed below.
 		for credentialsType in CredentialsType.allCases {
@@ -45,9 +53,18 @@ import Secrets
 		}
 
 		account.deleteSettings()
+		try FileManager.default.removeItem(atPath: account.dataFolder)
+		ownedFolders.remove(account.dataFolder)
+	}
 
-		// Cleanup failing is not a test failure, and aborting here would take every
-		// other test in the process down with it.
-		try? FileManager.default.removeItem(atPath: account.dataFolder)
+	func withAccount(type: AccountType, _ body: (Account) async throws -> Void) async throws {
+		let account = createAccount(type: type)
+		do {
+			try await body(account)
+		} catch {
+			try await deleteAccount(account)
+			throw error
+		}
+		try await deleteAccount(account)
 	}
 }

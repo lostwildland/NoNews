@@ -24,6 +24,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	private let searchTable: SearchTable
 	private let retentionStyle: ArticlesDatabase.RetentionStyle
 	private let articlesCache = Mutex([String: Article]())
+	private let indexingStopped = Mutex(false)
 
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "ArticlesTable")
 	private static let signposter = OSSignposter(subsystem: Logger.nnwSubsystem, category: .pointsOfInterest)
@@ -534,6 +535,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Indexing
 
 	func indexUnindexedArticles() {
+		guard !indexingStopped.withLock({ $0 }) else { return }
 		queue.runInDatabase { database in
 			let sql = "select articleID from articles where searchRowID is null limit 500;"
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: nil) else {
@@ -549,6 +551,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				self.indexUnindexedArticles()
 			}
 		}
+	}
+
+	func stopIndexing() {
+		indexingStopped.withLock { $0 = true }
 	}
 
 	// MARK: - Caches

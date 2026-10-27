@@ -199,11 +199,13 @@
                 }
             }
         }
-        else if (SQLITE_OK != rc) {
-            NSLog(@"error closing!: %d", rc);
-        }
     }
     while (retry);
+
+    if (rc != SQLITE_OK) {
+        NSLog(@"error closing!: %d", rc);
+        return NO;
+    }
     
     _db = nil;
     return YES;

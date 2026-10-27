@@ -671,9 +671,11 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 		if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
 			// Flush in the background so marking doesn't block the caller
 			// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
-			Task { try? await sendArticleStatus() }
+			account.startBackground { [self] in try? await sendArticleStatus() }
 		}
 	}
+
+	private var syncInitialization: Task<Void, Never>?
 
 	func accountDidInitialize() {
 		guard let account else {
@@ -684,7 +686,12 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 		// A send in progress when the app was killed left its statuses selected. Clear them so
 		// they get sent, instead of waiting for the next selectForProcessing to pick them up.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/4280>
-		syncDatabase.resetAllSelectedForProcessing()
+		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
+	}
+
+	func closeDatabases() async -> Bool {
+		await syncInitialization?.value
+		return await syncDatabase.close()
 	}
 
 	func accountWillBeDeleted() {

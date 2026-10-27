@@ -240,6 +240,11 @@ public enum FetchType {
 	private var fetchingAllUnreadCounts = false
 	private var needsRefetchAllUnreadCounts = false
 	var areUnreadCountsInitialized = false
+	private var isClosing = false
+	private var backgroundTasks = [UUID: Task<Void, Never>]()
+	private var activeOperations = 0
+	private var operationsDrained: CheckedContinuation<Void, Never>?
+	private var closeTask: Task<Bool, Never>?
 
 	public let dataFolder: String
 	let database: ArticlesDatabase
@@ -344,7 +349,7 @@ public enum FetchType {
 		opmlFile.load()
 		feedSettingsDatabase.deleteSettingsForFeedsNotIn(flattenedFeedURLs)
 
-		DispatchQueue.main.async {
+		startBackground { [self] in
 			self.database.cleanupDatabaseAtStartup(subscribedToFeedIDs: self.flattenedFeedsIDs)
 			self._fetchAllUnreadCounts()
 		}
@@ -454,7 +459,7 @@ public enum FetchType {
 	}
 
 	public func receiveRemoteNotification(userInfo: [AnyHashable: Any]) async {
-		await delegate.receiveRemoteNotification(userInfo: userInfo)
+		try? await withOperation { await delegate.receiveRemoteNotification(userInfo: userInfo) }
 	}
 
 	// MARK: - Refreshing
@@ -467,7 +472,7 @@ public enum FetchType {
 	}
 
 	public func refreshAll() async throws {
-		try await delegate.refreshAll()
+		try await withOperation { try await delegate.refreshAll() }
 	}
 
 	// MARK: - Activity Log
@@ -504,12 +509,12 @@ public enum FetchType {
 	// MARK: - Syncing Article Status
 
 	public func sendArticleStatus() async throws {
-		try await delegate.sendArticleStatus()
+		try await withOperation { try await delegate.sendArticleStatus() }
 	}
 
 	@discardableResult
 	public func syncArticleStatus() async throws -> Bool {
-		try await delegate.syncArticleStatus()
+		try await withOperation { try await delegate.syncArticleStatus() }
 	}
 
 	// MARK: - OPML
@@ -522,10 +527,12 @@ public enum FetchType {
 
 		Task { @MainActor in
 			do {
-				try await delegate.importOPML(opmlFile: opmlFile)
-				// Reset the last fetch date to get the article history for the added feeds.
-				lastArticleFetchStartTime = nil
-				try? await delegate.refreshAll()
+				try await withOperation {
+					try await delegate.importOPML(opmlFile: opmlFile)
+					// Reset the last fetch date to get the article history for the added feeds.
+					lastArticleFetchStartTime = nil
+					try? await delegate.refreshAll()
+				}
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -541,11 +548,13 @@ public enum FetchType {
 
 	/// Resume network activity for the delegate after a previous `suspendNetwork()`.
 	public func resumeDelegate() {
+		guard !isClosing else { return }
 		delegate.resume()
 	}
 
 	/// Reload OPML, etc.
 	public func resume() {
+		guard !isClosing else { return }
 		_fetchAllUnreadCounts()
 	}
 
@@ -563,6 +572,55 @@ public enum FetchType {
 
 	public func prepareForDeletion() {
 		delegate.accountWillBeDeleted()
+	}
+
+	func closeForFixtureRemoval() async -> Bool {
+		if let closeTask {
+			return await closeTask.value
+		}
+		isClosing = true
+		isDeleted = true
+		NotificationCenter.default.removeObserver(self)
+		NotificationCenter.default.removeObserver(delegate)
+		delegate.suspendNetwork()
+		let task = Task { @MainActor in
+			if activeOperations > 0 {
+				await withCheckedContinuation { operationsDrained = $0 }
+			}
+			while !backgroundTasks.isEmpty {
+				let tasks = Array(backgroundTasks.values)
+				for task in tasks { await task.value }
+			}
+			let syncClosed = await delegate.closeDatabases()
+			let articlesClosed = await database.close()
+			let settingsClosed = await feedSettingsDatabase.close()
+			return syncClosed && articlesClosed && settingsClosed
+		}
+		closeTask = task
+		return await task.value
+	}
+
+	private func withOperation<T>(_ operation: () async throws -> T) async throws -> T {
+		guard !isClosing else { throw CancellationError() }
+		activeOperations += 1
+		defer {
+			activeOperations -= 1
+			if activeOperations == 0 {
+				operationsDrained?.resume()
+				operationsDrained = nil
+			}
+		}
+		return try await operation()
+	}
+
+	@discardableResult func startBackground(_ operation: @escaping @MainActor () async -> Void) -> Bool {
+		guard !isClosing else { return false }
+		let id = UUID()
+		backgroundTasks[id] = Task { @MainActor in
+			await operation()
+			backgroundTasks[id] = nil
+		}
+		return true
 	}
 
 	func deleteSettings() {
@@ -594,7 +652,7 @@ public enum FetchType {
 	}
 
 	public func markArticles(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws {
-		try await delegate.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		try await withOperation { try await delegate.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag) }
 	}
 
 	func existingContainer(withExternalID externalID: String) -> Container? {
@@ -683,7 +741,7 @@ public enum FetchType {
 	public func addFeed(_ feed: Feed, to container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.addFeed(feed: feed, container: container)
+				try await withOperation { try await delegate.addFeed(feed: feed, container: container) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -694,7 +752,7 @@ public enum FetchType {
 	public func createFeed(url: String, name: String?, container: Container, validateFeed: Bool, completion: @escaping (Result<Feed, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				let feed = try await delegate.createFeed(url: url, name: name, container: container, validateFeed: validateFeed)
+				let feed = try await withOperation { try await delegate.createFeed(url: url, name: name, container: container, validateFeed: validateFeed) }
 				completion(.success(feed))
 			} catch {
 				completion(.failure(error))
@@ -728,7 +786,7 @@ public enum FetchType {
 	public func removeFeed(_ feed: Feed, from container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.removeFeed(feed: feed, container: container)
+				try await withOperation { try await delegate.removeFeed(feed: feed, container: container) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -739,7 +797,7 @@ public enum FetchType {
 	public func moveFeed(_ feed: Feed, from: Container, to: Container, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to)
+				try await withOperation { try await delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -748,13 +806,13 @@ public enum FetchType {
 	}
 
 	public func renameFeed(_ feed: Feed, name: String) async throws {
-		try await delegate.renameFeed(with: feed, to: name)
+		try await withOperation { try await delegate.renameFeed(with: feed, to: name) }
 	}
 
 	public func restoreFeed(_ feed: Feed, container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.restoreFeed(feed: feed, container: container)
+				try await withOperation { try await delegate.restoreFeed(feed: feed, container: container) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -764,13 +822,13 @@ public enum FetchType {
 
 	@discardableResult
 	public func addFolder(_ name: String) async throws -> Folder {
-		try await delegate.createFolder(name: name)
+		try await withOperation { try await delegate.createFolder(name: name) }
 	}
 
 	public func removeFolder(_ folder: Folder, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.removeFolder(with: folder)
+				try await withOperation { try await delegate.removeFolder(with: folder) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -779,13 +837,13 @@ public enum FetchType {
 	}
 
 	public func renameFolder(_ folder: Folder, to name: String) async throws {
-		try await delegate.renameFolder(with: folder, to: name)
+		try await withOperation { try await delegate.renameFolder(with: folder, to: name) }
 	}
 
 	public func restoreFolder(_ folder: Folder, completion: @escaping (Result<Void, Error>) -> Void) {
 		Task { @MainActor in
 			do {
-				try await delegate.restoreFolder(folder: folder)
+				try await withOperation { try await delegate.restoreFolder(folder: folder) }
 				completion(.success(()))
 			} catch {
 				completion(.failure(error))
@@ -1395,20 +1453,21 @@ private extension Account {
 	}
 
 	func _fetchUnreadCount(feed: Feed) {
-		Task { @MainActor in
+		startBackground { [self] in
 			let unreadCount = await database.fetchUnreadCountAsync(feedID: feed.feedID)
 			feed.unreadCount = unreadCount
 		}
 	}
 
 	func _fetchUnreadCounts(feeds: Set<Feed>) {
-		Task { @MainActor in
+		startBackground { [self] in
 			let unreadCountDictionary = await database.fetchUnreadCountsAsync(feedIDs: feeds.feedIDs())
 			processUnreadCounts(unreadCountDictionary: unreadCountDictionary, feeds: feeds)
 		}
 	}
 
 	func _fetchAllUnreadCounts() {
+		guard !isClosing else { return }
 		// Status changes arrive continuously during a refresh. Only one full-count
 		// query is in flight at a time, and one more runs afterward if anything
 		// changed while it ran.
@@ -1418,7 +1477,7 @@ private extension Account {
 		}
 		fetchingAllUnreadCounts = true
 
-		Task { @MainActor in
+		startBackground { [self] in
 			// The flag stays set while the feed counts are applied so updateUnreadCount
 			// runs once at the end instead of once per feed.
 			if let unreadCountDictionary = await database.fetchAllUnreadCountsAsync() {
