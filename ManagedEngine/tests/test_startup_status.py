@@ -1,4 +1,5 @@
 import json
+from contextlib import closing
 import shutil
 from pathlib import Path
 import sqlite3
@@ -9,6 +10,28 @@ import unittest
 
 
 class StartupStatusTest(unittest.TestCase):
+    def test_current_startup_preserves_empty_legacy_structures(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp) / 'data'
+            token = 'a' * 32
+            def launch():
+                return subprocess.run([sys.executable, str(script), str(data)], input=json.dumps({'token': token}) + '\n',
+                                      text=True, capture_output=True, timeout=10, check=True,
+                                      env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            self.assertEqual(json.loads(launch().stdout), {'status': 'ready'})
+            database = data / 'information.sqlite'
+            with closing(sqlite3.connect(database)) as db, db:
+                for table in ('raw_texts', 'draft_texts'):
+                    db.execute('CREATE TABLE ' + table + ' (snapshot_id INTEGER, text TEXT, future_field BLOB)')
+                    db.execute('CREATE INDEX ' + table + '_future ON ' + table + '(future_field)')
+                    db.execute('CREATE TRIGGER ' + table + '_future AFTER INSERT ON ' + table + ' BEGIN SELECT 1; END')
+                before = db.execute('SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name').fetchall()
+            for _ in range(2):
+                self.assertEqual(json.loads(launch().stdout), {'status': 'ready'})
+                with closing(sqlite3.connect(database)) as db:
+                    self.assertEqual(db.execute('SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name').fetchall(), before)
+
     def test_schema_errors_and_corrupt_database_are_controlled(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         with tempfile.TemporaryDirectory() as temp:

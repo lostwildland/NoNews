@@ -19,6 +19,16 @@ import Darwin
 		defer { try? FileManager.default.removeItem(at: dir) }
 		setenv("INFORMATION_OS_RAW_VAULT", "must-not-reach-child", 1)
 		let data = dir.appendingPathComponent("data")
+		let exhausted = ProcessingEngine(testRuntime: runtime, entry: fixture, dataRoot: dir.appendingPathComponent("exhausted"), timeout: 0.4, duplicateOutput: { _ in -1 })
+		for _ in 0..<2 {
+			exhausted.start()
+			var quitFinished = false
+			exhausted.stop { quitFinished = true }
+			try await wait(exhausted) { if case .failed = $0 { return true }; return false }
+			precondition(quitFinished)
+			exhausted.stop()
+			precondition(exhausted.state == .stopped)
+		}
 		let engine = ProcessingEngine(testRuntime: runtime, entry: fixture, dataRoot: data, timeout: 0.4)
 		engine.start()
 		try await wait(engine) { $0 == .ready }

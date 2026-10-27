@@ -22,6 +22,7 @@ final class ProcessingEngine {
 	private let locate: () -> (URL, URL)?
 	private let dataRoot: URL?
 	private let timeout: TimeInterval
+	private let duplicateOutput: @Sendable (Int32) -> Int32
 	private var stopCallbacks: [() -> Void] = []
 	private var process: Process?
 	private var input: FileHandle?
@@ -48,13 +49,15 @@ final class ProcessingEngine {
 		let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
 		dataRoot = support?.appendingPathComponent("ProcessingEngine", isDirectory: true)
 		timeout = 10
+		duplicateOutput = { dup($0) }
 	}
 
 #if DEBUG
-	init(testRuntime: URL, entry: URL, dataRoot: URL, timeout: TimeInterval = 1) {
+	init(testRuntime: URL, entry: URL, dataRoot: URL, timeout: TimeInterval = 1, duplicateOutput: @escaping @Sendable (Int32) -> Int32 = { dup($0) }) {
 		locate = { (testRuntime, entry) }
 		self.dataRoot = dataRoot
 		self.timeout = timeout
+		self.duplicateOutput = duplicateOutput
 	}
 #endif
 
@@ -97,8 +100,15 @@ final class ProcessingEngine {
 		do {
 			try child.run()
 			try? stdout.fileHandleForWriting.close()
-			let descriptor = dup(stdout.fileHandleForReading.fileDescriptor)
-			guard descriptor >= 0 else { fail("Processing communication failed."); return }
+			let descriptor = duplicateOutput(stdout.fileHandleForReading.fileDescriptor)
+			guard descriptor >= 0 else {
+				DispatchQueue.global(qos: .utility).async { [weak self] in
+					child.waitUntilExit()
+					DispatchQueue.main.async { self?.exited(run: run) }
+				}
+				fail("Processing communication failed.")
+				return
+			}
 			DispatchQueue.global(qos: .utility).async { [weak self] in
 				defer { close(descriptor) }
 				var bytes = [UInt8](repeating: 0, count: 8192)

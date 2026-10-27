@@ -91,14 +91,6 @@ def ensure(db: sqlite3.Connection, *, artifacts=None) -> bool:
                    legacy_content_migration, literature, media_jobs, media_raw_activation,
                    media_store, news_media, pipeline, projection, reading_notes,
                    reconciliation, reject_cleanup, service, settings, zotero)
-    # Retiring the two body tables is not part of the version bump, because a
-    # live database can still hold a body row when the bump runs (an older
-    # process finishing a write). The drop is conditional on the table being
-    # empty, so it has to be re-attempted on a later start instead of never
-    # happening. Both calls are idempotent and cost one lookup when the table is
-    # already gone.
-    core.retire_body_table(db, "raw_texts")
-    service.retire_body_table(db, "draft_texts")
     if version(db) == SCHEMA_VERSION:
         return False
 

@@ -1,5 +1,11 @@
 # T02 managed-engine evidence (partial)
 
+## Round 2 coordinator corrections
+
+Independent review of `17fdf64` found a shared Standards/Spec P2: output descriptor duplication can fail after the child starts but before its reader/exit waiter exists, leaving failure teardown and quit callbacks permanently waiting. A DEBUG-initializer fault seam reproduces this through the public controller: the prior code timed out in stopping. The failure branch now installs an exit waiter before teardown even without a readable descriptor. The focused controller check passed afterward, including repeated failed starts, completed quit callbacks and the existing resistant-child and startup-error cases.
+
+Spec also found that current-schema opening still dropped empty historical body tables, including additional columns, indexes and triggers. A public stdio regression first failed because those schema objects disappeared. Ordinary current-version opening now skips that retirement and repeated startup preserves the full synthetic sqlite_master inventory. Its focused regression passed; the prepared schema source and integrity manifest were refreshed before the full Python suite. These changes have not yet been rebuilt into the running installed bundle. The remaining round-two large-job-history read finding stays with the original owner; no T02 acceptance is claimed.
+
 ## Independent review round 1: historical-schema correction
 
 Reviewed HEAD `4a7cc9ef88107c86287507774dd1bfa0b5176d26`. Spec review found one P1: source retirement migrations could drop historical human work, observation bodies and draft-file references when opening an older schema. The coordinator first reproduced a schema-40 start succeeding on a fixture containing those rows/paths. Writable startup now checks the version and whether an unversioned database is populated before changing journal/schema state; it accepts only new empty data or current schema 41 and closes its connection on refusal. Unsupported historical forms are retained for a separately verified import, not migrated destructively on startup. A typed safe schema-error code is available for the native error-message correction.
