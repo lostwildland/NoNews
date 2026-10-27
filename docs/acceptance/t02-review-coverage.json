@@ -474,6 +474,15 @@
       "findings": "1 P2 root extras",
       "correction": "eb6a156;5syntheticregressionspass;fresh review pending",
       "evidence": "t02-packaging-review-r10.md"
+    },
+    {
+      "axis": "spec",
+      "base": "36fc3ae6b057a5fe07e1b831e88c90b62958cded",
+      "head": "eb6a15667d415c3569703ba7530b945e8cf703e0",
+      "coverage": "5 changed paths and connected source/preparation/embed seams complete",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-packaging-review-r10.md",
+      "parent_check": "5 CLI tests passed from extracted pinned commit; no live worktree source used"
     }
   ]
 }
