@@ -23,7 +23,10 @@ def read_message():
 
 
 def send(message):
-    print(json.dumps(message, separators=(',', ':')), flush=True)
+    encoded = json.dumps(message, separators=(',', ':'), ensure_ascii=True)
+    if len(encoded) + 1 > MAX_MESSAGE:
+        encoded = '{"error":"response too large"}'
+    print(encoded, flush=True)
 
 
 def main():

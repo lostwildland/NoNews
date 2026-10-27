@@ -7,6 +7,8 @@ import unittest
 
 
 class ManagedServiceTest(unittest.TestCase):
+    @unittest.skipUnless(os.environ.get('IO_TEST_PYTHON') and os.environ.get('IO_TEST_SOURCE'),
+                         'Optional reference-source comparison')
     def test_real_service_settings_survive_restart(self):
         python = os.environ['IO_TEST_PYTHON']
         source = os.environ['IO_TEST_SOURCE']
