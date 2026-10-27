@@ -84,13 +84,13 @@ class Application:
                 rows = db.db.execute('''
                     SELECT j.rowid AS cursor_rowid,j.id,j.item_id,j.stage,j.status,j.attempts,j.error,j.batch_id,
                            j.created_at,j.updated_at,j.available_at,j.result_json,
-                           i.title,i.media_type,
+                           i.title,i.media_type,i.id IS NULL AS item_unavailable,
                            (SELECT s.error FROM stage_state s
                              WHERE s.item_id=j.item_id AND s.status='failed'
                                AND s.error IS NOT NULL AND s.error<>''
                              ORDER BY s.updated_at DESC LIMIT 1) AS stage_error,
                            CASE WHEN d.id IS NULL THEN 0 ELSE 1 END AS dismissed
-                    FROM processing_jobs j JOIN items i ON i.id=j.item_id
+                    FROM processing_jobs j LEFT JOIN items i ON i.id=j.item_id
                     LEFT JOIN failure_dismissals d
                            ON d.kind='job' AND d.id=j.id AND d.stamp=j.updated_at
                     WHERE j.rowid <= ? ORDER BY j.rowid DESC LIMIT 1''', (row_id,)).fetchall()
@@ -104,16 +104,19 @@ class Application:
                 for row in rows:
                     job = dict(row)
                     row_id = job.pop('cursor_rowid')
-                    resolved = queue.failure_resolved(row)
-                    retryable = queue.retryable(row)
+                    unavailable = bool(job.pop('item_unavailable'))
+                    resolved = not unavailable and queue.failure_resolved(row)
+                    retryable = not unavailable and queue.retryable(row)
                     retry_blocked = None
-                    if row['status'] == 'failed' and not resolved:
+                    if unavailable:
+                        retry_blocked = 'The original item is unavailable; restore its verified record before retrying'
+                    elif row['status'] == 'failed' and not resolved:
                         if not retryable:
                             retry_blocked = 'This processing stage requires its guarded runner and cannot be retried here'
                         else:
                             retryable = False
                             retry_blocked = 'Settings-write server only accepts settings mutations'
-                    job.update(error=_job_reason(row), dismissed=bool(row['dismissed']),
+                    job.update(error=_job_reason(row), dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
                                resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
                                cause=causes.classify(_job_reason(row)))
                     jobs.append(job)

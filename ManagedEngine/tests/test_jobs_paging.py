@@ -9,6 +9,60 @@ import unittest
 
 
 class JobsPagingTest(unittest.TestCase):
+    def test_missing_items_do_not_hide_or_block_job_history(self):
+        engine = Path(__file__).resolve().parents[1]
+        for orphan_only in (False, True):
+            with self.subTest(orphan_only=orphan_only), tempfile.TemporaryDirectory() as tmp:
+                data = Path(tmp) / 'data'
+                command = [str(engine / '.prepared/python/bin/python3'), str(engine / 'stdio_service.py'), str(data)]
+                token = 'a' * 32
+                env = {'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'}
+                subprocess.run(command, input=json.dumps({'token':token})+'\n', text=True,
+                               capture_output=True, check=True, env=env, timeout=10)
+                values = [(1, 'older', 'item'), (2, 'orphan', 'missing'), (3, 'newer', 'item')]
+                if orphan_only:
+                    values = [values[1]]
+                original_result = json.dumps({'retained': 'Missing item result 😀' * 3000}, ensure_ascii=False)
+                with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
+                    db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','now','now','now','now')")
+                    db.executemany("INSERT INTO processing_jobs(rowid,id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error,result_json) VALUES (?,?,?,'curator',?,'failed','now','now','now','Retained failure',?)",
+                                   [(rowid, name, item, name, original_result) for rowid, name, item in values])
+                process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)
+                def send(message):
+                    process.stdin.write(json.dumps(message)+'\n'); process.stdin.flush()
+                    return json.loads(process.stdout.readline())
+                try:
+                    self.assertEqual(send({'token':token}), {'status':'ready'})
+                    cursor, chunks, records = None, bytearray(), []
+                    while True:
+                        reply = send({'id':1,'token':token,'method':'GET','path':'/api/jobs',
+                                      'query':{} if cursor is None else {'cursor':cursor}})
+                        self.assertIn('result', reply, reply)
+                        page = reply['result']
+                        chunks.extend(base64.b64decode(page['chunk']))
+                        if page['recordComplete']:
+                            records.append(json.loads(chunks)); chunks.clear()
+                        cursor = page['next']
+                        if cursor is None:
+                            break
+                    self.assertEqual([record['id'] for record in records],
+                                     ['orphan'] if orphan_only else ['newer', 'orphan', 'older'])
+                    missing = next(record for record in records if record['id'] == 'orphan')
+                    self.assertEqual(missing['item_id'], 'missing')
+                    self.assertIsNone(missing['title'])
+                    self.assertTrue(missing['itemUnavailable'])
+                    self.assertFalse(missing['retryable'])
+                    self.assertIn('unavailable', missing['retryBlocked'])
+                    self.assertTrue(all(record['error'] == 'Retained failure' and
+                                        record['result_json'] == original_result for record in records))
+                    self.assertTrue(all(not record['itemUnavailable'] for record in records if record['id'] != 'orphan'))
+                finally:
+                    process.stdin.close()
+                    self.assertEqual(process.wait(timeout=10), 0)
+                    process.stdout.close()
+                with closing(sqlite3.connect(data / 'information.sqlite')) as db:
+                    self.assertEqual(db.execute('SELECT rowid,id,item_id FROM processing_jobs ORDER BY rowid').fetchall(), values)
+
     def test_history_traverses_the_full_signed_rowid_range(self):
         engine = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmp:
