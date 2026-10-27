@@ -1,0 +1,11 @@
+# Native test SQLite diagnostics
+
+2026-10-28. Read-only inspection of saved test action logs; no test rerun or account/profile access. Console-log extraction was unavailable, so action logs were used. The diagnostic text is not treated as a test pass or production incident.
+
+T00's accepted result `Test-NetNewsWire-2026.10.28_00-28-19-+0800.xcresult` already contains SQLite disk-I/O and “vnode unlinked while in use” diagnostics. T02's result `Test-NetNewsWire-2026.10.28_02-09-35-+0800.xcresult` contains the same diagnostic class. After deduplicating emitted lines, the respective diagnostic counts were 2,358 and 2,347; 96 and 94 lines explicitly named the synthetic NetNewsWireTestAccounts root. Counts include repeated underlying events with different timestamps; they are not counts of corrupted databases or failed tests.
+
+The first T02 group occurs during AccountFeedbinFolderContentsSyncTest.testDownloadSync and names DB.sqlite3, Sync.sqlite3 and FeedSettings.db beneath the temporary test-account root. The T00 baseline includes the same temporary-root unlink class before T02 existed. Modules/Account/Tests had no T02 changes. TestAccountManager.deleteAccount removes that account directory after credential/settings cleanup without an explicit database-lifetime wait in that helper. This is a concrete fixture-lifetime concern; exact shutdown ordering and its effect on assertions still need diagnosis.
+
+Both recorded test plans report 753 passed and zero failed. That does not prove these diagnostics are harmless or that every asynchronous assertion remains representative. The available evidence does not attribute them to the new managed-engine database, and no production data was inspected. T30 must resolve the fixture close/drain/remove ordering and rerun representative/full native checks before final validation claims a clean data-integrity result. Preserve the original functional tests and assertions; do not suppress SQLite diagnostics or exclude the affected tests merely to obtain green output.
+
+Source inspected: Modules/Account/Tests/AccountTests/TestAccountManager.swift and Feedbin/AccountFeedbinFolderContentsSyncTest.swift. No application shutdown or filesystem cleanup was performed in this investigation.

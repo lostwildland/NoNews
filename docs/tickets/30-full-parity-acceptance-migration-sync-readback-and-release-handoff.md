@@ -10,6 +10,7 @@ The owner can use all prior IO abilities in NoNews and a new user can independen
 
 - [ ] Every active capability and newly discovered active source behavior has an accepted ticket plus meaningful test/runtime evidence; retired items are honestly separated.
 - [ ] Run full appropriate macOS/iOS builds and tests, integration/migration/sync live readback and independently aggregated Standards/Spec reviews.
+- [ ] Resolve the synthetic account fixture's database-close/remove diagnostics documented in [native test SQLite evidence](../acceptance/t02-test-diagnostics.md); preserve affected tests/assertions and verify that cleanup waits for database work. Passing counts alone do not clear data-integrity diagnostics.
 - [ ] No material code/UX/accessibility/data-integrity issue remains; private final evidence is locally accessible with redacted public summary.
 - [ ] Each completed ticket has commit and remote ref, review base/HEAD and test outcome; goal is not completed while live prerequisites remain pending.
 - [ ] Clean abandoned changes and deliver runnable app, migration/rollback guide and known limitations without award claims.

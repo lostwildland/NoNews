@@ -18,6 +18,8 @@ Use a private authenticated channel appropriate to the app sandbox, with per-lau
 
 Readiness must be backed by the actual IO application/database service: prove a real read (for example schema/status or empty job/source listing) and a real settings round trip through its public dispatch boundary. An independent toy HTTP health endpoint does not prove the processor started. Advanced business flows belong to their later tickets, but real service code and schema must underlie the lifecycle.
 
+The readiness write/read check targets the actual local processing setting inside a rollback-only transaction, not a separate temporary database or a committed health-marker row. Preserve the original value, absence, timestamp and other rows, including on probe failure; do not overwrite imported settings or repeatedly update their history at launch. A read-only or write-rejecting database produces a meaningful unavailable/failed state before Ready. This verifies local settings storage, not model quality or external integration credentials.
+
 ## Reuse and portability
 
 Prefer compatible existing backend behavior and database structures over a wholesale language rewrite. A portable app bootstrap supplies explicit configured roots and optional integrations; it does not reuse the personal source CLI bootstrap that requires fixed vaults/write gates. Only sanitized reusable source and needed public schema resources enter the public repo. Include provenance and exact scope; do not copy private data, personal constants, credentials, generated caches or the entire source working tree indiscriminately.
