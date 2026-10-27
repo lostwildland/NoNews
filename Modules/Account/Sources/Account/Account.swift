@@ -534,24 +534,21 @@ public enum FetchType {
 	// MARK: - OPML
 
 	public func importOPML(_ opmlFile: URL, completion: @escaping (Result<Void, Error>) -> Void) {
+		guard acceptsFixtureWork else {
+			completion(.failure(CancellationError()))
+			return
+		}
 		guard !delegate.isOPMLImportInProgress else {
 			completion(.failure(AccountError.opmlImportInProgress))
 			return
 		}
 
-		Task { @MainActor in
-			do {
-				try await withOperation {
-					try await delegate.importOPML(opmlFile: opmlFile)
-					// Reset the last fetch date to get the article history for the added feeds.
-					lastArticleFetchStartTime = nil
-					try? await delegate.refreshAll()
-				}
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({
+			try await self.delegate.importOPML(opmlFile: opmlFile)
+			// Reset the last fetch date to get the article history for the added feeds.
+			self.lastArticleFetchStartTime = nil
+			try? await self.delegate.refreshAll()
+		}, completion: completion)
 	}
 
 	// MARK: - Suspend/Resume
@@ -642,6 +639,20 @@ public enum FetchType {
 		let work = DatabaseWork(accountID: accountID)
 		defer { work.finish() }
 		return try await DatabaseWork.$current.withValue(work) { try await operation() }
+	}
+
+	func performOperation<T>(_ operation: @escaping @MainActor () async throws -> T, completion: @escaping (Result<T, Error>) -> Void) {
+		guard startBackground({
+			do {
+				let result = try await self.withOperation { try await operation() }
+				completion(.success(result))
+			} catch {
+				completion(.failure(error))
+			}
+		}) else {
+			completion(.failure(CancellationError()))
+			return
+		}
 	}
 
 	@discardableResult func startBackground(_ operation: @escaping @MainActor () async -> Void) -> Bool {
@@ -774,25 +785,11 @@ public enum FetchType {
 	}
 
 	public func addFeed(_ feed: Feed, to container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.addFeed(feed: feed, container: container) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.addFeed(feed: feed, container: container) }, completion: completion)
 	}
 
 	public func createFeed(url: String, name: String?, container: Container, validateFeed: Bool, completion: @escaping (Result<Feed, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				let feed = try await withOperation { try await delegate.createFeed(url: url, name: name, container: container, validateFeed: validateFeed) }
-				completion(.success(feed))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.createFeed(url: url, name: name, container: container, validateFeed: validateFeed) }, completion: completion)
 	}
 
 	func createFeed(with name: String?, url: String, feedID: String, homePageURL: String?) -> Feed {
@@ -819,25 +816,11 @@ public enum FetchType {
 	}
 
 	public func removeFeed(_ feed: Feed, from container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.removeFeed(feed: feed, container: container) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.removeFeed(feed: feed, container: container) }, completion: completion)
 	}
 
 	public func moveFeed(_ feed: Feed, from: Container, to: Container, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.moveFeed(feed: feed, sourceContainer: from, destinationContainer: to) }, completion: completion)
 	}
 
 	public func renameFeed(_ feed: Feed, name: String) async throws {
@@ -845,14 +828,7 @@ public enum FetchType {
 	}
 
 	public func restoreFeed(_ feed: Feed, container: Container, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.restoreFeed(feed: feed, container: container) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.restoreFeed(feed: feed, container: container) }, completion: completion)
 	}
 
 	@discardableResult
@@ -861,14 +837,7 @@ public enum FetchType {
 	}
 
 	public func removeFolder(_ folder: Folder, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.removeFolder(with: folder) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.removeFolder(with: folder) }, completion: completion)
 	}
 
 	public func renameFolder(_ folder: Folder, to name: String) async throws {
@@ -876,14 +845,7 @@ public enum FetchType {
 	}
 
 	public func restoreFolder(_ folder: Folder, completion: @escaping (Result<Void, Error>) -> Void) {
-		Task { @MainActor in
-			do {
-				try await withOperation { try await delegate.restoreFolder(folder: folder) }
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		performOperation({ try await self.delegate.restoreFolder(folder: folder) }, completion: completion)
 	}
 
 	func addFolderToTree(_ folder: Folder) {

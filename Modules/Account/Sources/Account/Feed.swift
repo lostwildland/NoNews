@@ -214,14 +214,7 @@ import Articles
 			completion(.failure(CancellationError()))
 			return
 		}
-		Task { @MainActor in
-			do {
-				try await account.renameFeed(self, name: newName)
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		account.performOperation({ try await account.renameFeed(self, name: newName) }, completion: completion)
 	}
 
 	// MARK: - UnreadCountProvider

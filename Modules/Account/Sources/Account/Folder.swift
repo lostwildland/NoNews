@@ -42,7 +42,14 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	static let untitledName = NSLocalizedString("Untitled ƒ", comment: "Folder name")
 	nonisolated public let folderID: Int // not saved: per-run only
-	public var externalID: String?
+	public var externalID: String? {
+		didSet {
+			guard account?.acceptsFixtureWork == true else {
+				externalID = oldValue
+				return
+			}
+		}
+	}
 	static var incrementingID = 0
 
 	// MARK: - DisplayNameProvider
@@ -55,6 +62,10 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	public var unreadCount = 0 {
 		didSet {
+			guard account?.acceptsFixtureWork == true else {
+				unreadCount = oldValue
+				return
+			}
 			if unreadCount != oldValue {
 				postUnreadCountDidChangeNotification()
 			}
@@ -68,14 +79,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 			completion(.failure(CancellationError()))
 			return
 		}
-		Task { @MainActor in
-			do {
-				try await account.renameFolder(self, to: name)
-				completion(.success(()))
-			} catch {
-				completion(.failure(error))
-			}
-		}
+		account.performOperation({ try await account.renameFolder(self, to: name) }, completion: completion)
 	}
 
 	// MARK: - Init

@@ -9,9 +9,79 @@ import Synchronization
 import RSCore
 @testable import Account
 
-@Suite(.isolatedWebserviceResponses) @MainActor struct AccountFixtureLifetimeTests {
+@Suite(.isolatedWebserviceResponses, .serialized) @MainActor struct AccountFixtureLifetimeTests {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
+
+	@Test func callbacksSubmittedBeforeCloseFinishAndPersist() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let path = account.dataFolder
+		let from = try #require(account.ensureFolder(with: "From"))
+		let to = try #require(account.ensureFolder(with: "To"))
+		let renameFolder = try #require(account.ensureFolder(with: "Rename"))
+		let removedFolder = try #require(account.ensureFolder(with: "Remove"))
+		let restoredFolder = Folder(account: account, name: "Restore")
+		let feed = account.createFeed(with: "Feed", url: "https://fixture.invalid/callback-feed", feedID: "callback-feed", homePageURL: nil)
+		let moved = account.createFeed(with: "Moved", url: "https://fixture.invalid/callback-move", feedID: "callback-move", homePageURL: nil)
+		let removed = account.createFeed(with: "Removed", url: "https://fixture.invalid/callback-remove", feedID: "callback-remove", homePageURL: nil)
+		let restored = account.createFeed(with: "Restored", url: "https://fixture.invalid/callback-restore", feedID: "callback-restore", homePageURL: nil)
+		from.addFeedToTreeAtTopLevel(moved)
+		from.addFeedToTreeAtTopLevel(removed)
+		let url = "https://fixture.invalid/callback-created.xml"
+		let xml = """
+		<?xml version="1.0"?><rss version="2.0"><channel><title>Fixture</title><link>https://fixture.invalid/</link><description>Fixture</description><item><title>Callback article</title><guid>callback-article</guid><link>https://fixture.invalid/item</link></item></channel></rss>
+		"""
+		TestingURLProtocol.$currentTestID.withValue(nil) {
+			TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
+		}
+		let importURL = URL(fileURLWithPath: path + "/import.opml")
+		try "<opml version=\"2.0\"><body><outline text=\"Imported\" xmlUrl=\"https://fixture.invalid/imported.xml\"/></body></opml>".write(to: importURL, atomically: true, encoding: .utf8)
+		var results = [Result<Void, Error>]()
+		var creation: Result<Feed, Error>?
+		account.addFeed(feed, to: from) { results.append($0) }
+		account.moveFeed(moved, from: from, to: to) { results.append($0) }
+		account.removeFeed(removed, from: from) { results.append($0) }
+		account.restoreFeed(restored, container: to) { results.append($0) }
+		account.removeFolder(removedFolder) { results.append($0) }
+		account.restoreFolder(restoredFolder) { results.append($0) }
+		feed.rename(to: "Accepted feed") { results.append($0) }
+		renameFolder.rename(to: "Accepted folder") { results.append($0) }
+		account.importOPML(importURL) { results.append($0) }
+		account.createFeed(url: url, name: nil, container: to, validateFeed: true) { creation = $0 }
+		#expect(results.isEmpty)
+		if case .some = creation { Issue.record("Creation callback ran before close") }
+		#expect(await account.closeForFixtureRemoval())
+		#expect(results.count == 9)
+		for result in results { if case .failure(let error) = result { Issue.record("Accepted callback failed: \(error)") } }
+		_ = try #require(creation).get()
+		#expect(from.topLevelFeeds.contains(feed))
+		#expect(to.topLevelFeeds.contains(moved))
+		#expect(!from.topLevelFeeds.contains(removed) && to.topLevelFeeds.contains(restored))
+		#expect(renameFolder.name == "Accepted folder")
+		#expect(account.folders?.contains(removedFolder) == false)
+		#expect(account.folders?.contains(restoredFolder) == true)
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Callback article'") == "Callback article")
+		let opml = try String(contentsOfFile: path + "/Subscriptions.opml", encoding: .utf8)
+		#expect(opml.contains("Accepted folder") && opml.contains(url) && opml.contains("imported.xml"))
+		var rejected = [Result<Void, Error>]()
+		account.removeFeed(feed, from: from) { rejected.append($0) }
+		account.restoreFeed(feed, container: to) { rejected.append($0) }
+		account.addFeed(feed, to: to) { rejected.append($0) }
+		account.moveFeed(feed, from: from, to: to) { rejected.append($0) }
+		account.removeFolder(renameFolder) { rejected.append($0) }
+		account.restoreFolder(removedFolder) { rejected.append($0) }
+		account.importOPML(importURL) { rejected.append($0) }
+		feed.rename(to: "Rejected") { rejected.append($0) }
+		renameFolder.rename(to: "Rejected") { rejected.append($0) }
+		var rejectedCreation: Result<Feed, Error>?
+		account.createFeed(url: url, name: nil, container: to, validateFeed: true) { rejectedCreation = $0 }
+		#expect(rejected.count == 9)
+		for result in rejected { if case .failure(let error) = result { #expect(error is CancellationError) } else { Issue.record("Closed callback succeeded") } }
+		if case .failure(let error) = try #require(rejectedCreation) { #expect(error is CancellationError) } else { Issue.record("Closed creation succeeded") }
+		#expect(from.topLevelFeeds.contains(feed) && renameFolder.name == "Accepted folder")
+		try await manager.deleteAccount(account)
+	}
 
 	@Test func failedOPMLFlushKeepsDirtySubscriptionsForRetry() async throws {
 		let manager = TestAccountManager()
@@ -179,6 +249,8 @@ import RSCore
 		var account: Account? = manager.createAccount(type: .onMyMac)
 		let feed = try #require(account?.createFeed(with: "Original", url: "https://example.com/released", feedID: "released", homePageURL: nil))
 		let folder = try #require(account?.ensureFolder(with: "Original"))
+		folder.externalID = "original-id"
+		folder.unreadCount = 4
 		try await manager.deleteAccount(try #require(account))
 		account = nil
 		#expect(feed.account == nil)
@@ -190,8 +262,14 @@ import RSCore
 		let childrenObserver = NotificationCenter.default.addObserver(forName: .ChildrenDidChange, object: folder, queue: nil) { _ in
 			notifications.count.withLock { $0 += 1 }
 		}
+		let unreadObserver = NotificationCenter.default.addObserver(forName: .UnreadCountDidChange, object: folder, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
 		folder.name = "Rejected"
+		folder.externalID = "rejected-id"
+		folder.unreadCount = 9
 		#expect(folder.name == "Original")
+		#expect(folder.externalID == "original-id" && folder.unreadCount == 4)
 		folder.addFeedToTreeAtTopLevel(feed)
 		folder.topLevelFeeds = [feed]
 		folder.folders = [folder]
@@ -200,6 +278,7 @@ import RSCore
 		#expect(notifications.count.withLock { $0 } == 0)
 		NotificationCenter.default.removeObserver(observer)
 		NotificationCenter.default.removeObserver(childrenObserver)
+		NotificationCenter.default.removeObserver(unreadObserver)
 		let feedResult: Result<Void, Error> = await withCheckedContinuation { continuation in
 			feed.rename(to: "Rejected") { continuation.resume(returning: $0) }
 		}
@@ -215,6 +294,8 @@ import RSCore
 		let account = manager.createAccount(type: .onMyMac)
 		let feed = account.createFeed(with: "Original", url: "https://example.com/during", feedID: "during", homePageURL: nil)
 		let folder = try #require(account.ensureFolder(with: "Before"))
+		folder.externalID = "initial-id"
+		folder.unreadCount = 3
 		let detachedFolder = Folder(account: account, name: "Detached")
 		let other = account.createFeed(with: "Other", url: "https://example.com/other", feedID: "other", homePageURL: nil)
 		account.addFeedToTreeAtTopLevel(feed)
@@ -229,9 +310,11 @@ import RSCore
 			startSignal.yield(())
 			for await _ in release { break }
 			feed.editedName = "Admitted"
+			folder.externalID = "admitted-id"
 			folder.addFeedToTreeAtTopLevel(other)
 			let changed = await account.database.markAndFetchNewAsync(articleIDs: ["admitted"], statusKey: .starred, flag: true)
 			#expect(changed == ["admitted"])
+			folder.unreadCount = 7
 		}
 		for await _ in started { break }
 		let close = Task { await account.closeForFixtureRemoval() }
@@ -281,14 +364,21 @@ import RSCore
 		let folderObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: folder, queue: nil) { _ in
 			notifications.count.withLock { $0 += 1 }
 		}
+		let unreadObserver = NotificationCenter.default.addObserver(forName: .UnreadCountDidChange, object: folder, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
 		feed.editedName = "Rejected"
 		folder.name = "Rejected"
+		folder.externalID = "rejected-id"
+		folder.unreadCount = 99
 		#expect(folder.name == "Before")
+		#expect(folder.externalID == "initial-id" && folder.unreadCount == 3)
 		#expect(feed.editedName == "Before")
 		#expect(notifications.count.withLock { $0 } == 0)
 		NotificationCenter.default.removeObserver(observer)
 		NotificationCenter.default.removeObserver(displayObserver)
 		NotificationCenter.default.removeObserver(folderObserver)
+		NotificationCenter.default.removeObserver(unreadObserver)
 		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
 		let rejected = await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
 		#expect(rejected.isEmpty)
@@ -300,7 +390,9 @@ import RSCore
 		let closed = await close.value
 		#expect(closed)
 		#expect(folder.topLevelFeeds == [other])
+		#expect(folder.externalID == "admitted-id" && folder.unreadCount == 7)
 		let finalOPML = try String(contentsOfFile: path + "/Subscriptions.opml", encoding: .utf8)
+		#expect(finalOPML.contains("admitted-id"))
 		#expect(folderContents("Before", in: finalOPML).contains(other.url))
 		let closedChildren = NotificationCounter()
 		let closedObserver = NotificationCenter.default.addObserver(forName: .ChildrenDidChange, object: account, queue: nil) { _ in
@@ -324,10 +416,17 @@ import RSCore
 		let afterCloseObserver = NotificationCenter.default.addObserver(forName: .DisplayNameDidChange, object: folder, queue: nil) { _ in
 			afterCloseNotifications.count.withLock { $0 += 1 }
 		}
+		let afterCloseUnreadObserver = NotificationCenter.default.addObserver(forName: .UnreadCountDidChange, object: folder, queue: nil) { _ in
+			afterCloseNotifications.count.withLock { $0 += 1 }
+		}
 		folder.name = "Rejected after close"
+		folder.externalID = "rejected-after-close"
+		folder.unreadCount = 99
 		#expect(folder.name == "Before")
+		#expect(folder.externalID == "admitted-id" && folder.unreadCount == 7)
 		#expect(afterCloseNotifications.count.withLock { $0 } == 0)
 		NotificationCenter.default.removeObserver(afterCloseObserver)
+		NotificationCenter.default.removeObserver(afterCloseUnreadObserver)
 		#expect(feed.editedName == "Admitted")
 		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'during'") == "Admitted")
 		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT starred FROM statuses WHERE articleID = 'admitted'") == "1")
