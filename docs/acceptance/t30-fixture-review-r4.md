@@ -20,3 +20,11 @@ There is no evidence here that the retail profile was changed, and no production
 Before another full plan containing ScriptingTests, the same fixture owner must bind every application-targeting fixture to the exact current host bundle identifier, refuse unavailable/unbound source rather than execute a name-based fallback, and verify that identifier under the isolated acceptance entry. Keep existing script assertions and do not skip tests or hardcode a retail identifier. Add a behavioral resource/target regression, then validate the isolated full plan and artifact. The installed SDK confirms NSAppleScript has nullable source and initWithSource; unavailable source must be handled explicitly.
 
 Fresh independent Standards/Spec assessment must include this harness change with the existing lifecycle repair before integration. Complete T30, production deletion, iOS, live sync, migration and visible UI acceptance remain open.
+
+## Current R7 candidate for fresh review
+
+HEAD: `209c924aa9f5117f05e5cd33298ff07680cde9ee`, original base unchanged. Seven commits and 53 logical changed paths, including script resource renames. Local/remote refs match, worktree clean, original-base whitespace and isolated-artifact identity checks pass.
+
+The coordinator independently read the final `2026.10.28_06-00-09-+0800` xcresult: **767 top-level passed, zero failed/skipped**, with 296 parameterized runs. The saved action JSON contains 1,179 emittedOutput fields and 10,634 extracted lines, with zero disk-I/O and zero vnode-unlink matches and seven isolated-host marker lines. This extraction has a different line-count boundary from the owner's 9,597 emitted action lines; both retain their stated scope. One generic main-thread warning remains.
+
+The owner binds each application-targeting raw script resource to the exact current host before execution, requires the isolated acceptance bundle identifier under `NNW_ACCEPTANCE_TESTS`, and refuses unbound or unusable source/identity. The URL fixture uses an ignored test URL. The owner reports the non-executing binding test passed before all seven scripting tests. Fresh independent full lifecycle and harness Standards/Spec reviews are required at this exact HEAD. Prior R3 findings were corrected, but no repair acceptance or full T30 acceptance is claimed.

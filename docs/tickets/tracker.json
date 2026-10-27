@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "eb6a156",
-      "implementation_state": "Source-boundary Spec correction complete0 at eb6a156;5CLI tests rerun from pinned commit pass. Standards root-delta recheck, aggregate streaming, other scope reviews and actual CI/bundle/API/UI acceptance pending",
+      "last_reported_head": "4be1246ef430e2166dd06ed2c9e808de4dbd709f",
+      "implementation_state": "Bounded streaming committed; coordinator45tests44pass1optionalSkip. Current bundle/CI and complete scope/cross-group reviews pending; open and unintegrated",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,9 +417,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "R3 closure/container fixes candidate; parent766fullpass0fail0skip/zeroSQLitediagnostics. Newly inspected pre-existing name-based scripting target needs exact-host harness correction before another full plan and fresh review; fullT30open",
+      "implementation_state": "Lifecycle and exact-host scripting candidate; coordinator767nativePass0fail0skip/zeroSQLiteDiagnostics. Fresh independent full lifecycle+harness reviews pending; fullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "38f48a749fccf2a7ab35a118a7cbdca9dc2b870c",
+      "last_reported_head": "209c924aa9f5117f05e5cd33298ff07680cde9ee",
       "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
     }
   },

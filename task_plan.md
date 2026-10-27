@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 remain the only accepted tickets (2/31). T30 candidate38f48a7 passes766fulltests with zeroSQLite diagnostics, but pre-existing scripting fixtures target NetNewsWire by name. Complete exact-current-host scripting isolation before another full plan and fresh lifecycle/harness review; do not claim earlier recipient isolation. Continue T02 aggregate-only bounded-memory implementation after its successful non-aggregate checkpoint; final source/CI/bundle checks remain. Packaging root guard eb6a156 passes5syntheticcases and requires fresh independent correction assessment. API integration/T03 and full UI/migration/integration/sync acceptance remain open.
+T00/T01 remain the only accepted tickets (2/31). T30 candidate209c924 passes767fulltests with zeroSQLite diagnostics and exact-host scripting binding; fresh full lifecycle/harness Standards and Spec reviews are required. T02 candidate4be1246 passes45Python tests(44pass1optionalSkip); prepare the current signed bundle and real CI evidence, then complete current-blob native/database/jobs/packaging and cross-group review. Packaging source-boundary corrections have scoped Spec0/Standards0 assessments; changed declarations still need review. API integration/T03 and full UI/migration/integration/sync acceptance remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
