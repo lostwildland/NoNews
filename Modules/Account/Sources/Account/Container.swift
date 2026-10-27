@@ -158,6 +158,7 @@ extension Notification.Name {
 	}
 
 	func postChildrenDidChangeNotification() {
+		guard account?.acceptsFixtureWork == true else { return }
 		NotificationCenter.default.post(name: .ChildrenDidChange, object: self)
 	}
 }

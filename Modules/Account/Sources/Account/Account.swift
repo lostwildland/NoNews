@@ -158,8 +158,12 @@ public enum FetchType {
 		}
 	}
 
-	public var topLevelFeeds = Set<Feed>()
-	public var folders: Set<Folder>? = Set<Folder>()
+	public var topLevelFeeds = Set<Feed>() {
+		didSet { if !acceptsFixtureWork { topLevelFeeds = oldValue } }
+	}
+	public var folders: Set<Folder>? = Set<Folder>() {
+		didSet { if !acceptsFixtureWork { folders = oldValue } }
+	}
 
 	public var externalID: String? {
 		get {
@@ -595,8 +599,6 @@ public enum FetchType {
 		#if DEBUG
 		onFixtureClosingForTesting?()
 		#endif
-		NotificationCenter.default.removeObserver(self)
-		NotificationCenter.default.removeObserver(delegate)
 		delegate.suspendNetwork()
 		let task = Task { @MainActor in
 			if activeOperations > 0 {
@@ -610,6 +612,8 @@ public enum FetchType {
 				closeTask = nil
 				return false
 			}
+			NotificationCenter.default.removeObserver(self)
+			NotificationCenter.default.removeObserver(delegate)
 			isDeleted = true
 			let syncClosed = await delegate.closeDatabases()
 			initializationWork?.finish()
@@ -708,6 +712,7 @@ public enum FetchType {
 
 	@discardableResult
 	func ensureFolder(with name: String) -> Folder? {
+		guard acceptsFixtureWork else { return nil }
 		// TODO: support subfolders, maybe, some day
 
 		if name.isEmpty {
@@ -727,6 +732,7 @@ public enum FetchType {
 	}
 
 	public func ensureFolder(withFolderNames folderNames: [String]) -> Folder? {
+		guard acceptsFixtureWork else { return nil }
 		// TODO: support subfolders, maybe, some day.
 		// Since we don’t, just take the last name and make sure there’s a Folder.
 
@@ -881,6 +887,7 @@ public enum FetchType {
 	}
 
 	func addFolderToTree(_ folder: Folder) {
+		guard acceptsFixtureWork else { return }
 		folders!.insert(folder)
 		postChildrenDidChangeNotification()
 		structureDidChange()
@@ -996,6 +1003,7 @@ public enum FetchType {
 	}
 
 	public func structureDidChange() {
+		guard acceptsFixtureWork else { return }
 		// Feeds were added or deleted. Or folders added or deleted.
 		// Or feeds inside folders were added or deleted.
 		opmlFile.markAsDirty()
@@ -1147,12 +1155,14 @@ public enum FetchType {
 	}
 
 	public func removeFeedFromTreeAtTopLevel(_ feed: Feed) {
+		guard acceptsFixtureWork else { return }
 		topLevelFeeds.remove(feed)
 		structureDidChange()
 		postChildrenDidChangeNotification()
 	}
 
 	public func removeAllInstancesOfFeedFromTreeAtAllLevels(_ feed: Feed) {
+		guard acceptsFixtureWork else { return }
 		topLevelFeeds.remove(feed)
 
 		if let folders {
@@ -1166,6 +1176,7 @@ public enum FetchType {
 	}
 
 	public func removeFeedsFromTreeAtTopLevel(_ feeds: Set<Feed>) {
+		guard acceptsFixtureWork else { return }
 		guard !feeds.isEmpty else {
 			return
 		}
@@ -1175,12 +1186,14 @@ public enum FetchType {
 	}
 
 	public func addFeedToTreeAtTopLevel(_ feed: Feed) {
+		guard acceptsFixtureWork else { return }
 		topLevelFeeds.insert(feed)
 		structureDidChange()
 		postChildrenDidChangeNotification()
 	}
 
 	func addFeedIfNotInAnyFolder(_ feed: Feed) {
+		guard acceptsFixtureWork else { return }
 		if !flattenedFeeds().contains(feed) {
 			addFeedToTreeAtTopLevel(feed)
 		}
@@ -1188,6 +1201,7 @@ public enum FetchType {
 
 	/// Remove the folder from this account. Does not call delegate.
 	func removeFolderFromTree(_ folder: Folder) {
+		guard acceptsFixtureWork else { return }
 		folders?.remove(folder)
 		structureDidChange()
 		postChildrenDidChangeNotification()

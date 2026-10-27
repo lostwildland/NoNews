@@ -19,6 +19,9 @@ import os
 import Secrets
 
 @MainActor final class FeedlyAccountDelegate: AccountDelegate {
+	#if DEBUG
+	static var afterOptimisticMoveForTesting: (() async -> Void)?
+	#endif
 
 	nonisolated static var environment: FeedlyAPICaller.API {
 		return .cloud
@@ -737,6 +740,9 @@ import Secrets
 			// Optimistically move the feed.
 			from.removeFeedFromTreeAtTopLevel(feed)
 			to.addFeedToTreeAtTopLevel(feed)
+			#if DEBUG
+			await Self.afterOptimisticMoveForTesting?()
+			#endif
 
 			do {
 				_ = try await caller.addFeed(with: resource, title: feed.editedName, toCollectionWith: toCollectionID)

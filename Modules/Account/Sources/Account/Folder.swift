@@ -26,8 +26,12 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 		SidebarItemIdentifier.folder(accountID, nameForDisplay)
 	}
 
-	public var topLevelFeeds: Set<Feed> = Set<Feed>()
-	public var folders: Set<Folder>? // subfolders are not supported, so this is always nil
+	public var topLevelFeeds: Set<Feed> = Set<Feed>() {
+		didSet { if account?.acceptsFixtureWork != true { topLevelFeeds = oldValue } }
+	}
+	public var folders: Set<Folder>? { // subfolders are not supported, so this is always nil
+		didSet { if account?.acceptsFixtureWork != true { folders = oldValue } }
+	}
 
 	public var name: String? {
 		didSet {
@@ -127,11 +131,13 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 	}
 
 	public func addFeedToTreeAtTopLevel(_ feed: Feed) {
+		guard account?.acceptsFixtureWork == true else { return }
 		topLevelFeeds.insert(feed)
 		postChildrenDidChangeNotification()
 	}
 
 	public func addFeeds(_ feeds: Set<Feed>) {
+		guard account?.acceptsFixtureWork == true else { return }
 		guard !feeds.isEmpty else {
 			return
 		}
@@ -140,11 +146,13 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 	}
 
 	public func removeFeedFromTreeAtTopLevel(_ feed: Feed) {
+		guard account?.acceptsFixtureWork == true else { return }
 		topLevelFeeds.remove(feed)
 		postChildrenDidChangeNotification()
 	}
 
 	public func removeFeedsFromTreeAtTopLevel(_ feeds: Set<Feed>) {
+		guard account?.acceptsFixtureWork == true else { return }
 		guard !feeds.isEmpty else {
 			return
 		}
@@ -154,6 +162,7 @@ public final class Folder: SidebarItem, Renamable, Container, Hashable {
 
 	/// Replace the entire top-level feed set in one shot, posting a single change notification.
 	public func replaceTopLevelFeeds(_ feeds: Set<Feed>) {
+		guard account?.acceptsFixtureWork == true else { return }
 		topLevelFeeds = feeds
 		postChildrenDidChangeNotification()
 	}
