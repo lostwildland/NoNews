@@ -54,16 +54,91 @@ _RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
-def classify(error: str | None) -> str:
-    """The cause behind one failure message. Never raises, never returns empty."""
-    value = str(error or "").lower()
-    if any(source in value for source in ("papererror:", "publisher:", "source fetch")) and "http 403" in value:
+class _CredentialPattern:
+    """Streaming equivalent of the unbounded credential regex."""
+    prefix = re.compile(r'api[_ ]key')
+    targets = ('missing', 'invalid', 'not configured')
+
+    def __init__(self):
+        self.tail = ''
+        self.states = set()
+        self.matched = False
+
+    def feed(self, chunk):
+        combined = self.tail + chunk
+        offset = len(self.tail)
+        ends = {m.end() - offset for m in self.prefix.finditer(combined) if m.end() > offset}
+        self.tail = combined[-6:]
+        position = 0
+        for end in sorted(ends):
+            self._advance(chunk[position:end])
+            self.states.add(('word', 0))
+            position = end
+        self._advance(chunk[position:])
+
+    def _advance(self, text):
+        if not self.states or self.matched:
+            return
+        for ch in text:
+            next_states = set()
+            for state, index in self.states:
+                if state == 'word':
+                    if ch.isalnum() or ch == '_':
+                        next_states.add((state, 0))
+                    if ch.isspace():
+                        next_states.add(('space', 0))
+                elif state in ('space', 'is_space'):
+                    if ch.isspace():
+                        next_states.add((state, 0))
+                    else:
+                        for target in self.targets:
+                            if ch == target[0]:
+                                next_states.add((target, 1))
+                        if state == 'space' and ch == 'i':
+                            next_states.add(('optional_i', 0))
+                elif state == 'optional_i' and ch == 's':
+                    next_states.add(('optional_is', 0))
+                elif state == 'optional_is' and ch.isspace():
+                    next_states.add(('is_space', 0))
+                elif state in self.targets and index < len(state) and ch == state[index]:
+                    if index + 1 == len(state):
+                        self.matched = True
+                        return
+                    next_states.add((state, index + 1))
+            self.states = next_states
+            if not self.states:
+                return
+
+
+def classify_chunks(chunks) -> str:
+    """Classify a stream without retaining the original message."""
+    special = ('papererror:', 'publisher:', 'source fetch', 'http 403',
+               'paper abstract lookup', 'http 429')
+    needles = set(special)
+    for _, terms in _RULES:
+        needles.update(terms)
+    found = set()
+    overlap = max(map(len, needles)) - 1
+    tail = ''
+    credential = _CredentialPattern()
+    for chunk in chunks:
+        value = chunk.lower()
+        credential.feed(value)
+        text = tail + value
+        found.update(needle for needle in needles if needle in text)
+        tail = text[-overlap:]
+    if any(source in found for source in special[:3]) and 'http 403' in found:
         return SOURCE_BROWSER
-    if "paper abstract lookup" in value and "http 429" in value:
+    if 'paper abstract lookup' in found and 'http 429' in found:
         return REMOTE_ERROR
-    if re.search(r"api[_ ]key\w*\s+(?:is\s+)?(?:missing|invalid|not configured)", value):
+    if credential.matched:
         return PROVIDER_AUTH
-    for cause, needles in _RULES:
-        if any(needle in value for needle in needles):
+    for cause, terms in _RULES:
+        if any(needle in found for needle in terms):
             return cause
     return UNKNOWN
+
+
+def classify(error: str | None) -> str:
+    """The cause behind one failure message. Never raises, never returns empty."""
+    return classify_chunks((str(error or ''),))

@@ -3,7 +3,6 @@ from pathlib import Path
 from contextlib import closing
 import sqlite3
 import base64
-import json
 import re
 import secrets
 import tempfile
@@ -11,7 +10,7 @@ import time
 import threading
 from . import causes, settings, schema
 from .core import InformationDB, utcnow
-from .jobs import JobQueue
+from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages, text_chunks
 
 
 class Application:
@@ -74,21 +73,25 @@ class Application:
                     row_id, offset, digest = int(match[1]), int(match[2]), match[3]
                     if not -2**63 <= row_id <= 2**63-1 or (offset == 0) != (digest == '-'):
                         raise ValueError('invalid cursor')
+                self._clear_snapshot()
+                db.db.execute('BEGIN')
                 rows = db.db.execute('''
-                    SELECT j.rowid AS cursor_rowid,j.id,j.item_id,j.stage,j.status,j.attempts,j.error,j.batch_id,
-                           j.created_at,j.updated_at,j.available_at,j.result_json,
-                           i.title,i.media_type,i.id IS NULL AS item_unavailable,
-                           (SELECT s.error FROM stage_state s
+                    SELECT j.rowid AS cursor_rowid,NULL AS id,NULL AS item_id,NULL AS stage,NULL AS status,NULL AS attempts,
+                           NULL AS error, NULL AS batch_id, NULL AS created_at,NULL AS updated_at,NULL AS available_at,
+                           CASE WHEN j.stage IN ('auto','acquisition','curator','editor','tags','maintenance','media','historical_curator','scoring') THEN j.stage END AS semantic_stage,
+                           j.status='failed' AS is_failed,
+                           NULL AS result_json,
+                           j.result_json IS NOT NULL AS has_result,
+                           NULL AS title,NULL AS media_type,i.rowid AS item_rowid,i.id IS NULL AS item_unavailable,
+                           (SELECT s.rowid FROM stage_state s
                              WHERE s.item_id=j.item_id AND s.status='failed'
                                AND s.stage=j.stage
-                               AND s.error IS NOT NULL AND s.error<>''
-                             ORDER BY s.updated_at DESC LIMIT 1) AS stage_error,
+                             ORDER BY s.updated_at DESC LIMIT 1) AS stage_rowid,
                            CASE WHEN d.id IS NULL THEN 0 ELSE 1 END AS dismissed
                     FROM processing_jobs j LEFT JOIN items i ON i.id=j.item_id
                     LEFT JOIN failure_dismissals d
                            ON d.kind='job' AND d.id=j.id AND d.stamp=j.updated_at
                     WHERE j.rowid <= ? ORDER BY j.rowid DESC LIMIT 1''', (row_id,)).fetchall()
-                queue = JobQueue(db)
                 if cursor is not None and rows and rows[0]['cursor_rowid'] != row_id:
                     raise ValueError('stale cursor')
                 if not rows:
@@ -98,13 +101,55 @@ class Application:
                 for row in rows:
                     job = dict(row)
                     row_id = job.pop('cursor_rowid')
+                    has_result = job.pop('has_result')
+                    stage = job.pop('semantic_stage')
+                    failed = bool(job.pop('is_failed'))
+                    item_rowid = job.pop('item_rowid')
+                    stage_rowid = job.pop('stage_rowid')
+                    if stage_rowid is not None:
+                        stage_kind = db.db.execute('SELECT typeof(error) FROM stage_state WHERE rowid=?', (stage_rowid,)).fetchone()[0]
+                        if stage_kind == 'null':
+                            stage_rowid = None
+                        elif stage_kind == 'text':
+                            with db.db.blobopen('stage_state', 'error', stage_rowid, readonly=True) as error_blob:
+                                if len(error_blob) == 0:
+                                    stage_rowid = None
+                    job['stage_error'] = None
+                    columns = {name: ('processing_jobs', name, row_id) for name in ('id', 'item_id', 'stage', 'status', 'attempts', 'updated_at', 'error', 'batch_id', 'created_at', 'available_at', 'result_json')}
+                    columns.update(title=('items', 'title', item_rowid), media_type=('items', 'media_type', item_rowid), stage_error=('stage_state', 'error', stage_rowid))
+                    kinds = {}
+                    raw_size = 0
+                    utf8_database = db.db.execute('PRAGMA encoding').fetchone()[0] == 'UTF-8'
+                    for name, (table, column, source_rowid) in columns.items():
+                        if source_rowid is None:
+                            kinds[name] = 'null'
+                            continue
+                        kind = db.db.execute(f'SELECT typeof({column}) FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0]
+                        kinds[name] = kind
+                        if kind == 'blob':
+                            raise TypeError('unsupported job value')
+                        if kind == 'text':
+                            with db.db.blobopen(table, column, source_rowid, readonly=True) as blob:
+                                raw_size += len(blob) if utf8_database else (len(blob) + 1) // 2
+                            if raw_size > SNAPSHOT_CAPACITY:
+                                raise SnapshotTooLarge('record exceeds snapshot capacity')
                     unavailable = bool(job.pop('item_unavailable'))
-                    resolved = not unavailable and queue.failure_resolved(row)
-                    retryable = not unavailable and queue.retryable(row)
+                    if unavailable or not failed:
+                        resolved = False
+                    elif stage == 'auto':
+                        if kinds['result_json'] == 'text':
+                            with closing(text_chunks(db.db, 'processing_jobs', 'result_json', row_id)) as chunks:
+                                failed_stages = aggregate_failed_stages(chunks)
+                        else:
+                            failed_stages = ()
+                        resolved = bool(failed_stages) and all(self._resolved_job(db.db, row_id, part) for part in failed_stages)
+                    else:
+                        resolved = self._resolved_job(db.db, row_id, stage)
+                    retryable = not unavailable and failed and stage in {'auto', 'acquisition', 'curator', 'editor', 'tags', 'maintenance', 'media'} and not resolved
                     retry_blocked = None
                     if unavailable:
                         retry_blocked = 'The original item is unavailable; restore its verified record before retrying'
-                    elif row['status'] == 'failed' and not resolved:
+                    elif failed and not resolved:
                         if not retryable:
                             retry_blocked = 'This processing stage requires its guarded runner and cannot be retried here'
                         else:
@@ -112,24 +157,77 @@ class Application:
                             retry_blocked = 'Settings-write server only accepts settings mutations'
                     job.update(dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
                                resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
-                               cause=causes.classify(str(row['error'] or '')))
+                               cause=causes.classify_chunks(text_chunks(db.db, 'processing_jobs', 'error', row_id))
+                               if kinds['error'] == 'text' else causes.classify(db.db.execute('SELECT error FROM processing_jobs WHERE rowid=?', (row_id,)).fetchone()[0]))
                     jobs.append(job)
-                self._clear_snapshot()
-                encoded = json.dumps(jobs[0], ensure_ascii=False, separators=(',', ':')).encode('utf-8')
-                if len(encoded) > 512 * 1024 * 1024:
-                    raise ValueError('record exceeds snapshot capacity')
                 following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
                 next_cursor = f'{following[0]}:0:-' if following else None
                 spool = tempfile.TemporaryFile(dir=self.database.parent)
-                spool.write(encoded)
-                token = secrets.token_hex(16)
-                with self.snapshot_lock:
-                    self.snapshot = (token, spool, len(encoded), next_cursor, time.monotonic() + 120)
-                    self.snapshot_timer = threading.Timer(120, self._expire_snapshot, args=(token,))
-                    self.snapshot_timer.daemon = True
-                    self.snapshot_timer.start()
+                try:
+                    writer = SnapshotWriter(spool)
+                    writer.write(b'{')
+                    for index, (key, value) in enumerate(jobs[0].items()):
+                        if index:
+                            writer.write(b',')
+                        writer.value(key)
+                        writer.write(b':')
+                        if key == 'result_json' and has_result and stage != 'auto':
+                            writer.text_column(db.db, 'processing_jobs', 'result_json', row_id)
+                        elif key in columns and columns[key][2] is not None:
+                            table, column, source_rowid = columns[key]
+                            kind = kinds[key]
+                            if kind == 'null':
+                                writer.value(None)
+                            elif kind == 'text':
+                                writer.text_column(db.db, table, column, source_rowid)
+                            else:
+                                writer.value(db.db.execute(f'SELECT {column} FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0])
+                        else:
+                            writer.value(value)
+                    writer.write(b'}')
+                    db.db.execute('COMMIT')
+                except BaseException:
+                    spool.close()
+                    raise
+                try:
+                    token = secrets.token_hex(16)
+                    with self.snapshot_lock:
+                        self.snapshot = (token, spool, writer.size, next_cursor, time.monotonic() + 120)
+                        self.snapshot_timer = threading.Timer(120, self._expire_snapshot, args=(token,))
+                        self.snapshot_timer.daemon = True
+                        self.snapshot_timer.start()
+                except BaseException:
+                    self._clear_snapshot()
+                    spool.close()
+                    raise
                 return self._frame(0, token)
             raise ValueError('Unsupported operation')
+
+    @staticmethod
+    def _resolved_job(db, row_id, stage):
+        if stage in (None, 'media'):
+            return False
+        item = '(SELECT item_id FROM processing_jobs WHERE rowid=?)'
+        stamp = '(SELECT updated_at FROM processing_jobs WHERE rowid=?)'
+        if stage == 'historical_curator':
+            return bool(db.execute("SELECT 1 FROM processing_jobs j "
+                "JOIN pipeline_stage_runs p ON p.job_id=j.id AND p.item_id=j.item_id AND p.stage='curator' AND p.status='ready' "
+                "JOIN curator_runs c ON c.id=json_extract(p.result_json,'$.run_id') AND c.item_id=j.item_id AND c.status='succeeded' AND c.score BETWEEN 0 AND 10 "
+                f"WHERE j.item_id={item} AND j.stage='historical_curator' AND j.status='succeeded' "
+                f"AND j.updated_at>{stamp} AND p.updated_at>{stamp} AND c.finished_at>{stamp} LIMIT 1",
+                (row_id, row_id, row_id, row_id)).fetchone())
+        successes = {'scoring': ("pipeline_stage_runs", "stage='scoring' AND status='ready'", 'updated_at'),
+                     'acquisition': ("pipeline_stage_runs", "stage='acquisition' AND status='ready'", 'updated_at'),
+                     'curator': ("curator_runs", "status='succeeded'", 'finished_at'),
+                     'editor': ("editor_drafts", '1', 'created_at'),
+                     'maintenance': ("pipeline_stage_runs", "stage='maintenance' AND status='ready'", 'updated_at')}
+        if stage not in successes:
+            return False
+        if db.execute(f"SELECT 1 FROM stage_state WHERE item_id={item} AND stage=? AND status='failed' AND updated_at<={stamp}",
+                      (row_id, stage, row_id)).fetchone():
+            return False
+        table, condition, time_column = successes[stage]
+        return bool(db.execute(f"SELECT 1 FROM {table} WHERE item_id={item} AND {condition} AND {time_column}>{stamp} LIMIT 1", (row_id, row_id)).fetchone())
 
     def _expire_snapshot(self, token):
         with self.snapshot_lock:
