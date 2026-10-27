@@ -1,5 +1,9 @@
 # T02 managed-engine evidence (partial)
 
+## Round 3 coordinator cursor correction
+
+Review of `e5e657d` reproduced a Spec P2: the service could emit zero/negative rowids in continuation cursors while its parser refused them. A public IPC regression first failed while traversing jobs with rowids at the signed 64-bit maximum, one, zero, minus one and the signed minimum. The parser now accepts that range, refuses overflow on either side and traverses every record in order. The focused regression passed; after refreshing the staged server and manifest, the full Python suite passed 13 tests total (12 passed, one optional reference check skipped). The change is not yet in the running installed bundle. Other round-three initialization/performance/readiness findings remain with the original owner.
+
 ## Round 2 coordinator corrections
 
 Independent review of `17fdf64` found a shared Standards/Spec P2: output descriptor duplication can fail after the child starts but before its reader/exit waiter exists, leaving failure teardown and quit callbacks permanently waiting. A DEBUG-initializer fault seam reproduces this through the public controller: the prior code timed out in stopping. The failure branch now installs an exit waiter before teardown even without a readable descriptor. The focused controller check passed afterward, including repeated failed starts, completed quit callbacks and the existing resistant-child and startup-error cases.

@@ -52,11 +52,11 @@ class Application:
                 if cursor is None:
                     row_id, offset, digest = 2**63 - 1, 0, '-'
                 else:
-                    match = re.fullmatch(r'([1-9][0-9]{0,18}):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
+                    match = re.fullmatch(r'(-?(?:0|[1-9][0-9]{0,18})):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
                     if not match:
                         raise ValueError('invalid cursor')
                     row_id, offset, digest = int(match[1]), int(match[2]), match[3]
-                    if row_id > 2**63-1 or (offset == 0) != (digest == '-'):
+                    if not -2**63 <= row_id <= 2**63-1 or (offset == 0) != (digest == '-'):
                         raise ValueError('invalid cursor')
                 rows = db.db.execute('''
                     SELECT j.rowid AS cursor_rowid,j.id,j.item_id,j.stage,j.status,j.attempts,j.error,j.batch_id,

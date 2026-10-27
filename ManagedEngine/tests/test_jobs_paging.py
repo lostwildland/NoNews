@@ -8,6 +8,43 @@ import unittest
 
 
 class JobsPagingTest(unittest.TestCase):
+    def test_history_traverses_the_full_signed_rowid_range(self):
+        engine = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp) / 'data'
+            command = [str(engine / '.prepared/python/bin/python3'), str(engine / 'stdio_service.py'), str(data)]
+            token = 'a' * 32
+            env = {'PATH':'/usr/bin:/bin','PYTHONDONTWRITEBYTECODE':'1'}
+            subprocess.run(command, input=json.dumps({'token':token})+'\n', text=True, capture_output=True, check=True, env=env, timeout=10)
+            values = [(2**63-1, 'max'), (1, 'positive'), (0, 'zero'), (-1, 'negative'), (-2**63, 'min')]
+            with sqlite3.connect(data / 'information.sqlite') as db:
+                db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','now','now','now','now')")
+                db.executemany("INSERT INTO processing_jobs(rowid,id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES (?,?,'item','curator',?,'succeeded','now','now','now')", [(rowid, name, name) for rowid, name in values])
+            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env)
+            def send(message):
+                process.stdin.write(json.dumps(message)+'\n'); process.stdin.flush()
+                return json.loads(process.stdout.readline())
+            try:
+                self.assertEqual(send({'token':token}), {'status':'ready'})
+                cursor = None
+                records = []
+                while True:
+                    response = send({'id':1,'token':token,'method':'GET','path':'/api/jobs','query':{} if cursor is None else {'cursor':cursor}})
+                    self.assertIn('result', response, response)
+                    page = response['result']
+                    self.assertTrue(page['recordComplete'])
+                    records.append(json.loads(base64.b64decode(page['chunk'])))
+                    cursor = page['next']
+                    if cursor is None:
+                        break
+                self.assertEqual([record['id'] for record in records], [name for _, name in values])
+                for rowid in (-2**63-1, 2**63):
+                    self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':f'{rowid}:0:-'}})['error'], 'invalid query')
+            finally:
+                process.stdin.close()
+                process.wait(timeout=10)
+                process.stdout.close()
+
     def test_complete_history_and_large_unicode_record(self):
         engine = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmp:
