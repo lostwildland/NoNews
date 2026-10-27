@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "d73d8d278812d09a01962ce1df8479cb896eb3ee",
-  "state": "Current signed source4be1246 and local CI-plan747passes verified; candidate2aa0f68 adds CI entitlement-root fix and evidence. Actual GitHub CI, complete remaining group/cross-group and visual acceptance are pending.",
+  "candidate": "26071ee6cbac80cdcca05e36437e8f9eb695d678",
+  "state": "Native10path scopes complete0/0atidenticalblobs. Parserfix26071ee passes46tests1optionalSkip;freshjobs/canonicaldatabase/currentpackaging/crossgroupreview and currentbundlevisual/remoteCIremainpending.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -12,8 +12,8 @@
   "groups": {
     "packaging": 24,
     "native": 10,
-    "database": 28,
-    "jobs": 7
+    "database": 27,
+    "jobs": 8
   },
   "files": [
     {
@@ -51,44 +51,44 @@
       "group": "native",
       "blob": "92f50b1835a800e3c7a4cb86af13e503445424da",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "Mac/Preferences/PreferencesWindowController.swift",
       "group": "native",
       "blob": "d12338b1698cdaeb76ffb6b3a200ca0771bc7551",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
       "blob": "f1d0657ec81b0e1c7f78d43b8ca1b237c6a8ccff",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
       "blob": "108c1a0883559ef6d9335a988fe8f1a86e6f8558",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/JOBS-IPC.md",
       "group": "jobs",
-      "blob": "f597b35aae3a5311b9095b9a86a0bc6a9144b1f2",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "previous_blob": "cc9be181ae7cf16c953b5e7cfb7f3717744fa6c9"
+      "blob": "0806155e1996f0fd8c908b18eb309e9c132b9f0a",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "f597b35aae3a5311b9095b9a86a0bc6a9144b1f2"
     },
     {
       "path": "ManagedEngine/PROVENANCE.md",
       "group": "packaging",
-      "blob": "ea2284d5eec13c379cae26e708191b6963359d2f",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
-      "previous_blob": "fd007c83ac339d9ea5930c879d6016bb93c8df02"
+      "blob": "8963d3109d4bf6f429fbab8ba0da5a22c46bdc0e",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "ea2284d5eec13c379cae26e708191b6963359d2f"
     },
     {
       "path": "ManagedEngine/assemble_payload.py",
@@ -107,7 +107,7 @@
     },
     {
       "path": "ManagedEngine/backend/causes.py",
-      "group": "database",
+      "group": "jobs",
       "blob": "b3f3e6c7bd5071190bed651ea55ad2c71917b895",
       "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
       "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
@@ -151,9 +151,10 @@
     {
       "path": "ManagedEngine/backend/job_stream.py",
       "group": "jobs",
-      "blob": "0cc055f851c0b1c1485ce97d0dbf2ff11444c5a4",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion"
+      "blob": "e45b6477009ad5fb7223bd0f59875c4bbc154472",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "0cc055f851c0b1c1485ce97d0dbf2ff11444c5a4"
     },
     {
       "path": "ManagedEngine/backend/jobs.py",
@@ -270,10 +271,10 @@
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "jobs",
-      "blob": "fa016574f80a32fbd7dcae9def3972061abe7362",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "previous_blob": "cd155f85bce650cfb63f3c550b363ab7a4624f45"
+      "blob": "5fdfda8623cfb27ec9c936a288277e6a357c2077",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "fa016574f80a32fbd7dcae9def3972061abe7362"
     },
     {
       "path": "ManagedEngine/backend/service.py",
@@ -329,14 +330,14 @@
       "group": "native",
       "blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
       "group": "native",
       "blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/tests/make_large_fixture.py",
@@ -350,21 +351,21 @@
       "group": "native",
       "blob": "f7d737f36685715ef346aa54567275d20d5b9142",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/tests/run_native_checks.sh",
       "group": "native",
       "blob": "1868054762864c48f498eddd92a5dda2e247d137",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/tests/test_channel.py",
       "group": "native",
       "blob": "ca45dfd66835df76b543f269d6d6592570baf85b",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/tests/test_initialization_probe.py",
@@ -376,17 +377,18 @@
     {
       "path": "ManagedEngine/tests/test_job_stream.py",
       "group": "jobs",
-      "blob": "ce709597f209edbbdd2e28cbdc125a5e4bfcedce",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion"
+      "blob": "15f6579a02d461bb89936995b5b5f75ededc7b71",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "ce709597f209edbbdd2e28cbdc125a5e4bfcedce"
     },
     {
       "path": "ManagedEngine/tests/test_jobs_paging.py",
       "group": "jobs",
-      "blob": "0b1f1f8506f1532fe500386ee23ea552a9358429",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "previous_blob": "79faaf8f0445c703cd829debfa0fd87a8b2d9d9a"
+      "blob": "b54e7adc5768908b80bb98e1527c595b0d7ccf2e",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "0b1f1f8506f1532fe500386ee23ea552a9358429"
     },
     {
       "path": "ManagedEngine/tests/test_large_snapshot.py",
@@ -436,7 +438,7 @@
       "group": "native",
       "blob": "3ecd92d819113adc6800c63d459c1efe2586777a",
       "standards": "complete10/10 native scope atd73d8d2;0 actionableP1/P2;currentseams still require Spec/crossgroup",
-      "spec": "pending current candidate review"
+      "spec": "complete10/10native scope atd73d8d2;0 actionableP1/P2;wholeAPI/UIgateopen"
     },
     {
       "path": "ManagedEngine/verify_payload_source.py",
@@ -498,18 +500,18 @@
     {
       "path": "docs/acceptance/t00-native-baseline.md",
       "group": "packaging",
-      "blob": "f422d658704a8d1dc604161a5e4ab173a30f822b",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
-      "previous_blob": "0fa3eb9cd5a0671944c938bc657680ad8a9a46d6"
+      "blob": "391adcf2cf8f17241655b0dc29e6ff68524ab5da",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "f422d658704a8d1dc604161a5e4ab173a30f822b"
     },
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "6fe4ad82b1142862e10be72e58855de756158983",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
-      "previous_blob": "e8dbeef9afd480181e03bdf668b29e59c9bb856d"
+      "blob": "165ba352b5d2191c89c1518b22548e6d07d1cd86",
+      "standards": "pending correction review at26071ee",
+      "spec": "pending correction review at26071ee",
+      "previous_blob": "6fe4ad82b1142862e10be72e58855de756158983"
     }
   ],
   "scope_reviews": {
@@ -541,6 +543,11 @@
       "standards": {
         "candidate": "d73d8d278812d09a01962ce1df8479cb896eb3ee",
         "state": "complete10/10 plus connected lifecycle/settings/schema/termination seams;0 actionableP1/P2;lower-priority code-layout guidance deviation",
+        "evidence": "t02-current-candidate.md"
+      },
+      "spec": {
+        "candidate": "d73d8d278812d09a01962ce1df8479cb896eb3ee",
+        "state": "complete10/10 plus connected seams;0 actionableP1/P2",
         "evidence": "t02-current-candidate.md"
       }
     }
@@ -574,15 +581,15 @@
     }
   ],
   "source_verification": {
-    "head": "4be1246ef430e2166dd06ed2c9e808de4dbd709f",
+    "head": "26071ee6cbac80cdcca05e36437e8f9eb695d678",
     "command": "python3 -W error::ResourceWarning -m unittest discover -s ManagedEngine/tests -q",
-    "tests": 45,
-    "passed": 44,
+    "tests": 47,
+    "passed": 46,
     "skipped": 1,
     "failed": 0,
-    "seconds": 26.56,
-    "checker": "root coordinator",
-    "note": "Optional live reference comparison skipped; no production reads or native acceptance implied"
+    "seconds": 41.268,
+    "checker": "rootcoordinator",
+    "note": "No production comparison; signedr10bundlepredatesfix"
   },
   "source_provenance_readback": {
     "checker": "root coordinator",

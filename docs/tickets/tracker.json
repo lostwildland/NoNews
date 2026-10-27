@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "d73d8d278812d09a01962ce1df8479cb896eb3ee",
-      "implementation_state": "Signed bundle/localCI747pass;two complete8/8jobs reviews found recursiveJSON history blocker. Original owner correction and native/database/currentpackaging/crossgroup review pending. PR documentation conflict resolved locally; actualGitHubCI unproven",
+      "last_reported_head": "26071ee6cbac80cdcca05e36437e8f9eb695d678",
+      "implementation_state": "Native10pathStandards0/Spec0atidenticalblobs;iterativeparserfixcoordinator47tests46pass1optionalSkip. Freshjobs/database/packaging/crossgroupreview/currentbundle/UI/remoteCIpending",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,9 +417,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "R4Standards2P2/Spec2P2, both incomplete: callback submission race and retainedFolder setters. Small setter guards uncommitted; original owner must implement/test callback boundary and revalidate. FullT30open",
+      "implementation_state": "CallbacksubmissionandFoldersettersfixed;coordinator768fullpass0fail0skipandisolatedidentity. Owner152focused/zeroSQLitediagnostics;freshfullsliceindependentreviewpending,fullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "209c924aa9f5117f05e5cd33298ff07680cde9ee",
+      "last_reported_head": "d60871121fdfc00f17c6091d49df71b7bffd3d8b",
       "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
     }
   },
