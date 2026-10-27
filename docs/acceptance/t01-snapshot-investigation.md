@@ -1,5 +1,13 @@
 # T01 snapshot investigation (incomplete)
 
+## Independent review round 2: current open schema gate
+
+Reviewed HEAD `fcb211463ad3f93e57178287e1647fa6ee70cb50`. Standards found one P2: a valid gzip header with corrupt DEFLATE could raise uncaught `zlib.error`. Spec found two P1s: the version marker alone admitted abbreviated/incomplete schema-41 databases; an imported Raw version could substitute an archive-path binding for the missing authoritative literature mapping. The previous remote-object/draft guards remain present. No acceptance is claimed.
+
+The coordinator reproduced and fixed the two narrow exception/Raw defects through the public snapshot boundary. Corrupt DEFLATE is converted to `SnapshotError` and the CLI refuses it without traceback. Imported Raw requires its literature mapping, with existing owner/file evidence checks retained; a merely readable archive cannot replace that authority. All 37 snapshot tests, compilation and diff checks passed after these corrections. The new tests first failed on the reviewed implementation.
+
+The incomplete-schema finding remains open for the original owner. Required current tables/columns must be validated while retaining unknown additional tables. Existing abbreviated positive fixtures must become actual canonical-schema fixtures; no production bypass or test-only validation switch may replace the missing gate. The utility remains unsuitable for personal cutover until this and fresh independent review are complete.
+
 ## Independent review round 1 and coordinator corrections
 
 Reviewed HEAD `7c0f8c76a3f0d6a5252e24794c520aca2e4d07b3`. Standards identified one P2: SQLite `mode=ro` could write source WAL shared-memory coordination bytes. Spec identified two P1s: remote-only managed image bytes could be absent despite successful restore; an imported draft's database copy could be accepted without its authoritative file mapping. These are historical findings: the Spec changes were made by the parent and the WAL boundary was subsequently changed as described below. The two axes remain separate and the fixes await independent re-review; T01 is not accepted.

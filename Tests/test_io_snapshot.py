@@ -15,6 +15,38 @@ from scripts.io_snapshot import SnapshotError, snapshot, verify, restore, read_a
 
 
 class SnapshotTests(unittest.TestCase):
+    def test_corrupt_deflate_is_refused_without_a_cli_traceback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            archive = vault / 'source.html.gz'
+            archive.write_bytes(b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03\x07' + b'\x00' * 8)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.execute('CREATE TABLE literature_assets (id INTEGER, source_path TEXT, archive_path TEXT, file_hash TEXT, metadata_json TEXT)')
+                db.execute('INSERT INTO literature_assets VALUES (1,?,?,?,?)', ('historical', str(archive), '0' * 64, '{}'))
+            with self.assertRaisesRegex(SnapshotError, 'invalid compressed source'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            cli = Path(__file__).parents[1] / 'scripts/io_snapshot.py'
+            result = subprocess.run([sys.executable, str(cli), 'snapshot', str(root / 'source.sqlite'),
+                                     str(root / 'cli-snap'), '--root', f'vault={vault}'],
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('invalid compressed source', result.stdout)
+            self.assertNotIn('Traceback', result.stderr)
+
+    def test_imported_raw_cannot_use_an_archive_in_place_of_its_file_authority(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            vault = self.make_simple(root)
+            with closing(sqlite3.connect(root / 'source.sqlite')) as db, db:
+                db.executescript('CREATE TABLE raw_snapshots (id INTEGER, item_id TEXT, path TEXT); CREATE TABLE body_versions (snapshot_id INTEGER, item_id TEXT, sha256 TEXT, authority TEXT, cleaned_at TEXT); CREATE TABLE body_texts (snapshot_id INTEGER, text TEXT);')
+                db.execute('INSERT INTO raw_snapshots VALUES (1,?,?)', ('item', str(vault / 'body')))
+                db.execute('INSERT INTO body_versions VALUES (1,?,?,?,NULL)', ('item', hashlib.sha256(b'synthetic').hexdigest(), 'imported'))
+                db.execute("INSERT INTO body_texts VALUES (1,'synthetic')")
+            with self.assertRaisesRegex(SnapshotError, 'imported raw.*authoritative file'):
+                snapshot(root / 'source.sqlite', {'vault': vault}, root / 'snap')
+            self.assertFalse((root / 'snap').exists())
+
     def test_wal_source_without_shm_is_never_modified(self):
         import shutil
         for mode in (0o755, 0o555):
