@@ -60,6 +60,12 @@ final class FeedSettingsDatabase: Sendable {
 	private let serialDispatchQueue: DispatchQueue
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "FeedSettingsDatabase")
 
+	#if DEBUG
+	func withDatabaseForTesting<T>(_ body: (FMDatabase) -> T) -> T {
+		serialDispatchQueue.sync { body(database) }
+	}
+	#endif
+
 	init(databasePath: String) {
 		self.databasePath = databasePath
 		self.serialDispatchQueue = DispatchQueue(label: "FeedSettingsDatabase")

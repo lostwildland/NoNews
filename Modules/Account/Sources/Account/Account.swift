@@ -261,6 +261,9 @@ public enum FetchType {
 	private lazy var opmlFile = OPMLFile(filename: (dataFolder as NSString).appendingPathComponent("Subscriptions.opml"), account: self)
 	private let settings: AccountSettings
 	private let feedSettingsDatabase: FeedSettingsDatabase
+	#if DEBUG
+	var feedSettingsDatabaseForTesting: FeedSettingsDatabase { feedSettingsDatabase }
+	#endif
 	private typealias FeedSettingsDictionary = [String: FeedSettings]
 	private var feedSettingsCache = FeedSettingsDictionary()
 
@@ -594,7 +597,11 @@ public enum FetchType {
 			let syncClosed = await delegate.closeDatabases()
 			let articlesClosed = await database.close()
 			let settingsClosed = await feedSettingsDatabase.close()
-			return syncClosed && articlesClosed && settingsClosed
+			let closed = syncClosed && articlesClosed && settingsClosed
+			if !closed {
+				closeTask = nil
+			}
+			return closed
 		}
 		closeTask = task
 		return await task.value

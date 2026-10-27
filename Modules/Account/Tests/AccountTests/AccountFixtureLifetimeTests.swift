@@ -9,6 +9,31 @@ import SyncDatabase
 @Suite(.isolatedWebserviceResponses) @MainActor struct AccountFixtureLifetimeTests {
 	private enum FixtureError: Error, Equatable { case expected }
 
+	@Test func failedAccountCloseCanBeRetried() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let path = account.dataFolder
+		let settingsIdentity = try identity(path + "/FeedSettings.db")
+		var destination: OpaquePointer?
+		guard sqlite3_open(":memory:", &destination) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }
+		defer { sqlite3_close(destination) }
+		let backup = try #require(account.feedSettingsDatabaseForTesting.withDatabaseForTesting { database in
+			guard let source = database.sqliteHandle() else { return nil as OpaquePointer? }
+			return sqlite3_backup_init(destination, "main", OpaquePointer(source), "main")
+		})
+		async let first = account.closeForFixtureRemoval()
+		async let second = account.closeForFixtureRemoval()
+		let results = await (first, second)
+		#expect(!results.0 && !results.1)
+		#expect(FileManager.default.fileExists(atPath: path))
+		#expect(hasOpenFile(settingsIdentity))
+		let finishResult = sqlite3_backup_finish(backup)
+		#expect(finishResult == SQLITE_OK)
+		try await manager.deleteAccount(account)
+		#expect(!FileManager.default.fileExists(atPath: path))
+		#expect(!hasOpenFile(settingsIdentity))
+	}
+
 	@Test func throwingBodyStillRemovesItsFixture() async throws {
 		let manager = TestAccountManager()
 		var path = ""
@@ -31,6 +56,20 @@ import SyncDatabase
 		for file in identities { #expect(hasOpenFile(file)) }
 		try await manager.deleteAccount(account)
 		for file in identities { #expect(!hasOpenFile(file)) }
+	}
+
+	@Test func retainedFeedRejectsChangesAfterClose() async throws {
+		let manager = TestAccountManager()
+		try await manager.withAccount(type: .onMyMac) { account in
+			let feed = account.createFeed(with: "Original", url: "https://example.com/feed", feedID: "fixture", homePageURL: nil)
+			feed.editedName = "Before close"
+			let closed = await account.closeForFixtureRemoval()
+			#expect(closed)
+			feed.editedName = "After close"
+			#expect(feed.editedName == "Before close")
+			let articles = await account.fetchArticlesAsync(.feed(feed))
+			#expect(articles.isEmpty)
+		}
 	}
 
 	@Test func closesDatabasesBeforeRemovingOnlyOwnedDirectory() async throws {
