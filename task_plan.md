@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 remain the only two accepted tickets (2/31). T02 corrections are packaged at d21a38d (code 897f43c); parent verified r9 identity, deep signature, source/manifest hashes and app/child relationship. Dispatch fresh complete original-base R9 Standards/Spec reviews before API integration and T03. Keep visible Settings Ready and all final UI gates open. T30 R2 returned Standards 2 P2 and Spec 4 P2: dependent article work, queued OPML, retained Folder setters and pre-close sync reset require original-owner fixes plus deterministic tests and final native validation. T02 released the serialized Xcode resource to T30. Do not integrate ca087f5. Full personal migration, integrations and sync remain unimplemented/unaccepted.
+T00/T01 remain the only accepted tickets (2/31). T02 R9 returned incomplete on both axes: Standards found one P2 pre-limit whole-record memory amplification; Spec reported no finding only in inspected scope. Continue the original owner for bounded input/streamed spool construction, complete large-record and capacity tests, then actual payload validation and explicitly complete review coverage before integration/T03. T30 original owner is fixing four R2 shutdown interleavings and owns the serialized Xcode resource. Do not integrate ca087f5 or d21a38d as accepted. Visible Settings Ready, full personal migration, integrations, sync and final UX remain open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

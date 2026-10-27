@@ -16,10 +16,14 @@ At this readback the exact app PID 74950 owns bundled interpreter PID 74956. Thi
 
 ## Standards
 
-Pending fresh complete independent review of the pinned original-base change, including first-party schema-owner code and connected tests. The incomplete R8 assessment is not a clean pass.
+1 actionable P2; review incomplete. The reviewer reproduced a 48 MiB traced allocation peak while requesting the first frame of a 16 MiB `result_json`. `server.py` materializes the complete row, JSON string and UTF-8 bytes before checking the 512 MiB limit. Near-limit termination is source-derived, not an observed crash. Preflight field sizes before fetching oversized values and stream encoding to the spool with bounded buffers; preserve complete supported records. A whole-string token yielded by `JSONEncoder.iterencode` would not by itself fix this peak. [Standards review](t3-thread://v1/thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t02-complete-standards-review-20261028-r9).
+
+The reviewer inspected native lifecycle, IPC, schema validation, major owners and selected tests but left portions of owners, build tooling, tests and context incomplete. This is not an API clearance.
 
 ## Spec
 
-Pending fresh independent review against issue #4 and the managed-engine/full-parity contracts. Later business handlers remain later tickets; the current foundation must satisfy its actual lifecycle, storage and IPC requirements.
+No actionable P1/P2 found in inspected portions; review incomplete, not a zero-findings complete verdict. Inspected native lifecycle, private channel, settings/history, all startup schema owners including nested mapping/cleanup owners, selected packaging/tests and the current managed-engine contract. Some connected tests, acceptance/build wiring and remaining specification/review documents were not fully inspected. [Spec review](t3-thread://v1/thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t02-complete-spec-review-20261028-r9).
+
+The coordinator read both terminal reports and the connected paging/spool path. The original implementation owner must correct memory bounds, test coherent complete large records and controlled capacity refusal, then refresh prepared payload evidence. Subsequent independent review must identify explicit file coverage and fill the unreviewed scope; partial prior reviews cannot clear the API. Later business handlers remain later tickets.
 
 No code acceptance or integration is claimed. Visible native Ready and appearance remain unobserved; Intel/universal, iOS, CloudKit and release signing remain unverified. T03 can begin only after the API code has passed review and been integrated, with unresolved visual acceptance retained explicitly. T00/T01 remain the only two accepted tickets of 31.

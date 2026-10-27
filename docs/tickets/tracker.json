@@ -45,7 +45,7 @@
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
       "last_reported_head": "d21a38dd8e9822746c5ccc6b85a74e71a03d56d2",
-      "implementation_state": "R8 corrections packaged in signed relocated r9 app; parent verified identity, signatures and source hashes; fresh complete R9 Standards/Spec reviews pending; visual gate open",
+      "implementation_state": "R9 Standards: 1 P2 and incomplete; Spec incomplete with no finding in inspected portions. Original-owner bounded-memory history fix and explicit complete review coverage required; UI gate open",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
