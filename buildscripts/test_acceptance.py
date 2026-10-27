@@ -2,8 +2,10 @@
 import plistlib
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -12,6 +14,63 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class AcceptanceBuildPreservationTests(unittest.TestCase):
+    def test_overlapping_builds_do_not_modify_concurrent_source_updates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "buildscripts").mkdir()
+            shutil.copy(ROOT / "buildscripts/acceptance.sh", root / "buildscripts/acceptance.sh")
+            (root / "NetNewsWire.xcodeproj").mkdir()
+            secret = root / "Modules/Secrets/Sources/Secrets/SecretKey.swift"
+            secret.parent.mkdir(parents=True)
+            secret.write_bytes(b"synthetic original source")
+            gates = root / "gates"
+            gates.mkdir()
+            binary = root / "bin"
+            binary.mkdir()
+            command = binary / "xcodebuild"
+            command.write_text('''#!/usr/bin/env python3
+import os, pathlib, sys, time
+project = pathlib.Path(sys.argv[sys.argv.index('-project') + 1]).resolve().parent
+generated = project / 'Modules/Secrets/Sources/Secrets/SecretKey.swift'
+generated.write_bytes(b'synthetic generated source')
+gates = pathlib.Path(os.environ['FIXTURE_GATES'])
+role = os.environ['FIXTURE_ROLE']
+(gates / (role + '-path')).write_text(str(project))
+(gates / (role + '-ready')).touch()
+wait_for = gates / ('B-ready' if role == 'A' else 'A-finished')
+deadline = time.monotonic() + 8
+while not wait_for.exists():
+    if time.monotonic() > deadline:
+        sys.exit(24)
+    time.sleep(0.01)
+''')
+            command.chmod(0o700)
+            environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"], FIXTURE_GATES=str(gates))
+            processes = []
+            try:
+                for role in ("A", "B"):
+                    processes.append(subprocess.Popen(["/bin/bash", str(root / "buildscripts/acceptance.sh"), "build"],
+                                                       env=dict(environment, FIXTURE_ROLE=role), stdout=subprocess.PIPE,
+                                                       stderr=subprocess.PIPE, start_new_session=True))
+                    deadline = time.monotonic() + 8
+                    while not (gates / (role + "-ready")).exists():
+                        self.assertIsNone(processes[-1].poll())
+                        self.assertLess(time.monotonic(), deadline)
+                        time.sleep(0.01)
+                secret.write_bytes(b"synthetic update from ordinary build")
+                _, errors = processes[0].communicate(timeout=10)
+                self.assertEqual(processes[0].returncode, 0, errors)
+                (gates / "A-finished").touch()
+                _, errors = processes[1].communicate(timeout=10)
+                self.assertEqual(processes[1].returncode, 0, errors)
+                self.assertEqual(secret.read_bytes(), b"synthetic update from ordinary build")
+                self.assertNotEqual((gates / "A-path").read_text(), (gates / "B-path").read_text())
+            finally:
+                for process in processes:
+                    if process.poll() is None:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    process.communicate()
+
     def test_preserves_generated_file_on_success_and_failure(self):
         for original in (None, b"synthetic existing generated source\n"):
             for status in (0, 23):
@@ -29,11 +88,14 @@ class AcceptanceBuildPreservationTests(unittest.TestCase):
                     command = binary / "xcodebuild"
                     command.write_text("#!/bin/bash\nset -eu\n"
                                        "test -z \"${FEEDLY_CLIENT_SECRET+x}\"\n"
-                                       "printf 'synthetic newly generated source' > \"$FIXTURE_GENERATED_FILE\"\n"
+                                       "project_dir=\"$(cd \"$(dirname \"$2\")\" && pwd)\"\n"
+                                       "generated=\"$project_dir/Modules/Secrets/Sources/Secrets/SecretKey.swift\"\n"
+                                       "test ! -e \"$generated\"\n"
+                                       "printf 'synthetic newly generated source' > \"$generated\"\n"
                                        "exit \"$FIXTURE_BUILD_STATUS\"\n")
                     command.chmod(0o700)
                     environment = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ["PATH"],
-                                       FEEDLY_CLIENT_SECRET="synthetic-test-value", FIXTURE_GENERATED_FILE=str(secret),
+                                       FEEDLY_CLIENT_SECRET="synthetic-test-value",
                                        FIXTURE_BUILD_STATUS=str(status))
                     result = subprocess.run(["/bin/bash", str(root / "buildscripts/acceptance.sh"), "build"],
                                             env=environment, capture_output=True)
