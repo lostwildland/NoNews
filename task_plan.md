@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 remain the only accepted tickets (2/31). T02 candidate2aa0f68 has current signed bundle/local CI747pass plus45Python tests(44pass1optionalSkip); actual GitHub CI and complete native/database/jobs/packaging/cross-group assessments remain open. Fill bounded current-blob review groups before API integration/T03. T30 R4 returned callback-admission and retainedFolder setter P2s, both reviews incomplete; continue the original owner with the now-free Xcode resource, preserving exact-host scripting. T03's200000UTF8-byte prompt bound now explicitly covers native transport save/read/history. Full UI/migration/integration/sync acceptance remains open.
+T00/T01 remain onlyaccepted(2/31). T02current19bce6b passes48Python(47pass1skip);nativebothaxescomplete0,DBStandards27/27zeroP1P2withlatenttransactionfixawaitingdelta,DBSpec/jobsparsercorrection/currentpackaging/crossgroupreview/currentbundle/UI/remoteCIremain. T30R5foundrelease-without-closeFeedSettingsguardgap;rootweakownereditawaitsoriginalownerregressionandnativechecks. Splitreviewscopesforcompletecoverage. Fullproductfeatures/migration/sync/UIacceptanceunchanged.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

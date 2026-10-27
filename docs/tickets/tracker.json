@@ -44,8 +44,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "26071ee6cbac80cdcca05e36437e8f9eb695d678",
-      "implementation_state": "Native10pathStandards0/Spec0atidenticalblobs;iterativeparserfixcoordinator47tests46pass1optionalSkip. Freshjobs/database/packaging/crossgroupreview/currentbundle/UI/remoteCIpending",
+      "last_reported_head": "19bce6b82f0426946424002c0c2d19c3bfa2d295",
+      "implementation_state": "NativeScopes0/0;databaseStandards27/27zeroP1P2;latenttransactiondecoratorfixedbyroot19bce6b,48tests47pass1skip. Otheraxes/corrections/crossgroup/currentbundle/UI/remoteCIopen",
       "review_evidence": "docs/acceptance/t02-review-r9.md"
     },
     "03": {
@@ -417,7 +417,7 @@
         "28",
         "29"
       ],
-      "implementation_state": "CallbacksubmissionandFoldersettersfixed;coordinator768fullpass0fail0skipandisolatedidentity. Owner152focused/zeroSQLitediagnostics;freshfullsliceindependentreviewpending,fullT30open",
+      "implementation_state": "R5bothaxesincomplete1P2released-ownerFeedSettingswrites. Rootweak-ownerguarduncommitted;originalownerregression/nativevalidationrequired. FullT30open",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "d60871121fdfc00f17c6091d49df71b7bffd3d8b",
       "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
