@@ -92,6 +92,10 @@ class SnapshotExpired(ValueError):
     code = 'snapshot_expired'
 
 
+class MigrationBusy(ValueError):
+    code = 'migration_busy'
+
+
 def save(db, key, value):
     db.execute('INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?) '
                'ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at',
@@ -407,7 +411,7 @@ def editor_review_digest(db, connection, choices, editor_services, report):
     return digest.hexdigest()
 
 
-def command(db, action, body):
+def command(db, action, body, *, operation_id=None):
     if action == 'pause':
         with transaction(db):
             save(db, 'magpie_claims_paused', '1')
@@ -454,6 +458,8 @@ def command(db, action, body):
                 raise configuration.ConfigurationError('Review pinned Editor associations again')
         if report['running']:
             result = {'status': 'waiting', 'running': report['running'], 'paused': True, 'serviceId': connection['id']}
+            if operation_id:
+                result['operationId'] = operation_id
             save(db, 'nonews.migration-last-apply', json.dumps(result))
             return result
         for _ in report['evidence']:
@@ -501,5 +507,7 @@ def command(db, action, body):
                                (json.dumps(context), job['id'], job['item_id'], checkpoint['stage']))
         save(db, 'magpie_claims_paused', '0')
         result = {'status': 'applied', 'running': 0, 'paused': False, 'serviceId': connection['id']}
+        if operation_id:
+            result['operationId'] = operation_id
         save(db, 'nonews.migration-last-apply', json.dumps(result))
         return result

@@ -17,7 +17,8 @@ ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/
            ('POST', '/api/config/refresh'), ('DELETE', '/api/config/services'), ('DELETE', '/api/config/prompts'),
            ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
            ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
-           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release')}
+           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release'),
+           ('POST', '/api/config/migration/operation')}
 
 
 def read_message():
@@ -150,6 +151,8 @@ def main():
                         send({**correlation, 'error': 'rendered response is too large', 'code': 'render_too_large'})
                     elif getattr(error, 'code', None) == 'snapshot_expired':
                         send({**correlation, 'error': 'migration report expired', 'code': 'snapshot_expired'})
+                    elif getattr(error, 'code', None) == 'migration_busy':
+                        send({**correlation, 'error': 'migration is in progress', 'code': 'migration_busy'})
                     elif getattr(error, 'code', None) == 'snapshot_capacity':
                         send({**correlation, 'error': 'migration report exceeds snapshot capacity', 'code': 'snapshot_capacity'})
                     else:

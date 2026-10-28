@@ -8,6 +8,7 @@ import uuid
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -50,6 +51,17 @@ class MigrationTest(unittest.TestCase):
                 process.stdin.write(json.dumps({'id': 1, 'token': token, 'method': method, 'path': path, 'body': body}) + '\n')
                 process.stdin.flush()
                 return json.loads(process.stdout.readline())
+            def finish(action, started):
+                for _ in range(3000):
+                    response = call('POST', '/api/config/migration/' + action, {'operationId': started['operationId']})
+                    if 'error' in response:
+                        return response
+                    if response['result']['state'] == 'complete':
+                        return response['result']['result']
+                    self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
+                    self.assertEqual(call('GET', '/api/config/services', {'id': service['id']})['result']['id'], service['id'])
+                    time.sleep(.01)
+                self.fail('Migration operation did not finish')
             service = call('PUT', '/api/config/services', {'name': 'Gateway', 'type': 'magpie',
                 'endpoint': f'http://127.0.0.1:{server.server_port}'})['result']
             call('POST', '/api/config/refresh', {'id': service['id']})
@@ -60,6 +72,39 @@ class MigrationTest(unittest.TestCase):
                     ((f'large-{index:04}-' + suffix, 'curator', '{"provider":"old","model":"model"}', 'now') for index in range(2_200)))
                 db.execute('INSERT INTO app_settings VALUES (?,?,?)', ('magpie_migration_evidence',
                     json.dumps([{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}]), 'now'))
+            started = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
+            self.assertEqual(started['state'], 'running')
+            queued = call('PUT', '/api/settings/processing', {'processors': 2})['result']
+            self.assertIn('_pendingMutation', queued)
+            progress = finish('preview', started)
+            self.assertEqual(progress['counts']['models'], 2200)
+            repeated = call('POST', '/api/config/migration/preview', {'operationId': started['operationId']})['result']
+            self.assertEqual(repeated['result']['snapshotId'], progress['snapshotId'])
+            changed = finish('operation', {'operationId': queued['_pendingMutation']})
+            self.assertEqual(changed['processors'], 2)
+            self.assertEqual(call('GET', '/api/settings/processing', {})['result']['processors'], 2)
+            stale = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
+            cancelled = call('POST', '/api/config/migration/preview', {'operationId': stale['operationId'], 'cancel': True})
+            if cancelled.get('result', {}).get('state') == 'complete':
+                old_snapshot = cancelled['result']['result']['snapshotId']
+                call('POST', '/api/config/migration/release', {'snapshotId': old_snapshot})
+            elif 'error' in cancelled:
+                self.assertEqual(cancelled['code'], 'snapshot_expired')
+            else:
+                refused = finish('preview', stale)
+                self.assertEqual(refused['code'], 'snapshot_expired')
+            superseded = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
+            replacement = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
+            old_result = finish('preview', superseded)
+            if 'code' in old_result:
+                self.assertEqual(old_result['code'], 'snapshot_expired')
+            else:
+                call('POST', '/api/config/migration/release', {'snapshotId': old_result['snapshotId']})
+            new_report = finish('preview', replacement)
+            self.assertEqual(new_report['counts']['models'], 2200)
+            call('POST', '/api/config/migration/release', {'snapshotId': new_report['snapshotId']})
+            release = call('POST', '/api/config/migration/release', {'snapshotId': progress['snapshotId'], 'cooperative': True})['result']
+            self.assertTrue(finish('release', release)['released'])
             first = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})
             self.assertIn('result', first)
             first = first['result']
@@ -126,15 +171,21 @@ class MigrationTest(unittest.TestCase):
             self.assertTrue(call('POST', '/api/config/migration/pause', {})['result']['paused'])
             with closing(sqlite3.connect(database)) as db, db:
                 db.execute("CREATE TRIGGER fail_resume BEFORE UPDATE ON app_settings WHEN NEW.key='magpie_claims_paused' AND NEW.value='0' BEGIN SELECT RAISE(ABORT, 'injected'); END")
-            self.assertEqual(call('POST', '/api/config/migration/apply', {'serviceId': service['id']})['error'], 'operation failed')
+            failed = call('POST', '/api/config/migration/apply', {'serviceId': service['id'], 'cooperative': True})['result']
+            self.assertEqual(finish('apply', failed)['error'], 'operation failed')
             self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
             with closing(sqlite3.connect(database)) as db, db:
                 self.assertEqual(db.execute("SELECT count(*) FROM app_settings WHERE key LIKE 'nonews.migration-evidence.%'").fetchone()[0], 0)
                 self.assertEqual(db.execute("SELECT count(*) FROM model_configs WHERE config_json LIKE '%target%'").fetchone()[0], 0)
                 self.assertEqual(db.execute("SELECT value FROM app_settings WHERE key='magpie_claims_paused'").fetchone()[0], '1')
                 db.execute('DROP TRIGGER fail_resume')
-            applied = call('POST', '/api/config/migration/apply', {'serviceId': service['id']})['result']
+            started_apply = call('POST', '/api/config/migration/apply', {'serviceId': service['id'], 'cooperative': True})['result']
+            queued = call('PUT', '/api/settings/processing', {'processors': 3})['result']
+            self.assertIn('_pendingMutation', queued)
+            applied = finish('apply', started_apply)
             self.assertEqual(applied['status'], 'applied')
+            self.assertEqual(applied['operationId'], started_apply['operationId'])
+            self.assertEqual(finish('operation', {'operationId': queued['_pendingMutation']})['processors'], 3)
             self.assertLess(len(json.dumps(applied)), 1024)
             with closing(sqlite3.connect(database)) as db:
                 self.assertEqual(db.execute("SELECT value FROM app_settings WHERE key='magpie_migration_evidence'").fetchone()[0], legacy)

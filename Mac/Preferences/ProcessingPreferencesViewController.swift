@@ -1,7 +1,7 @@
 import AppKit
 import Secrets
 
-final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate {
+final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate, NSTextViewDelegate {
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
 	private let services = NSPopUpButton()
@@ -38,6 +38,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private var reportCounts: [String: Int] = [:]
 	private var reportIndex = 0
 	private var reportGeneration = 0
+	private var reportRequestInFlight = false
 	private var reportRow: [String: Any] = [:]
 	private var editorGatewayRows: [[String: Any]] = []
 	private var migrationChoices: [String: String] = [:]
@@ -45,10 +46,19 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private var migrationReview = MigrationReviewState()
 	private var migrationWaiting = false
 	private var editorReviewToken: String?
+	private var previewOperation: String?
+	private var previewRequestGeneration = 0
+	private var pendingApply: (id: String, ticket: MigrationReviewState.ApplyTicket)?
+	private var promptGeneration = 0
+	private var bindingGeneration = 0
+	private var serviceGeneration = 0
+	private var serviceRequestGeneration = 0
+	private var listGeneration = 0
 
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
 		migrationReview.invalidate()
+		cancelMigrationPreview()
 		releaseMigrationReport()
 	}
 
@@ -133,10 +143,13 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		serviceType.target = self
 		serviceType.action = #selector(migrationInputChanged)
 		for field in [serviceName, endpoint, credential] { field.delegate = self }
-		for popup in [legacyTarget, editorGateway] {
-			popup.target = self
-			popup.action = #selector(migrationInputChanged)
-		}
+		promptName.delegate = self
+		instructions.delegate = self
+		for popup in [role, target, titleLanguage, typography] { popup.target = self; popup.action = #selector(promptInputChanged) }
+		history.target = self
+		history.action = #selector(promptInputChanged)
+		confirmLegacyOutput.target = self
+		confirmLegacyOutput.action = #selector(promptInputChanged)
 		credential.placeholderString = "Stored in Keychain"
 		let actions = NSStackView(views: [button("New", #selector(newService)), button("Save", #selector(saveService)), button("Refresh Models or Targets", #selector(refreshService)), button("Delete", #selector(deleteService))])
 		reportSection.addItems(withTitles: ["Models", "Pending", "Evidence"])
@@ -228,7 +241,9 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			case .success(let value): then(value)
 			case .failure(let error):
 				if let onFailure { onFailure(); return }
-				if error as? ProcessingEngine.EngineError == .snapshotExpired {
+				if error as? ProcessingEngine.EngineError == .migrationBusy {
+					self?.feedback.stringValue = "Routing is being updated. Try this change again when it finishes."
+				} else if error as? ProcessingEngine.EngineError == .snapshotExpired {
 					self?.feedback.stringValue = "The routing report expired. Preview again."
 				} else if error as? ProcessingEngine.EngineError == .snapshotCapacity {
 					self?.feedback.stringValue = "The routing report is too large to retain."
@@ -239,9 +254,57 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		}
 	}
 
+	private func migrationRequest(_ action: String, _ body: [String: Any], onFailure: @escaping () -> Void, started: ((String) -> Void)? = nil, then: @escaping ([String: Any]) -> Void) {
+		let previewGeneration = previewRequestGeneration
+		var input = body
+		input["cooperative"] = true
+		request("POST", "/api/config/migration/\(action)", input, onFailure: onFailure) { [weak self] result in
+			guard let self, let identity = result["operationId"] as? String, result["state"] as? String == "running" else { onFailure(); return }
+			if action == "preview" && previewGeneration != self.previewRequestGeneration {
+				self.cancelPreview(identity)
+				return
+			}
+			if action == "preview" { self.previewOperation = identity }
+			started?(identity)
+			self.pollMigration(action, identity: identity, onFailure: onFailure, then: then)
+		}
+	}
+
+	private func pollMigration(_ action: String, identity: String, onFailure: @escaping () -> Void, then: @escaping ([String: Any]) -> Void) {
+		request("POST", "/api/config/migration/\(action)", ["operationId": identity], onFailure: onFailure) { [weak self] value in
+			guard let self, value["operationId"] as? String == identity else { onFailure(); return }
+			if value["state"] as? String == "complete", let result = value["result"] as? [String: Any] {
+				if action == "preview", self.previewOperation == identity { self.previewOperation = nil }
+				then(result)
+			} else if value["state"] as? String == "running" {
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+					self?.pollMigration(action, identity: identity, onFailure: onFailure, then: then)
+				}
+			} else { onFailure() }
+		}
+	}
+
+	private func cancelMigrationPreview() {
+		previewRequestGeneration += 1
+		guard let identity = previewOperation else { return }
+		previewOperation = nil
+		cancelPreview(identity)
+	}
+
+	private func cancelPreview(_ identity: String) {
+		request("POST", "/api/config/migration/preview", ["operationId": identity, "cancel": true], onFailure: {}) { [weak self] response in
+			if let result = response["result"] as? [String: Any], let snapshot = result["snapshotId"] as? String {
+				self?.releaseSnapshot(snapshot)
+			}
+		}
+	}
+
 	private func loadLists() {
+		listGeneration += 1
+		let generation = listGeneration
 		loadPage("services", after: nil, collected: []) { [weak self] rows in
-			guard let self else { return }
+			guard let self, self.listGeneration == generation else { return }
+			let bindingID = self.visibleBindingID()
 			self.serviceRows = rows
 			self.editorGatewayRows = rows.filter { $0["type"] as? String == "magpie" }
 			self.editorGateway.removeAllItems()
@@ -254,10 +317,12 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				self.binding.addItem(withTitle: name)
 			}
 			if let id = self.currentService?["id"] as? String, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.services.selectItem(at: index) }
-			if let id = self.selectedBinding?["id"] as? String, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.binding.selectItem(at: index) }
+			if let id = bindingID, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.binding.selectItem(at: index) }
+			else { self.binding.selectItem(at: -1) }
 		}
 		loadPage("prompts", after: nil, collected: []) { [weak self] rows in
-			guard let self else { return }
+			guard let self, self.listGeneration == generation else { return }
+			let selectedID: String? = self.promptRows.indices.contains(self.prompts.indexOfSelectedItem) ? self.promptRows[self.prompts.indexOfSelectedItem]["id"] as? String : nil
 			let rows = rows.sorted {
 				let first = ($0["role"] as? String ?? "", $0["name"] as? String ?? "")
 				let second = ($1["role"] as? String ?? "", $1["name"] as? String ?? "")
@@ -270,7 +335,8 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				let role = (row["role"] as? String ?? "").capitalized
 				self.prompts.addItem(withTitle: "\(role): \(name)")
 			}
-			if let id = self.currentPrompt?["id"] as? String, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.prompts.selectItem(at: index) }
+			if let id = selectedID, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.prompts.selectItem(at: index) }
+			else { self.prompts.selectItem(at: -1) }
 		}
 	}
 
@@ -291,14 +357,18 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	@objc private func selectService() {
 		migrationReview.invalidate()
+		cancelMigrationPreview()
 		let index = services.indexOfSelectedItem
 		guard serviceRows.indices.contains(index), let id = serviceRows[index]["id"] as? String else { return }
 		if currentService?["id"] as? String != id, !confirmDiscardService() {
 			if let old = currentService?["id"] as? String, let position = serviceRows.firstIndex(where: { $0["id"] as? String == old }) { services.selectItem(at: position) }
 			return
 		}
+		serviceGeneration += 1
+		serviceRequestGeneration += 1
+		let generation = serviceRequestGeneration
 		request("GET", "/api/config/services", ["id": id]) { [weak self] value in
-			guard let self else { return }
+			guard let self, self.serviceRequestGeneration == generation else { return }
 			guard self.serviceRows.indices.contains(self.services.indexOfSelectedItem),
 				  self.serviceRows[self.services.indexOfSelectedItem]["id"] as? String == id else { return }
 			self.currentService = value
@@ -320,7 +390,10 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func resetService() {
+		serviceGeneration += 1
+		serviceRequestGeneration += 1
 		migrationReview.invalidate()
+		cancelMigrationPreview()
 		clearMigrationReport()
 		migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."
 		currentService = nil
@@ -357,15 +430,16 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		var body: [String: Any] = ["name": serviceName.stringValue, "type": serviceType.indexOfSelectedItem == 0 ? "magpie" : "openai-compatible", "endpoint": endpoint.stringValue]
 		if let id = currentService?["id"] as? String { body["id"] = id }
 		let secret = credential.stringValue
+		let generation = serviceGeneration
 		request("PUT", "/api/config/services", body) { [weak self] value in
 			guard let self, let id = value["id"] as? String else { return }
-			self.currentService = value
+			let current = self.serviceGeneration == generation
 			if body["type"] as? String == "openai-compatible", !secret.isEmpty {
 				do {
 					try CredentialsManager.storeCredentials(Credentials(type: .oauthAccessToken, username: "credential", secret: secret), server: "nonews-ai-\(id)")
-					self.credential.stringValue = ""
+					if current && self.credential.stringValue == secret { self.credential.stringValue = "" }
 				} catch {
-					self.feedback.stringValue = "Service saved, but the credential could not be stored. The connection is incomplete."
+					if current { self.feedback.stringValue = "Service saved, but the credential could not be stored. The connection is incomplete." }
 					self.loadLists()
 					return
 				}
@@ -373,17 +447,17 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			if body["type"] as? String == "openai-compatible" {
 				do {
 					guard try CredentialsManager.retrieveCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") != nil else {
-						self.feedback.stringValue = "Service saved without a credential. Add one to complete the connection."
+						if current { self.currentService = value; self.feedback.stringValue = "Service saved without a credential. Add one to complete the connection." }
 						self.loadLists()
 						return
 					}
 				} catch {
-					self.feedback.stringValue = "Service saved, but its credential could not be read. The connection is incomplete."
+					if current { self.currentService = value; self.feedback.stringValue = "Service saved, but its credential could not be read. The connection is incomplete." }
 					self.loadLists()
 					return
 				}
 			}
-			self.feedback.stringValue = "Service saved. Refresh its directory before choosing a target."
+			if current { self.currentService = value; self.feedback.stringValue = "Service saved. Refresh its directory before choosing a target." }
 			self.loadLists()
 		}
 	}
@@ -391,6 +465,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	@objc private func refreshService() {
 		migrationReview.invalidate()
 		guard let service = currentService, let id = service["id"] as? String else { feedback.stringValue = "Save a service first."; return }
+		let generation = serviceGeneration
 		var body: [String: Any] = ["id": id]
 		if service["type"] as? String == "openai-compatible" {
 			do {
@@ -402,7 +477,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			} catch { feedback.stringValue = "Could not read the service credential from Keychain."; return }
 		}
 		request("POST", "/api/config/refresh", body) { [weak self] value in
-			guard let self, self.currentService?["id"] as? String == id else { return }
+			guard let self, self.serviceGeneration == generation, self.currentService?["id"] as? String == id else { return }
 			self.currentService = value
 			self.migrationReview.invalidate()
 			self.legacyTarget.removeAllItems()
@@ -416,8 +491,15 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		}
 	}
 
-	func controlTextDidChange(_ notification: Notification) { migrationReview.invalidate(); releaseMigrationReport() }
-	@objc private func migrationInputChanged() { migrationReview.invalidate() }
+	func controlTextDidChange(_ notification: Notification) {
+		if notification.object as? NSTextField === promptName { promptGeneration += 1; return }
+		serviceGeneration += 1
+		serviceRequestGeneration += 1
+		migrationReview.invalidate(); cancelMigrationPreview(); releaseMigrationReport()
+	}
+	func textDidChange(_ notification: Notification) { if notification.object as? NSTextView === instructions { promptGeneration += 1 } }
+	@objc private func promptInputChanged() { promptGeneration += 1 }
+	@objc private func migrationInputChanged() { serviceGeneration += 1; serviceRequestGeneration += 1; migrationReview.invalidate(); cancelMigrationPreview() }
 
 	private func currentMigrationInput() -> MigrationReviewState.Input? {
 		let index = services.indexOfSelectedItem
@@ -432,10 +514,11 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	private func startMigrationPreview() {
 		guard let input = currentMigrationInput() else { migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."; return }
+		cancelMigrationPreview()
 		reportGeneration += 1
 		let ticket = migrationReview.begin(input)
 		editorReviewToken = nil
-		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices, "browse": true], onFailure: { [weak self] in
+		migrationRequest("preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices, "browse": true], onFailure: { [weak self] in
 			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
 			self.migrationStatus.stringValue = self.migrationReview.readbackFailure(for: input)
 		}) { [weak self] result in
@@ -449,6 +532,11 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			self.reportSnapshot = snapshot
 			self.reportCounts = counts
 			self.editorReviewToken = result["editorReviewToken"] as? String
+			if let pending = self.pendingApply, let receipt = result["lastApply"] as? [String: Any],
+			   receipt["operationId"] as? String == pending.id, pending.ticket.input == input,
+			   self.migrationReview.recordApply(status: receipt["status"] as? String ?? "", ticket: pending.ticket) {
+				self.pendingApply = nil
+			}
 			let paused = result["paused"] as? Bool == true
 			if !paused { self.migrationWaiting = false }
 			let state = MigrationReviewState.status(paused: paused, waiting: self.migrationWaiting)
@@ -461,7 +549,8 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	@objc private func pauseMigration() {
 		guard currentMigrationInput() != nil else { migrationStatus.stringValue = "Select a Magpie service first."; return }
 		migrationReview.invalidate()
-		request("POST", "/api/config/migration/pause", [:]) { [weak self] _ in
+		cancelMigrationPreview()
+		migrationRequest("pause", [:], onFailure: { [weak self] in self?.migrationStatus.stringValue = "Claims could not be paused. Try again." }) { [weak self] _ in
 			self?.migrationWaiting = false
 			self?.previewMigration()
 		}
@@ -478,8 +567,12 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		var body: [String: Any] = ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices]
 		if let token = editorReviewToken { body["reviewToken"] = token }
 		let applyTicket = migrationReview.beginApply(input)
-		request("POST", "/api/config/migration/apply", body) { [weak self] result in
+		migrationRequest("apply", body, onFailure: { [weak self] in
+			guard let self, self.currentMigrationInput() == input else { return }
+			self.migrationStatus.stringValue = "Apply could not be confirmed. Preview the durable routing status before retrying."
+		}, started: { [weak self] identity in self?.pendingApply = (identity, applyTicket) }) { [weak self] result in
 			guard let self else { return }
+			if self.pendingApply?.id == result["operationId"] as? String { self.pendingApply = nil }
 			guard self.migrationReview.recordApply(status: result["status"] as? String ?? "", ticket: applyTicket),
 				  self.currentMigrationInput() == applyTicket.input else {
 				return
@@ -515,7 +608,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func releaseSnapshot(_ snapshot: String) {
-		request("POST", "/api/config/migration/release", ["snapshotId": snapshot], onFailure: {}) { _ in }
+		migrationRequest("release", ["snapshotId": snapshot], onFailure: {}) { _ in }
 	}
 
 	private func releaseMigrationReport() {
@@ -537,6 +630,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	private func loadReportRow() {
 		reportGeneration += 1
+		guard !reportRequestInFlight else { return }
 		let generation = reportGeneration
 		let section = currentReportSection
 		let count = reportCounts[section] ?? 0
@@ -553,14 +647,19 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func loadReportPart(snapshot: String, section: String, index: Int, part: Int, data: Data, generation: Int) {
+		reportRequestInFlight = true
 		request("POST", "/api/config/migration/preview", ["snapshotId": snapshot, "section": section, "index": index, "part": part], onFailure: { [weak self] in
-			guard let self, self.reportGeneration == generation else { return }
+			guard let self else { return }
+			self.reportRequestInFlight = false
+			guard self.reportGeneration == generation else { self.loadReportRow(); return }
 			self.reportDetail.string = "Could not load this entry. Preview again if the report expired."
 		}) { [weak self] result in
-			guard let self, self.reportGeneration == generation, self.reportSnapshot == snapshot,
-				  result["snapshotId"] as? String == snapshot, result["section"] as? String == section,
+			guard let self else { return }
+			self.reportRequestInFlight = false
+			guard self.reportGeneration == generation, self.reportSnapshot == snapshot else { self.loadReportRow(); return }
+			guard result["snapshotId"] as? String == snapshot, result["section"] as? String == section,
 				  result["index"] as? Int == index, result["part"] as? Int == part,
-				  let encoded = result["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { return }
+				  let encoded = result["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { self.reportDetail.string = "The entry could not be read. Preview again."; return }
 			var record = data
 			record.append(chunk)
 			if let next = result["nextPart"] as? Int {
@@ -596,6 +695,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	@objc private func deleteService() {
 		guard let id = currentService?["id"] as? String else { return }
+		let generation = serviceGeneration
 		let using = promptRows.filter { $0["serviceId"] as? String == id }.compactMap { $0["name"] as? String }
 		guard using.isEmpty else { feedback.stringValue = "Service is used by: " + using.joined(separator: ", "); return }
 		let alert = NSAlert()
@@ -604,16 +704,14 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		alert.addButton(withTitle: "Cancel")
 		guard alert.runModal() == .alertFirstButtonReturn else { return }
 		request("DELETE", "/api/config/services", ["id": id]) { [weak self] _ in
+			guard let self else { return }
+			var failed = false
 			do { try CredentialsManager.removeCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") }
-			catch {
-				self?.resetService()
-				self?.loadLists()
-				self?.feedback.stringValue = "Service removed, but its Keychain credential could not be removed."
-				return
-			}
-			self?.resetService()
-			self?.loadLists()
-			self?.feedback.stringValue = "Service removed. Services in use cannot be removed."
+			catch { failed = true }
+			self.loadLists()
+			guard self.serviceGeneration == generation else { return }
+			self.resetService()
+			self.feedback.stringValue = failed ? "Service removed, but its Keychain credential could not be removed." : "Service removed. Services in use cannot be removed."
 		}
 	}
 
@@ -628,8 +726,17 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func showPrompt(_ id: String) {
+		promptGeneration += 1
+		bindingGeneration += 1
+		let generation = promptGeneration
+		currentPrompt = nil
+		selectedBinding = nil
+		target.removeAllItems()
+		versions = []
+		history.removeAllItems()
+		usedBy.stringValue = "Loading references…"
 		request("GET", "/api/config/prompts", ["id": id]) { [weak self] value in
-			guard let self else { return }
+			guard let self, self.promptGeneration == generation else { return }
 			self.currentPrompt = value
 			self.promptName.stringValue = value["name"] as? String ?? ""
 			self.role.selectItem(at: value["role"] as? String == "curator" ? 0 : 1)
@@ -658,7 +765,12 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func resetPrompt() {
+		promptGeneration += 1
+		bindingGeneration += 1
 		currentPrompt = nil
+		selectedBinding = nil
+		binding.selectItem(at: -1)
+		target.removeAllItems()
 		role.isEnabled = true
 		promptName.stringValue = ""
 		instructions.string = ""
@@ -682,13 +794,14 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	@objc private func importLegacy() {
-		guard confirmDiscardPrompt(), let serviceID = selectedBinding?["id"] as? String,
+		guard confirmDiscardPrompt(), let serviceID = selectedBinding?["id"] as? String, visibleBindingID() == serviceID,
 			  let selectedTarget = target.selectedItem?.title else {
 			feedback.stringValue = "Choose a service and target before importing."
 			return
 		}
+		let generation = promptGeneration
 		loadLegacy([:], collected: []) { [weak self] rows in
-			guard let self else { return }
+			guard let self, self.promptGeneration == generation else { return }
 			guard !rows.isEmpty else { self.feedback.stringValue = "No legacy prompts are available."; return }
 			let choices = NSPopUpButton()
 			choices.addItems(withTitles: rows.map { "\($0["kit"] as? String ?? "") / \($0["role"] as? String ?? "")" })
@@ -709,8 +822,9 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			self.request("POST", "/api/config/import-legacy", ["kit": kit, "role": role, "name": name.stringValue,
 				"serviceId": serviceID, "target": selectedTarget]) { [weak self] value in
 				guard let self, let id = value["id"] as? String else { return }
-				self.currentPrompt = nil
 				self.loadLists()
+				guard self.promptGeneration == generation else { return }
+				self.currentPrompt = nil
 				self.showPrompt(id)
 				self.feedback.stringValue = "Imported. Review and confirm output preferences before processing."
 			}
@@ -742,16 +856,19 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	@objc private func selectBinding() {
+		promptGeneration += 1
 		let index = binding.indexOfSelectedItem
 		guard serviceRows.indices.contains(index), let id = serviceRows[index]["id"] as? String else { return }
 		loadBinding(id, selected: nil)
 	}
 
 	private func loadBinding(_ id: String, selected: String?) {
+		bindingGeneration += 1
+		let generation = bindingGeneration
 		target.removeAllItems()
 		selectedBinding = nil
 		request("GET", "/api/config/services", ["id": id]) { [weak self] value in
-			guard let self else { return }
+			guard let self, self.bindingGeneration == generation, self.visibleBindingID() == id else { return }
 			self.selectedBinding = value
 			let targets = value["targets"] as? [String] ?? []
 			self.target.addItems(withTitles: targets)
@@ -763,13 +880,24 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		}
 	}
 
+	private func visibleBindingID() -> String? {
+		let index = binding.indexOfSelectedItem
+		return serviceRows.indices.contains(index) ? serviceRows[index]["id"] as? String : nil
+	}
+
 	private func promptBody() -> [String: Any]? {
-		guard !instructions.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, instructions.string.utf8.count <= 200_000 else {
-			feedback.stringValue = "Instructions must be nonempty and at most 200,000 UTF-8 bytes."
+		guard let body = promptBodyForComparison() else {
+			feedback.stringValue = "Choose valid instructions, a service, and a model or target. Instructions are limited to 200,000 UTF-8 bytes."
 			return nil
 		}
-		guard let serviceID = selectedBinding?["id"] as? String, let chosen = target.selectedItem?.title else {
-			feedback.stringValue = "Choose a service and model or target."
+		return body
+	}
+
+	private func promptBodyForComparison() -> [String: Any]? {
+		guard !instructions.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, instructions.string.utf8.count <= 200_000 else {
+			return nil
+		}
+		guard let serviceID = selectedBinding?["id"] as? String, visibleBindingID() == serviceID, let chosen = target.selectedItem?.title else {
 			return nil
 		}
 		var body: [String: Any] = ["name": promptName.stringValue, "role": role.indexOfSelectedItem == 0 ? "curator" : "editor",
@@ -781,25 +909,33 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		return body
 	}
 
-	private func loadHistory(_ id: String, before: String?, collected: [[String: Any]]) {
+	private func matchesPrompt(_ body: [String: Any], generation: Int) -> Bool {
+		guard promptGeneration == generation, let current = promptBodyForComparison() else { return false }
+		return NSDictionary(dictionary: current).isEqual(to: body)
+	}
+
+	private func loadHistory(_ id: String, before: String?, collected: [[String: Any]], generation: Int? = nil) {
+		let ticket = generation ?? promptGeneration
 		var body: [String: Any] = ["id": id]
 		if let before { body["before"] = before }
 		request("GET", "/api/config/history", body) { [weak self] result in
-			guard let self else { return }
+			guard let self, self.promptGeneration == ticket, self.currentPrompt?["id"] as? String == id else { return }
 			let all = collected + (result["versions"] as? [[String: Any]] ?? [])
-			if let next = result["next"] as? String { self.loadHistory(id, before: next, collected: all); return }
+			if let next = result["next"] as? String { self.loadHistory(id, before: next, collected: all, generation: ticket); return }
 			self.versions = all
 			self.history.removeAllItems()
 			self.history.addItems(withTitles: all.map { $0["createdAt"] as? String ?? "Unknown date" })
 		}
 	}
 
-	private func loadReferences(_ id: String, after: String?, collected: [[String: Any]], then: @escaping ([[String: Any]]) -> Void) {
+	private func loadReferences(_ id: String, after: String?, collected: [[String: Any]], generation: Int? = nil, then: @escaping ([[String: Any]]) -> Void) {
+		let ticket = generation ?? promptGeneration
 		var body: [String: Any] = ["promptId": id]
 		if let after { body["after"] = after }
 		request("GET", "/api/config/references", body) { [weak self] result in
+			guard let self, self.promptGeneration == ticket, self.currentPrompt?["id"] as? String == id else { return }
 			let rows = collected + (result["references"] as? [[String: Any]] ?? [])
-			if let next = result["next"] as? String { self?.loadReferences(id, after: next, collected: rows, then: then) }
+			if let next = result["next"] as? String { self.loadReferences(id, after: next, collected: rows, generation: ticket, then: then) }
 			else { then(rows) }
 		}
 	}
@@ -813,7 +949,9 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	@objc private func previewHistory() {
 		guard let (id, version) = selectedVersion() else { return }
-		request("GET", "/api/config/history", ["id": id, "versionId": version]) { value in
+		let generation = promptGeneration
+		request("GET", "/api/config/history", ["id": id, "versionId": version]) { [weak self] value in
+			guard let self, self.promptGeneration == generation, self.currentPrompt?["id"] as? String == id else { return }
 			let alert = NSAlert()
 			alert.messageText = "Instruction history"
 			let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 500, height: 260))
@@ -830,8 +968,9 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	@objc private func restoreHistory() {
 		guard let (id, version) = selectedVersion(), let body = promptBody() else { return }
+		let generation = promptGeneration
 		loadReferences(id, after: nil, collected: []) { [weak self] refs in
-			guard let self else { return }
+			guard let self, self.matchesPrompt(body, generation: generation) else { return }
 			if !refs.isEmpty {
 				let alert = NSAlert()
 				alert.messageText = "This prompt is shared by \(refs.count) sources."
@@ -842,13 +981,16 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				let choice = alert.runModal()
 				if choice == .alertSecondButtonReturn {
 					self.request("GET", "/api/config/history", ["id": id, "versionId": version]) { [weak self] old in
+						guard let self, self.matchesPrompt(body, generation: generation) else { return }
 						var copy = body
 						copy["text"] = old["text"]
-						self?.request("POST", "/api/config/copy", ["id": id, "name": self?.promptName.stringValue ?? "Copy", "configuration": copy]) { [weak self] value in
-							self?.currentPrompt = value
-							self?.instructions.string = value["text"] as? String ?? ""
-							self?.feedback.stringValue = "Restored as an independent copy."
-							self?.loadLists()
+						self.request("POST", "/api/config/copy", ["id": id, "name": body["name"] ?? "Copy", "configuration": copy]) { [weak self] value in
+							guard let self else { return }
+							self.loadLists()
+							guard self.matchesPrompt(body, generation: generation) else { return }
+							self.currentPrompt = value
+							self.instructions.string = value["text"] as? String ?? ""
+							self.feedback.stringValue = "Restored as an independent copy."
 						}
 					}
 					return
@@ -856,19 +998,23 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				if choice != .alertFirstButtonReturn { return }
 			}
 			self.request("POST", "/api/config/restore", ["id": id, "versionId": version, "configuration": body]) { [weak self] value in
-				self?.currentPrompt = value
-				self?.instructions.string = value["text"] as? String ?? ""
-				self?.feedback.stringValue = "Instructions restored with the selected service, target, and output preferences."
-				self?.loadHistory(id, before: nil, collected: [])
+				guard let self else { return }
+				self.loadLists()
+				guard self.matchesPrompt(body, generation: generation) else { return }
+				self.currentPrompt = value
+				self.instructions.string = value["text"] as? String ?? ""
+				self.feedback.stringValue = "Instructions restored with the selected service, target, and output preferences."
+				self.loadHistory(id, before: nil, collected: [])
 			}
 		}
 	}
 
 	@objc private func savePrompt() {
 		guard let body = promptBody() else { return }
+		let generation = promptGeneration
 		if let id = body["id"] as? String {
 			loadReferences(id, after: nil, collected: []) { [weak self] refs in
-				guard let self else { return }
+				guard let self, self.matchesPrompt(body, generation: generation) else { return }
 				if !refs.isEmpty {
 					let alert = NSAlert()
 					alert.messageText = "This prompt is shared by \(refs.count) sources."
@@ -877,36 +1023,46 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 					alert.addButton(withTitle: "Save as Copy")
 					alert.addButton(withTitle: "Cancel")
 					let choice = alert.runModal()
-					if choice == .alertSecondButtonReturn { self.copyPrompt(); return }
+					if choice == .alertSecondButtonReturn { self.copyPrompt(body, generation: generation); return }
 					if choice != .alertFirstButtonReturn { return }
 				}
-				self.persistPrompt(body)
+				self.persistPrompt(body, generation: generation)
 			}
-		} else { persistPrompt(body) }
+		} else { persistPrompt(body, generation: generation) }
 	}
 
-	private func persistPrompt(_ body: [String: Any]) {
+	private func persistPrompt(_ body: [String: Any], generation: Int) {
 		request("PUT", "/api/config/prompts", body) { [weak self] value in
-			self?.currentPrompt = value
-			if let id = value["id"] as? String { self?.loadHistory(id, before: nil, collected: []) }
-			self?.feedback.stringValue = "Prompt saved. Future processing uses this configuration."
-			self?.loadLists()
+			guard let self else { return }
+			self.loadLists()
+			guard self.matchesPrompt(body, generation: generation) else { return }
+			self.currentPrompt = value
+			if let id = value["id"] as? String { self.loadHistory(id, before: nil, collected: []) }
+			self.feedback.stringValue = "Prompt saved. Future processing uses this configuration."
 		}
 	}
 
 	@objc private func copyPrompt() {
-		guard let body = promptBody(), let id = currentPrompt?["id"] as? String else { return }
-		request("POST", "/api/config/copy", ["id": id, "name": promptName.stringValue, "configuration": body]) { [weak self] value in
-			self?.currentPrompt = value
-			self?.feedback.stringValue = "Copy saved independently. Existing source references were not changed."
-			self?.loadLists()
+		guard let body = promptBody(), currentPrompt?["id"] is String else { return }
+		copyPrompt(body, generation: promptGeneration)
+	}
+
+	private func copyPrompt(_ body: [String: Any], generation: Int) {
+		guard let id = body["id"] as? String else { return }
+		request("POST", "/api/config/copy", ["id": id, "name": body["name"] ?? "Copy", "configuration": body]) { [weak self] value in
+			guard let self else { return }
+			self.loadLists()
+			guard self.matchesPrompt(body, generation: generation) else { return }
+			self.currentPrompt = value
+			self.feedback.stringValue = "Copy saved independently. Existing source references were not changed."
 		}
 	}
 
 	@objc private func deletePrompt() {
-		guard let id = currentPrompt?["id"] as? String else { return }
+		guard let id = currentPrompt?["id"] as? String, let body = promptBody() else { return }
+		let generation = promptGeneration
 		loadReferences(id, after: nil, collected: []) { [weak self] refs in
-			guard let self else { return }
+			guard let self, self.matchesPrompt(body, generation: generation) else { return }
 			let names = refs.compactMap { $0["name"] as? String }
 			guard names.isEmpty else { self.feedback.stringValue = "Prompt is used by: " + names.joined(separator: ", "); return }
 			let alert = NSAlert()
@@ -916,9 +1072,11 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			alert.addButton(withTitle: "Cancel")
 			guard alert.runModal() == .alertFirstButtonReturn else { return }
 			self.request("DELETE", "/api/config/prompts", ["id": id]) { [weak self] _ in
-				self?.resetPrompt()
-				self?.loadLists()
-				self?.feedback.stringValue = "Prompt removed."
+				guard let self else { return }
+				self.loadLists()
+				guard self.matchesPrompt(body, generation: generation) else { return }
+				self.resetPrompt()
+				self.feedback.stringValue = "Prompt removed."
 			}
 		}
 	}

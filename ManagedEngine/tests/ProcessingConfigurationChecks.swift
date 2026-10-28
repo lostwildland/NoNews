@@ -11,9 +11,14 @@ import Foundation
 	}
 
 	@MainActor static func request(_ engine: ProcessingEngine, _ method: String, _ path: String, _ body: [String: Any] = [:]) async throws -> [String: Any] {
-		try await withCheckedThrowingContinuation { continuation in
-			engine.request(method: method, path: path, body: body) { result in continuation.resume(with: result) }
+		let data: Data = try await withCheckedThrowingContinuation { continuation in
+			engine.request(method: method, path: path, body: body) { result in
+				do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: result.get())) }
+				catch { continuation.resume(throwing: error) }
+			}
 		}
+		guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw NSError(domain: "Configuration response", code: 1) }
+		return value
 	}
 
 	@MainActor static func reportRecord(_ engine: ProcessingEngine, snapshot: String, section: String, index: Int) async throws -> [String: Any] {

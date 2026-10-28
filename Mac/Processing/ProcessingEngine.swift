@@ -240,7 +240,7 @@ final class ProcessingEngine {
 			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
 			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
-			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
@@ -312,7 +312,10 @@ final class ProcessingEngine {
 				}
 				pending.removeValue(forKey: id)
 				timers.removeValue(forKey: id)?.invalidate()
-				if let result = value["result"] as? [String: Any] { completion(.success(result)) }
+				if let result = value["result"] as? [String: Any] {
+					if let identity = result["_pendingMutation"] as? String { pollMutation(identity, completion: completion) }
+					else { completion(.success(result)) }
+				}
 				else {
 					let error: EngineError
 					switch value["code"] as? String {
@@ -320,6 +323,7 @@ final class ProcessingEngine {
 					case "invalid_configuration": error = .invalidConfiguration
 					case "render_too_large": error = .renderTooLarge
 					case "snapshot_expired": error = .snapshotExpired
+					case "migration_busy": error = .migrationBusy
 					case "snapshot_capacity": error = .snapshotCapacity
 					default: error = .operation
 					}
@@ -331,6 +335,24 @@ final class ProcessingEngine {
 			}
 		}
 		if buffer.count >= limit { fail("Invalid response from processing component.") }
+	}
+
+	private func pollMutation(_ identity: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		request(method: "POST", path: "/api/config/migration/operation", body: ["operationId": identity]) { [weak self] response in
+			switch response {
+			case .failure(let error): completion(.failure(error))
+			case .success(let value):
+				guard value["operationId"] as? String == identity else { completion(.failure(EngineError.operation)); return }
+				if value["state"] as? String == "complete", let result = value["result"] as? [String: Any] {
+					completion(.success(result))
+				} else if value["state"] as? String == "running" {
+					DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+						guard let self else { completion(.failure(EngineError.unavailable)); return }
+						self.pollMutation(identity, completion: completion)
+					}
+				} else { completion(.failure(EngineError.operation)) }
+			}
+		}
 	}
 
 	private func requestTimedOut(_ id: Int) {
@@ -397,5 +419,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy }
 }
