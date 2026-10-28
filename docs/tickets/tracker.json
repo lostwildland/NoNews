@@ -41,16 +41,20 @@
       "number": 4,
       "id": 6062371466,
       "title": "App-managed IO engine with native health and shutdown",
-      "status": "open",
+      "status": "closed",
       "native_parent": true,
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
       "last_reported_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
-      "implementation_state": "Accepted developer engine API/macOS lifecycle foundation and integrated by this merge. Sourcegate R32/R33/R34 clears both axes; current Python62pass/1optionalSkip, publiccontroller, CI747, installedharness11 and CUAReady→Stopped→Ready. Knownfixture2149diagnostics stayT30. Issueclosure follows verified integration push.",
+      "implementation_state": "Accepted and integrated developer engine API/macOS lifecycle foundation; issue4 closed after resolution6458171742. Source920efef/evidence567cc9e, sourcegate clear, current Python62pass/1skip, CI747, installedharness11 and nativeReady→Stopped→Ready. Knownfixturediagnostics trackedT30; fullparity/release/device/sync/migration separate.",
       "review_evidence": "docs/acceptance/t02-accepted-engine.md",
       "accepted_implementation_head": "920efefd61fb993a850241719a4d99e5691023b6",
-      "accepted_evidence_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae"
+      "accepted_evidence_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
+      "integration_head": "e3c6b152214ff4897d5c122c86fed0846c540736",
+      "resolution_comment": "https://github.com/lostwildland/NoNews/issues/4#issuecomment-6458171742",
+      "pull_request": "https://github.com/lostwildland/NoNews/pull/33",
+      "pull_request_state": "merged"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
@@ -61,7 +65,9 @@
       "native_parent": true,
       "native_blockers": [
         "02"
-      ]
+      ],
+      "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
+      "implementation_state": "Claimed by lostwildland after T02 issue4 closed; one Terra high owner starts from committed integrated API. Heavy native resource currently reserved T30."
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -421,7 +427,7 @@
         "28",
         "29"
       ],
-      "implementation_state": "R9 source migration checkpoint596f744 includes guarded API/callback/caller cancellation; syntax-only. T02 native resource released; original T30 owner now granted behavioralred/typecheck/focused/full/native validation of R8/R9. Historical774passes at a92a072 do not validate this later source.",
+      "implementation_state": "R9 source migration checkpoint596f744 syntax-only; original owner now granted behavioralred/typecheck/focused/overlap/full/build nativevalidation. Historical774passes at a92a072 remain separate; fresh reviews/fullT30 open.",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "596f74423b81e21a92f473df37faa22d3fc740cb",
       "review_evidence": "docs/acceptance/t30-storage-review-r9.md"

@@ -1,6 +1,6 @@
 # T02 accepted managed-engine foundation
 
-Accepted source: `920efefd61fb993a850241719a4d99e5691023b6`; implementation evidence: `567cc9ece0bb34e330a650de56e21ef6832fbaae`; original base: `c9ecfa14e884a7ce8895bb13eec3ea8711cbef90`. The evidence commit changes only the ticket record. The coordinator accepts this developer API and native macOS lifecycle foundation for integration. This is not full Information OS parity, personal cutover or release acceptance.
+Accepted source: `920efefd61fb993a850241719a4d99e5691023b6`; implementation evidence: `567cc9ece0bb34e330a650de56e21ef6832fbaae`; original base: `c9ecfa14e884a7ce8895bb13eec3ea8711cbef90`. The evidence commit changes only the ticket record. The coordinator accepted and integrated this developer API and native macOS lifecycle foundation at `e3c6b152214ff4897d5c122c86fed0846c540736`; PR33 is merged and issue4 is closed after [resolution](https://github.com/lostwildland/NoNews/issues/4#issuecomment-6458171742). This is not full Information OS parity, personal cutover or release acceptance.
 
 ## Ticket criteria and evidence
 
