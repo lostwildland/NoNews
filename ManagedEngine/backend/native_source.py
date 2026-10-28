@@ -7,6 +7,7 @@ import uuid
 from urllib.parse import urlsplit, urlunsplit
 
 from .core import transaction, utcnow
+from .configuration import ConfigurationError
 
 MEDIA_TYPES = {"news", "paper", "newsletter", "podcast", "video"}
 MODES = {"disabled", "normal", "important"}
@@ -132,7 +133,7 @@ def ensure_schema(db) -> None:
         db.execute("ALTER TABLE native_observation_identities ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
     if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='item_feed_contracts'").fetchone() and db.execute("SELECT 1 FROM item_feed_contracts LIMIT 1").fetchone() and db.execute("SELECT 1 FROM native_processing_contexts LIMIT 1").fetchone() is None:
-        raise RuntimeError("native_context_migration_required")
+        raise ConfigurationError("native_context_migration_required")
 
     if "service_id" not in policy_columns:
         db.execute("ALTER TABLE native_feed_policies ADD COLUMN service_id TEXT")
@@ -255,6 +256,8 @@ def observe(db, body):
     now = utcnow()
     with transaction(db):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
+        if identity and existing and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
+            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
         state = "unresolved"
         item_id = existing["item_id"] if existing else None
         if identity:
@@ -315,8 +318,8 @@ def replay(db, body):
     row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=? AND o.namespace=?", (context_id, namespace)).fetchone()
     if row is None:
         raise ValueError("Context not found")
-    if row[8] not in {"disabled", "normal", "important"} or row[12] is None:
-        raise ValueError("Current source policy is unavailable for replay")
+    if row[8] not in {"normal", "important"} or row[12] is None:
+        raise ValueError("Current source policy is unavailable or disabled for replay")
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
     replay_context_id = uuid.uuid4().hex
     now = utcnow()
@@ -464,7 +467,9 @@ def feeds(db, method, body):
                 raise ValueError("Feed policy changed during save")
             db.execute("INSERT INTO native_feed_policies(namespace,account_id,feed_id,title,media_type,processing_mode,curator_prompt_id,editor_prompt_id,service_id,threshold,scoring_strategy,body_strategy,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,service_id=excluded.service_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",
                        (namespace, account_id, feed_id, values["title"], values["media_type"], values["processing_mode"], values["curator_prompt_id"], values["editor_prompt_id"], values["service_id"], values["threshold"], values["scoring_strategy"], values["body_strategy"], (prior["revision"] + 1 if prior else 1), now, now))
-            for role in ("curator", "editor"):
+            if values["processing_mode"] == "disabled" and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone():
+                db.execute("UPDATE processing_jobs SET status='failed',error='native_policy_disabled',updated_at=? WHERE native_context_id IN (SELECT c.id FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE o.namespace=? AND o.account_id=? AND o.feed_id=?) AND status IN ('pending','running')", (now, namespace, account_id, feed_id))
+
                 db.execute("DELETE FROM app_settings WHERE key LIKE 'nonews.reference.%' AND json_extract(value,'$.sourceId')=? AND json_extract(value,'$.role' )=?", (_feed_key(namespace, account_id, feed_id), role))
             for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
                 if prompt_id:

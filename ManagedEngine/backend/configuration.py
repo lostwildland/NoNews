@@ -470,6 +470,8 @@ def _list(db, kind, body, response_budget=None):
     values = []
     for row in rows:
         value = json.loads(row[0])
+        if kind == 'prompt' and body.get('role') in {'curator', 'editor'} and value.get('role') != body['role']:
+            continue
         if kind == 'service':
             value = _record(db, 'service', value['id'])
         candidate = values + [value]
