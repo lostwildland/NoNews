@@ -274,7 +274,8 @@ def observe(db, body):
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
-            context_id = uuid.uuid4().hex
+            existing_context = db.execute("SELECT id FROM native_processing_contexts WHERE item_id=? AND observation_id=?", (item_id, observation_id)).fetchone()
+            context_id = existing_context[0] if existing_context else uuid.uuid4().hex
             db.execute("INSERT OR IGNORE INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
