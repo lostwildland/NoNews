@@ -11,6 +11,19 @@ from .configuration import ConfigurationError
 
 MEDIA_TYPES = {"news", "paper", "newsletter", "podcast", "video"}
 MODES = {"disabled", "normal", "important"}
+def _service_available(db, service_id):
+    if not service_id:
+        return False
+    try:
+        from . import configuration
+        value = configuration._record(db, "service", service_id)
+    except Exception:
+        row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + service_id,)).fetchone()
+        if row is None:
+            return False
+        value = json.loads(row[0])
+    return value.get("type") == "magpie" or not (value.get("credentialState") == "incomplete" or value.get("error") or value.get("stale") or ("checkedAt" in value and not value.get("checkedAt")))
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS native_source_observations(
@@ -326,12 +339,7 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
-            service_available = False
-            if policy and isinstance(policy[2], str):
-                service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + policy[2],)).fetchone()
-                if service_row:
-                    service_value = json.loads(service_row[0])
-                    service_available = service_value.get("type") == "magpie" or not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or ("checkedAt" in service_value and not service_value.get("checkedAt")))
+            service_available = _service_available(db, policy[2] if policy else None)
             historical_unresolved = db.execute("SELECT 1 FROM native_observation_identities WHERE observation_id=? AND evidence_state='unresolved' LIMIT 1", (observation_id,)).fetchone() is not None
             if service_available and policy and policy[3] == media_type and state == "verified" and not was_unresolved and not historical_unresolved and (existing_context is None or existing_context[2] == policy[8]) and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
@@ -351,11 +359,7 @@ def replay(db, body):
     observation_state = db.execute("SELECT o.identity_state FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=?", (context_id, namespace)).fetchone()
     if observation_state is None or observation_state[0] != "verified":
         raise ValueError("Conflicting or unresolved observation cannot be replayed")
-    service_available = True
-    if isinstance(row[6], str) and len(row[6]) == 32:
-        from . import configuration
-        service_value = configuration._record(db, "service", row[6])
-        service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
+    service_available = _service_available(db, row[6])
     if not service_available:
         raise ValueError("Current service binding is unavailable for replay")
     allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
@@ -550,14 +554,8 @@ def feeds(db, method, body):
                 if not values["media_type"] or not values["curator_prompt_id"] or not values["service_id"]:
                     raise ValueError("Enabled feed policy requires media, a Curator prompt, and a service")
                 service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone()
-                if service_row:
-                    from . import configuration
-                    if isinstance(values["service_id"], str) and len(values["service_id"]) == 32:
-                        service_value = configuration._record(db, "service", values["service_id"])
-                    else:
-                        service_value = json.loads(service_row[0])
-                    if service_value.get("type") != "magpie" and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or ("checkedAt" in service_value and not service_value.get("checkedAt"))):
-                        raise ValueError("Service binding is unavailable")
+                if not _service_available(db, values["service_id"]):
+                    raise ValueError("Service binding is unavailable")
 
                 strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
                 allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
