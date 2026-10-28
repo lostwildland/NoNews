@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Preview and Apply/evidence streaming are pushed at 1ddb5a6. The interrupted native-browsing turn preserved four modified files and one new fixture; the same original owner resumed as R11 after authoritative terminal-state readback. HIG development requirement supplied from root 4001e7d. Only timing-sensitive service/standalone-client/runtime-preparation checks granted. Bounded native browsing, responsiveness, fresh review and final native/Keychain/UI acceptance remain open.",
+      "implementation_state": "Bounded native browsing Slice3A pushed6da5efa; owner reports declared-runtime prompt/browse check,12focused Python passes/1optional skip and narrow source Swift6 typecheck. Native harness usedSwift5 after strict diagnostic; exact manifest failed67extra generatedpyc. Cooperative preview/Apply/release still red and uncommitted. Same ownerR12 continues source/lightweight functional checks; native grant released toT30. Full review/app/Keychain/HIG acceptance open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "1ddb5a632c87cab75713e17fd11b94a983cf9a85",
+      "last_reported_head": "6da5efa249ede069bf8ebccec8ecb86d198da9e2",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -567,9 +567,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Current clean/pushed checkpoint65be895 preservesR13consumer/R14CloudKit/R15provider corrections and adds propagated article-delete SQL failure before pending-status removal/page commit. Root independently read203focusedpasses/0fail/0skip. Current ledger105paths; boundedcorrection, remainingfixture/harness and connected reviews pending. Historical791fullpasses remain5013c91; currentfullMac/build/signature/iOS deferred until source reviewstabilizes. Native/source resource released; fullT30/liveproviders/migration/sync/UI remainopen.",
+      "implementation_state": "R17 paired correction review at65be895 covered8/8changed-hunk sets. Standards0material Standards findings with separateSpecP1; Spec2P1 transaction durability and dropped record error. Root926bbe3 preserves receive failure (parse only). FeedSettings synchronous SQL under admission lock also needs repair. Original owner resumes corrections/focused native checks;203focused and791full remain earlier-source evidence, not current acceptance.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+      "last_reported_head": "926bbe30e9dec29d29c5ad3341022d1829a533be",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [

@@ -1,5 +1,11 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Native browse handoff and R17 safety findings
+
+- T03 original owner delivered6da5efa native indexed/multipart browsing and reported declared-runtime200000-byte prompt/browse journeys,12Python passes/1optional skip and narrow source Swift6 typecheck. Native harness compiledSwift5 after a Swift6 continuation diagnostic; exact prepared integrity failed67extra generatedpyc. Slice3B cooperative preview/Apply/release remains red/uncommitted. Same ownerR12 continues source/lightweight functional work; timing/native resource released toT30.
+- R17 paired T30 reviews finished8/8changed-hunk coverage at65be895. Standards found no material Standards issue and separately1SpecP1; Spec found2P1s: deletion acknowledged before successful commit and ignored individual CloudKit record errors. Both are source-derived, not reviewer runtime reproductions. Full reports and connected coverage gaps recorded.
+- Root inspected queued receive/caller error paths and added the missing failure assignment at926bbe3; parsing/whitespace passed, no behavioral proof yet. Admission assessment permits only short metadata/enqueue critical sections and identifies FeedSettings synchronous SQL/queue waits inside its lock for correction. No blanket exception or whole-ticket clearance.
+
 ## 2026-10-28 — Interrupted task recovery
 
 - Authoritative thread reads found T03 native-browsing ordinal10 and both T30 R16 page/delete reviews interrupted, with no active run. Preserved T03's four modified files and new fixture; resumed the same owner as R11 with the existing limited resource grant and root4001e7d HIG requirement. No new worktree, privacy repair or provider switch.

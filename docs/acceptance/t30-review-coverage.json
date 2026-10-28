@@ -1,8 +1,8 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "65be895bf0bb8534eba3ef9e10973fa03a978185",
-  "source": "65be895bf0bb8534eba3ef9e10973fa03a978185",
-  "state": "105logical paths pinned to clean65be895. R13consumer/R14CloudKit/R15provider corrections and new failed-delete SQL/page path are ready for bounded review. Identical prior blobs retain only their stated coverage; changed/new blobs require fresh review. Focused203passes independently read by coordinator; current full/native artifact/iOS checks deferred. FullT30 remains open.",
+  "candidate": "926bbe30e9dec29d29c5ad3341022d1829a533be",
+  "source": "926bbe30e9dec29d29c5ad3341022d1829a533be",
+  "state": "105 paths at926bbe3. R17 correction reviews at65be895 cover8/8 hunks; Standards0 material findings, separately1SpecP1; Spec2P1(transaction commit and dropped record error). Coordinator receive-error assignment has parsing proof only. No current full/build/iOS acceptance.",
   "groups": {
     "consumers": 27,
     "account-core": 7,
@@ -200,10 +200,10 @@
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitReceiveStatusOperation.swift",
       "group": "account-delegates",
-      "standards": "New to ledger at65be895; independent bounded review pending.",
-      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "standards": "Changed after65be895: coordinator receive-error correction/evidence; parsing only. Fresh review pending.",
+      "spec": "Changed after65be895: failing receive result assignment; behavioral regression pending. No acceptance.",
       "previous_path": null,
-      "blob": "3329c4557b1c3de88025348e70a75a52b86b4c0b"
+      "blob": "be6c6feaeeaee55989f5478f0fa0b7d810b2d5d4"
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitRemoteNotificationOperation.swift",
@@ -1202,9 +1202,9 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "cb0370d4faee717b4658912852160b0f1c4361ea",
-      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
-      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "blob": "b381cff1c1fc6d5d53820bd7677c7794dbc4e8aa",
+      "standards": "Changed after65be895: coordinator receive-error correction/evidence; parsing only. Fresh review pending.",
+      "spec": "Changed after65be895: failing receive result assignment; behavioral regression pending. No acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
@@ -1248,14 +1248,16 @@
       }
     }
   ],
-  "current_branch_head": "65be895bf0bb8534eba3ef9e10973fa03a978185",
-  "native_resource": "T30 released its source and native resource. T03 has timing-sensitive service/standalone-client/runtime-preparation grant only; no full Xcode/app/Keychain run granted. Final T30 full/build/iOS runs remain deferred until findings stabilize.",
+  "current_branch_head": "926bbe30e9dec29d29c5ad3341022d1829a533be",
+  "native_resource": "T03 released timing/native after6da5efa. T30 receives focused native correction validation; final full/build/iOS deferred until known source findings stabilize. T03 source/lightweight functional checks only.",
   "review_reports": {
     "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
     "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
-    "provider_r15": "docs/acceptance/t30-provider-review-r15.md"
+    "provider_r15": "docs/acceptance/t30-provider-review-r15.md",
+    "page_delete_r17": "docs/acceptance/t30-page-delete-review-r17.md",
+    "admission_assessment": "docs/acceptance/t30-admission-assessment.md"
   },
-  "previous_candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+  "previous_candidate": "65be895bf0bb8534eba3ef9e10973fa03a978185",
   "review_scopes": {
     "cloudkit_page_delete": {
       "base": "e46b1b4d03b55204f2c379c26444266168c9776d",
@@ -1270,7 +1272,7 @@
         "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
         "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift"
       ],
-      "state": "R16 paired reviews were interrupted without a verdict (authoritative thread read: interrupted, no active run). Fresh paired R17 correction reviews are next; no prior coverage is upgraded. Remaining queue wrappers/provider/consumer/test/harness and original-base connected coverage stay separate."
+      "state": "R17 complete changed-hunk coverage8/8 at65be895. Standards0 material Standards findings and separate1SpecP1; Spec2P1. Changes requested; regression and fresh recheck required. Connected runtime/callback/commit gaps explicit."
     }
   }
 }

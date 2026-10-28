@@ -1,6 +1,6 @@
 # T30 native fixture and cancellation candidate
 
-Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current clean, pushed checkpoint `65be895bf0bb8534eba3ef9e10973fa03a978185`. The [coverage ledger](t30-review-coverage.json) now pins105 logical changed paths, including the additional CloudKit zones/transport, command/timeline/widget consumers and regression tests. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; reviewed checkpoint `65be895bf0bb8534eba3ef9e10973fa03a978185`, followed by coordinator receive-error correction `926bbe30e9dec29d29c5ad3341022d1829a533be`. The [coverage ledger](t30-review-coverage.json) pins105 logical changed paths, including the additional CloudKit zones/transport, command/timeline/widget consumers and regression tests. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
 
 ## Current evidence
 
@@ -10,7 +10,7 @@ The historical full-plan result remains791 passes at5013c91. Its independently e
 
 ## Review frontier
 
-The R16 page/delete Standards and Spec runs were both found interrupted with no active run on authoritative thread readback. Neither produced a verdict; their launch is not review coverage. Fresh paired R17 reviews must inspect the same pinned eight-path correction and connected tests. Other review scopes below remain open.
+The interrupted R16 runs produced no verdict. Fresh [paired R17 reviews](t30-page-delete-review-r17.md) covered all eight changed-hunk sets at65be895: Standards reported no material Standards finding and separately one Spec P1; Spec reported two P1s (transaction durability and dropped individual record errors). These source-derived findings require correction and behavioral proof. Root's one-line receive-error result correction has parsing proof only; the additional admission-lock assessment remains open. Other review scopes below remain open.
 
 - Page application, token/checkpoint advancement, pending sync status and the new failed SQL delete path, including shared CloudKit callback admission.
 - Per-operation send/receive/notification context and controlled queue/selection failure.
