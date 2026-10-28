@@ -66,6 +66,10 @@ import os
 	private var refreshWork: DatabaseWork?
 	#if DEBUG
 	var protocolClassesForTesting: [AnyClass]?
+	var beforeCompletionForTesting: (() async -> Void)?
+	var afterCompletionForTesting: (() -> Void)?
+	var beforeParseForTesting: (() async -> Void)?
+	var afterParseForTesting: (() -> Void)?
 	#endif
 	private var completion: (() -> Void)?
 	private var isSuspended = false
@@ -86,15 +90,17 @@ import os
 
 	@MainActor public func refreshFeeds(_ feeds: Set<Feed>) async {
 		await withCheckedContinuation { continuation in
-			Task { @MainActor in
-				refreshFeeds(feeds) {
-					continuation.resume()
-				}
+			refreshFeeds(feeds) {
+				continuation.resume()
 			}
 		}
 	}
 
 	@MainActor private func refreshFeeds(_ feeds: Set<Feed>, completion: (() -> Void)? = nil) {
+		guard self.completion == nil && outstandingParseTasks == 0 else {
+			completion?()
+			return
+		}
 		refreshWork = DatabaseWork.current
 		let specialCaseCutoffDate = Date().bySubtracting(hours: 25)
 		let redditURLToRefresh = Self.redditURLToRefresh(in: feeds)
@@ -155,11 +161,6 @@ import os
 			}
 			urlToFeedDictionary[url.absoluteString] = feed
 			urls.insert(url)
-		}
-
-		// This refresh replaces any in-flight one, so resume its caller rather than stranding it.
-		if let previousCompletion = self.completion {
-			previousCompletion()
 		}
 
 		self.completion = completion
@@ -330,7 +331,13 @@ import os
 			defer {
 				self.outstandingParseTasks -= 1
 				self.completeRefreshActivityIfReady()
+				#if DEBUG
+				self.afterParseForTesting?()
+				#endif
 			}
+			#if DEBUG
+			await self.beforeParseForTesting?()
+			#endif
 
 			Self.logger.debug("LocalAccountRefresher: parsing feed for \(url.absoluteString)")
 
@@ -433,6 +440,7 @@ import os
 	}
 
 	func downloadSessionDidComplete(_ downloadSession: DownloadSession) {
+		guard downloadSession === self.downloadSession else { return }
 
 		if let accountID {
 			completeRemainingActivities(accountID: accountID)
@@ -441,10 +449,17 @@ import os
 		downloadSessionIsComplete = true
 		completeRefreshActivityIfReady()
 		refreshWork = nil
+		let completion = self.completion
+		self.completion = nil
 
 		Task { @MainActor in
+			#if DEBUG
+			await beforeCompletionForTesting?()
+			#endif
 			completion?()
-			completion = nil
+			#if DEBUG
+			afterCompletionForTesting?()
+			#endif
 		}
 	}
 }

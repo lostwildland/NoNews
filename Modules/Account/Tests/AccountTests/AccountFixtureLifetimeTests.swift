@@ -39,6 +39,126 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
 
+	@Test func overlappingEmptyRefreshDoesNotReplaceAdmittedDownload() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let refresher = LocalAccountRefresher()
+		refresher.protocolClassesForTesting = [GatedRefreshURLProtocol.self]
+		let feed = account.createFeed(with: "Before", url: "https://fixture.invalid/overlap.xml", feedID: "overlap", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(feed)
+		let (requested, requestSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (secondDone, secondSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		GatedRefreshURLProtocol.onRequest = { requestSignal.yield(()); for await _ in release { break } }
+		defer { GatedRefreshURLProtocol.onRequest = nil }
+		var firstCalls = 0
+		var secondCalls = 0
+		account.startBackground { await refresher.refreshFeeds([feed]); firstCalls += 1 }
+		for await _ in requested { break }
+		account.startBackground { await refresher.refreshFeeds([]); secondCalls += 1; secondSignal.yield(()) }
+		for await _ in secondDone { break }
+		#expect(refresher.refreshStatsMessage.contains("1 feed"))
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.finish()
+		#expect(await close.value)
+		#expect(firstCalls == 1 && secondCalls == 1)
+		#expect(feed.conditionalGetInfo?.etag == "fixture-etag")
+		#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Refresh article'") == "Refresh article")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func completionFromEarlierRefreshCannotResumeLaterRefresh() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let refresher = LocalAccountRefresher()
+		refresher.protocolClassesForTesting = [GatedRefreshURLProtocol.self]
+		let first = account.createFeed(with: "First", url: "https://fixture.invalid/first.xml", feedID: "first", homePageURL: nil)
+		let second = account.createFeed(with: "Second", url: "https://fixture.invalid/second.xml", feedID: "second", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(first)
+		account.addFeedToTreeAtTopLevel(second)
+		let (requests, requestSignal) = AsyncStream<Void>.makeStream()
+		let (firstRelease, firstReleaseSignal) = AsyncStream<Void>.makeStream()
+		let (secondRelease, secondReleaseSignal) = AsyncStream<Void>.makeStream()
+		let (completionStarted, completionStartedSignal) = AsyncStream<Void>.makeStream()
+		let (completionRelease, completionReleaseSignal) = AsyncStream<Void>.makeStream()
+		let (completionReturned, completionReturnedSignal) = AsyncStream<Void>.makeStream()
+		let (parsed, parsedSignal) = AsyncStream<Void>.makeStream()
+		let (firstDone, firstDoneSignal) = AsyncStream<Void>.makeStream()
+		let (secondDone, secondDoneSignal) = AsyncStream<Void>.makeStream()
+		var requestCount = 0
+		var completionCount = 0
+		var firstCalls = 0
+		var secondCalls = 0
+		GatedRefreshURLProtocol.onRequest = {
+			requestCount += 1; requestSignal.yield(())
+			if requestCount == 1 { for await _ in firstRelease { break } }
+			else { for await _ in secondRelease { break } }
+		}
+		defer { GatedRefreshURLProtocol.onRequest = nil }
+		refresher.beforeCompletionForTesting = {
+			completionCount += 1; completionStartedSignal.yield(())
+			if completionCount == 1 { for await _ in completionRelease { break } }
+		}
+		refresher.afterCompletionForTesting = { completionReturnedSignal.yield(()) }
+		refresher.afterParseForTesting = { parsedSignal.yield(()) }
+		var requestIterator = requests.makeAsyncIterator()
+		var completionIterator = completionStarted.makeAsyncIterator()
+		var returnedIterator = completionReturned.makeAsyncIterator()
+		account.startBackground { await refresher.refreshFeeds([first]); firstCalls += 1; firstDoneSignal.yield(()) }
+		_ = await requestIterator.next()
+		firstReleaseSignal.finish()
+		_ = await completionIterator.next()
+		for await _ in parsed { break }
+		account.startBackground { await refresher.refreshFeeds([second]); secondCalls += 1; secondDoneSignal.yield(()) }
+		_ = await requestIterator.next()
+		completionReleaseSignal.finish()
+		_ = await returnedIterator.next()
+		for await _ in firstDone { break }
+		#expect(firstCalls == 1 && secondCalls == 0)
+		secondReleaseSignal.finish()
+		_ = await completionIterator.next()
+		_ = await returnedIterator.next()
+		for await _ in secondDone { break }
+		#expect(firstCalls == 1 && secondCalls == 1)
+		#expect(await account.closeForFixtureRemoval())
+		#expect(first.conditionalGetInfo?.etag == "fixture-etag" && second.conditionalGetInfo?.etag == "fixture-etag")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func overlappingRefreshDoesNotReplacePendingParseCounters() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let refresher = LocalAccountRefresher()
+		refresher.protocolClassesForTesting = [GatedRefreshURLProtocol.self]
+		let feed = account.createFeed(with: "Before", url: "https://fixture.invalid/parse.xml", feedID: "parse", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(feed)
+		let (parseStarted, parseSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (firstDone, firstSignal) = AsyncStream<Void>.makeStream()
+		let (secondDone, secondSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		GatedRefreshURLProtocol.onRequest = {}
+		defer { GatedRefreshURLProtocol.onRequest = nil }
+		refresher.beforeParseForTesting = { parseSignal.yield(()); for await _ in release { break } }
+		account.startBackground { await refresher.refreshFeeds([feed]); firstSignal.yield(()) }
+		for await _ in parseStarted { break }
+		for await _ in firstDone { break }
+		account.startBackground { await refresher.refreshFeeds([]); secondSignal.yield(()) }
+		for await _ in secondDone { break }
+		#expect(refresher.refreshStatsMessage.contains("1 feed"))
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.finish()
+		#expect(await close.value)
+		#expect(refresher.refreshStatsMessage.contains("1 new article"))
+		#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Refresh article'") == "Refresh article")
+		try await manager.deleteAccount(account)
+	}
+
 	@Test(arguments: [false, true]) func queuedOPMLRetainsOwnerUntilSuccessfulSave(failFirst: Bool) async throws {
 		let manager = TestAccountManager()
 		var account: Account? = manager.createAccount(type: .onMyMac)
