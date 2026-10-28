@@ -5,9 +5,29 @@ import subprocess
 import shutil
 import tempfile
 import unittest
+import sys
 
 
 class ManagedServiceTest(unittest.TestCase):
+    def test_boundary_sized_escaped_request_preserves_service(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'a' * 32
+        with tempfile.TemporaryDirectory() as root:
+            requests = [
+                {'token': token},
+                {'id': 1, 'token': token, 'method': 'GET', 'path': '/api/status',
+                 'body': {'text': '\u0001' * 199996 + '😀'}},
+                {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/settings/processing'},
+            ]
+            process = subprocess.run([sys.executable, str(script), root],
+                                     input=''.join(json.dumps(x) + '\n' for x in requests),
+                                     text=True, capture_output=True, timeout=30,
+                                     env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            self.assertEqual(process.returncode, 0, process.stderr)
+            replies = [json.loads(line) for line in process.stdout.splitlines()]
+            self.assertEqual(replies[1]['result']['schemaVersion'], 41)
+            self.assertEqual(replies[2]['result']['processors'], 1)
+
     @unittest.skipUnless(os.environ.get('IO_TEST_PYTHON') and os.environ.get('IO_TEST_SOURCE'),
                          'Optional reference-source comparison')
     def test_real_service_settings_survive_restart(self):

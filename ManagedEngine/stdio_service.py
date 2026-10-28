@@ -6,7 +6,8 @@ import sqlite3
 from pathlib import Path
 import sys
 
-MAX_MESSAGE = 65536
+# 200,000 UTF-8 bytes can expand to 1,200,000 bytes when JSON-escaped.
+MAX_MESSAGE = 1_310_720
 ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
            ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe')}
 

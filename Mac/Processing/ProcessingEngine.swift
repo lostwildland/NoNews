@@ -37,7 +37,8 @@ final class ProcessingEngine {
 	private var generation = 0
 	private var sawReady = false
 	private var failureMessage: String?
-	private let limit = 65536
+	// A 200,000-byte prompt can expand sixfold when JSON-escaped.
+	private let limit = 1_310_720
 	private let writer = DispatchQueue(label: "ProcessingEngine.writer")
 
 	private init() {
