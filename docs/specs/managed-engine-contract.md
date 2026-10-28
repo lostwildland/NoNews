@@ -22,6 +22,14 @@ Readiness must be backed by the actual IO application/database service: prove a 
 
 The readiness write/read check targets the actual local processing setting inside a rollback-only transaction, not a separate temporary database or a committed health-marker row. Preserve the original value, absence, timestamp and other rows, including on probe failure; do not overwrite imported settings or repeatedly update their history at launch. A read-only or write-rejecting database produces a meaningful unavailable/failed state before Ready. This verifies local settings storage, not model quality or external integration credentials.
 
+### Bounded history progress
+
+A supported large job record must remain readable without forcing one request to finish all parsing and serialization. Keep the existing authenticated jobs cursor interface and native request deadline. Preparation may return a bounded progress frame with an empty chunk, `recordComplete: false`, a valid continuation and an explicit `preparing` indication. Continuing that cursor performs bounded additional work until the complete, coherent original record is available. Callers must distinguish this progress from empty history or a completed record; no new public operation or persistent processing job is required.
+
+Each preparation/continuation request must finish comfortably inside the existing native deadline, including broad arrays of small values, very deep containers and large scalar fields. Status and other requests remain responsive between continuations. Keep the 512 MiB encoded-record capacity, exact raw results, source resolution and error semantics, and bounded memory over the entire preparation/read rather than only its first response. Neither increasing the timeout nor silently skipping resolution or content meets this requirement.
+
+Preparation owns a coherent read snapshot and releases its database, parser and spool resources on replacement, idle expiry, failure, completion and process exit. Authenticated valid progress refreshes the 120-second idle lifetime; continuous useful work must not expire solely because total processing exceeds 120 seconds. A capacity refusal has stable `job_record_too_large` code and preserves the record and service; it is distinct from an invalid query. Reading history never starts Curator, Editor or an external integration.
+
 ## Reuse and portability
 
 Prefer compatible existing backend behavior and database structures over a wholesale language rewrite. A portable app bootstrap supplies explicit configured roots and optional integrations; it does not reuse the personal source CLI bootstrap that requires fixed vaults/write gates. Only sanitized reusable source and needed public schema resources enter the public repo. Include provenance and exact scope; do not copy private data, personal constants, credentials, generated caches or the entire source working tree indiscriminately.

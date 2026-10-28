@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "9c9d4c8b55d545e019e7253d20c767a40584e12c",
-  "state": "Database corrections clear on both axes. Current signed relocated bundle/source/identity verified and nine real-bundle harness tests recorded. Jobs with updated controller fixture, current packaging and final cross-group review remain; visible Settings Ready remains unobserved.",
+  "candidate": "d36d44a79662bb1fad32e1cbc27ad322b0eaf194",
+  "state": "R29 jobs/controller review complete9/9 on both axes: broad/deep supported records still exceed request deadline; capacity misclassification corrected atd36d44a with51passes/1optionalSkip. Cooperative progress implementation required. R11 artifact is stale for new correction; packaging/cross-group/UI remain open.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -77,10 +77,10 @@
     {
       "path": "ManagedEngine/JOBS-IPC.md",
       "group": "jobs",
-      "blob": "9668f55781c3dc5f2c9835cce6c16ba183bf3916",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
-      "previous_blob": "0806155e1996f0fd8c908b18eb309e9c132b9f0a"
+      "blob": "6bf7b44ee97feed92aed3ee64a749375becbdb53",
+      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
+      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
+      "previous_blob": "9668f55781c3dc5f2c9835cce6c16ba183bf3916"
     },
     {
       "path": "ManagedEngine/PROVENANCE.md",
@@ -152,10 +152,10 @@
     {
       "path": "ManagedEngine/backend/job_stream.py",
       "group": "jobs",
-      "blob": "e7220ba9a6a0b528e65e2af77b3c246b3b11fc98",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
-      "previous_blob": "e45b6477009ad5fb7223bd0f59875c4bbc154472"
+      "blob": "dd8423f0a324e783512828046bad97bd5ffe1d99",
+      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
+      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
+      "previous_blob": "e7220ba9a6a0b528e65e2af77b3c246b3b11fc98"
     },
     {
       "path": "ManagedEngine/backend/jobs.py",
@@ -330,9 +330,10 @@
     {
       "path": "ManagedEngine/stdio_service.py",
       "group": "native",
-      "blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "blob": "3421902575297f3cab91158a38164c00eadc8a3b",
+      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
+      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
+      "previous_blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
@@ -398,10 +399,10 @@
     {
       "path": "ManagedEngine/tests/test_large_snapshot.py",
       "group": "jobs",
-      "blob": "eb0c6485c60703780292ef010434a0725e1c1cf3",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
-      "previous_blob": "d455d237ef92728d3c36d498fa702cac8d9b33bb"
+      "blob": "44a93285294a25275d6fc4d0631c5d89ba5c5731",
+      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
+      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
+      "previous_blob": "eb0c6485c60703780292ef010434a0725e1c1cf3"
     },
     {
       "path": "ManagedEngine/tests/test_packaged_service.py",
@@ -516,10 +517,10 @@
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "765cf976e4290a8b998c2afcfcf91d1db9972425",
-      "standards": "pending current evidence/source delta review",
-      "spec": "pending current evidence/source delta review",
-      "previous_blob": "5df85e7b3fafee3f67767f1a4eadd53e1f0c8e3f"
+      "blob": "ccc30b3b3f0e4523a6e247f83c06623865bcf37d",
+      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
+      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
+      "previous_blob": "765cf976e4290a8b998c2afcfcf91d1db9972425"
     }
   ],
   "scope_reviews": {

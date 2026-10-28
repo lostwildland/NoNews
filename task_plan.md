@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00 and T01 are accepted (2/31). T01 shared-schema corrections pass53tests and both independent R28 axes; personal migration remains unperformed. T02 code91fdf89/evidence9c9d4c8 is pushed; coordinator52total/51pass/1optionalSkip and payload/controller checks pass. Current signed relocated bundle passes identity/signature/source readback, with nine real-bundle harness passes recorded. R28 correction reviews are clear; jobs/packaging/cross-group reviews and visible UI remain open. T30 final normal build at357f463 passed, independently verified artifact identity/signature/hashes;54-path ledger splits account16/storage14/fixtures13/harness11 for manageable review. Prior769native tests remain scoped to2d1b273. Fullfeature/migration/sync/UXscope is unchanged.
+T00/T01 accepted (2/31). T02 R29 jobs/controller reviews completed9/9 on both axes: valid12MB broad arrays and16MB very-deep records exceed request deadlines. Capacity error fixed atd36d44a with52total/51pass/1optionalSkip; implement bounded cooperative preparation through existing cursor without reducing512MiB capacity, source semantics or memory coverage. R11 artifact is historical; current bundle/review/UI gates remain. T30 final build passed at357f463; review account16/storage14/fixtures13/harness11 groups against857cadd, keeping fullT30/migration/sync/UX open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.

@@ -46,9 +46,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "9c9d4c8b55d545e019e7253d20c767a40584e12c",
-      "implementation_state": "R27/R28 schema/transaction corrections clear. Current code91fdf89 signed/relocated bundle has nine harness passes; coordinator source/identity/signature/hash readback passes. Jobs/current packaging/cross-group and visible UI gates remain open.",
-      "review_evidence": "docs/acceptance/t02-review-r9.md"
+      "last_reported_head": "d36d44a79662bb1fad32e1cbc27ad322b0eaf194",
+      "implementation_state": "R29 jobs/controller scopes complete9/9, large-record deadline P2 remains. Capacity misclassification fixed with52total/51pass/1optionalSkip. Bounded cooperative read continuation required; later bundle/review/UI gates open.",
+      "review_evidence": "docs/acceptance/t02-jobs-review-r29.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
