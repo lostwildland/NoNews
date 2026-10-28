@@ -8,7 +8,7 @@ import secrets
 import tempfile
 import time
 import threading
-from . import causes, settings, schema, configuration
+from . import causes, settings, schema, configuration, magpie_migration
 from .core import InformationDB, utcnow
 from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
 
@@ -57,6 +57,16 @@ class Application:
                 return configuration.refresh(db.db, body)
             if path == '/api/config/references':
                 return configuration.references(db.db, method, body)
+            if path == '/api/config/render':
+                return configuration.render(db.db, body)
+            if path == '/api/config/bind':
+                return configuration.bind(db.db, body)
+            if path == '/api/config/import-legacy':
+                return configuration.import_legacy(db.db, body)
+            if path == '/api/config/legacy':
+                return configuration.legacy(db.db, body)
+            if path.startswith('/api/config/migration/'):
+                return magpie_migration.command(db.db, path.rsplit('/', 1)[-1], body)
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
             if path == '/api/settings/processing/probe' and method == 'POST':

@@ -175,7 +175,8 @@ final class ProcessingEngine {
 			   ("GET", "/api/config/services"), ("PUT", "/api/config/services"), ("GET", "/api/config/prompts"), ("PUT", "/api/config/prompts"),
 			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
-			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
+			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
@@ -249,7 +250,12 @@ final class ProcessingEngine {
 				timers.removeValue(forKey: id)?.invalidate()
 				if let result = value["result"] as? [String: Any] { completion(.success(result)) }
 				else {
-					let error: EngineError = value["code"] as? String == "job_record_too_large" ? .jobRecordTooLarge : .operation
+					let error: EngineError
+					switch value["code"] as? String {
+					case "job_record_too_large": error = .jobRecordTooLarge
+					case "invalid_configuration": error = .invalidConfiguration
+					default: error = .operation
+					}
 					completion(.failure(error))
 				}
 			} else {
@@ -324,5 +330,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration }
 }

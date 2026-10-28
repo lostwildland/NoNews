@@ -14,7 +14,9 @@ ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/
            ('GET', '/api/config/prompts'), ('PUT', '/api/config/prompts'),
            ('GET', '/api/config/history'), ('POST', '/api/config/copy'), ('POST', '/api/config/restore'),
            ('POST', '/api/config/refresh'), ('DELETE', '/api/config/services'), ('DELETE', '/api/config/prompts'),
-           ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references')}
+           ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
+           ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
+           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply')}
 
 
 def read_message():
@@ -109,7 +111,8 @@ def main():
                     if getattr(error, 'code', None) == 'job_record_too_large':
                         send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
                     elif getattr(error, 'code', None) == 'invalid_configuration':
-                        send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration'})
+                        details = {'placeholders': error.names} if hasattr(error, 'names') else {}
+                        send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration', **details})
                     else:
                         send({**correlation, 'error': 'invalid query'})
                 except Exception:
