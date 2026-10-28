@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Durable configuration and migration corrections at5154f96 remain unaccepted. R3 correction review requests3SpecP2s: complete coherent bounded report readback beyond16MiB, truthful post-apply readback failure, distinct same-name gateway identity. Same implementation owner resumed in existing checkout; T30 holds native resource. Root independently ran6configuration/migration/stdio passes plus1optional skip at5154f96 and executed the pure Swift review-state check; preferences/Keychain/declared-runtime/package/UI/runner checks remain pending.",
+      "implementation_state": "Owner324f40d commits2R3UIcorrections: apply acknowledgement survives readback failure and stableIDs distinguish names; fresh review pending. Rootbff22d0addsMainActor and actual preferences+engine pass strict narrow Swift6typecheck using acceptedT02dependencies/temporary correctedClangmaps. Root pure review-state executable and prior6Python/1optionalSkip are limited checks. >16MiB public regression red remains enabled/uncommitted; sameowner now implements backend storage slice, with native browsing and Apply/evidence streaming still required. T30 holds native resource; no T03 app/Keychain/package/runner acceptance.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "5154f964e012a19fedf33159e221c3af3f29ebe8",
+      "last_reported_head": "bff22d07649750a1ee214d7df2214b82e956169c",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-preview-binding-review-r3.md",
       "script_source_audit": {
