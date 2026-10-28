@@ -2,6 +2,8 @@
 
 Implementation contract for T04, with T11/T13/T14/T24/T27 consumers. It refines the accepted parity goal; it is not an implemented bridge or migration result. Source inspected on 2026-10-28 without private accounts, article contents or credentials.
 
+The [feed-policy source audit](../research/io-feed-policy-source-audit.md) supplies the inspected modes, material routes, authored-origin and catalogue/bulk/migration guarantees that this bridge must preserve. Native prompt bindings remain explicit; legacy Kit provenance does not introduce another mandatory inheritance layer.
+
 ## Identities that must remain distinct
 
 A native article is an observation of content through a particular account and feed. Its NNW article ID, feed ID and RSS GUID are opaque source identifiers, not global content IDs. Persist a stable installation/library namespace and the original account/feed/article identifiers as a structured binding. Do not construct an ambiguous delimiter-concatenated key, change an NNW identifier, or reuse the old globally unique FreshRSS entry field without namespacing. Preserve imported FreshRSS identifiers as original aliases; do not overwrite them with native IDs.

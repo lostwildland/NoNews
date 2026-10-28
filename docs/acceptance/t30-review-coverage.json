@@ -1,8 +1,8 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
-  "source": "a85ac897758debe408b5a08e616fc97836966a2d",
-  "state": "106 original-base paths at partial R17a85ac89. Root independently read208focused passes. Delete COMMIT rollback is owner evidence; other update/status callbacks and callback/admission verification remain open. Original ownerR21 continues connected correction; no full/native artifact acceptance.",
+  "candidate": "51d169e477d96bf103c5dd98a673786a50bd363c",
+  "source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
+  "state": "106paths at connected R17source49d80d0/evidence51d169e. Root independently read217focused passes; prod/test blobs identical across source/evidence pair. Fresh paired19-path durability/callback/admission review required; other scopes and full acceptance remain open.",
   "groups": {
     "consumers": 27,
     "account-core": 7,
@@ -30,7 +30,11 @@
     "latest_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_12-40-25-+0800.xcresult",
     "r17_partial_candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
     "r17_partial_focused_result": "Root independently read15-25-17xcresult:208passed/0failed/0skipped,total208,resultPassed; owner identifies combined checkpoint source. Full/build/iOS not rerun.",
-    "r17_partial_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_15-25-17-+0800.xcresult"
+    "r17_partial_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_15-25-17-+0800.xcresult",
+    "r17_connected_source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
+    "r17_connected_head": "51d169e477d96bf103c5dd98a673786a50bd363c",
+    "r17_connected_focused_result": "Root independently read15-57-10xcresult:217passed/0failed/0skipped,total217,resultPassed. Owner red/green includes status/article COMMIT rollback, cached state, status creation/index failure, actual callback driver/synthetic checkpoint and admission wait. No real server token/full page atomicity/liveSync/fullbuild claim.",
+    "r17_connected_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_15-57-10-+0800.xcresult"
   },
   "files": [
     {
@@ -99,9 +103,9 @@
       "path": "Modules/Account/Sources/Account/Account.swift",
       "previous_path": null,
       "group": "account-core",
-      "blob": "8a755226f90226759761065c392376b04b5cc62b",
-      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
-      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "blob": "3c85e0c4da27404cf0cc0aacb58c9762c4ca849e",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "88d4df18f098f3b3601dfc630e45759cc0883fa1",
@@ -165,10 +169,10 @@
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZone.swift",
       "group": "account-delegates",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "previous_path": null,
-      "blob": "1d676654bc9ca55e0bbfd75a76730b0f9b101b8a"
+      "blob": "b14e40d4b96cef791cb904a313755bf42d4c85a5"
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZoneDelegate.swift",
@@ -181,10 +185,10 @@
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
       "group": "account-delegates",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "previous_path": null,
-      "blob": "9837a0fc1bfe69af783826c46ba5e49619ce0846"
+      "blob": "b572f56c9b29498b6c5d5e88fc5a0212ba8220a2"
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZoneDelegate.swift",
@@ -305,9 +309,9 @@
       "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "e5bc32f0d3fe220fe84936df1281e29d95e82509",
-      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
-      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+      "blob": "ec94d7a6fbb4b451e35b32e28426cd83dd6728a8",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -455,9 +459,9 @@
       "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
       "previous_path": null,
       "group": "account-tests",
-      "blob": "557134bc0b8f44103b43af3fb2c508788fe60c47",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "9050d2eda6596463abcde385d716e00d46272727",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "2417245ecd5ed39a8012e541230e43c3bcf830ae",
@@ -487,9 +491,9 @@
       "path": "Modules/Account/Tests/AccountTests/FeedSettingsDatabaseTests.swift",
       "previous_path": null,
       "group": "account-tests",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
-      "blob": "8043d75ac4b72250025a59b61f8833fb004855b7"
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "blob": "99d6b24046020d26235e6086370e4d60d5f4bf6d"
     },
     {
       "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderContentsSyncTest.swift",
@@ -633,9 +637,9 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "1071f2690eb5922790b0223c0257e55df0d98df0",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "ab5ac6d28ece54312890fb95c7b0641fb93a482e",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "e168acb9223357e161a2cc326311bbde6f5a72a7",
@@ -652,9 +656,9 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "08e552d9dce15a8f3b31df7ebdaf35c2f11aa96c",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "1d75493a2f4085bdf6ede14e6a32ad2c739b13b5",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "9f96b7ef6f3bccd795774bc6e81f3fa048def343",
@@ -684,9 +688,9 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "db34db2fa7f8db207734b00b54577b5c503137ad",
-      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
-      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "blob": "85993b0db6b1e569b56e8bc064882cecd6b3466d",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "blob": "db34db2fa7f8db207734b00b54577b5c503137ad",
         "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
@@ -697,9 +701,9 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "01375ad3516843d97a558e406637b64ef9a0cd23",
-      "standards": "Changed since pinned review; correction review pending after consolidated verification",
-      "spec": "Changed since pinned review; correction review pending after consolidated verification",
+      "blob": "24477eb433620fa7ebffd2d0069c6c8cc70b5894",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "blob": "02c6ebe196d4a38028a3b1363cc47b6600ef9e2c",
         "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
@@ -710,9 +714,9 @@
       "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
       "previous_path": null,
       "group": "storage-tests",
-      "blob": "0a509bb26c1b996793349a944f7f18e5016b72a0",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "f4601fb7fa598ca512ede52e5b63e5e69347c2f8",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "50bb71b769842b658583d5fa3999bff4297d1726",
@@ -729,9 +733,9 @@
       "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
       "previous_path": null,
       "group": "storage-tests",
-      "blob": "72767ce38ee27a061ecf1651727774113342173e",
-      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
-      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+      "blob": "effff0510e1a09ac39350e78936df3cccbdda29b",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance."
     },
     {
       "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusDivergenceTests.swift",
@@ -760,10 +764,10 @@
     {
       "path": "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
       "group": "cloudkit-transport",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "previous_path": null,
-      "blob": "94b33a1a08b8344a15cc6b14b28050466400e594"
+      "blob": "23e084075e206c6e89ef704e417a0e583bc11728"
     },
     {
       "path": "Modules/Images/Sources/Images/ImageMetadataDatabase.swift",
@@ -782,9 +786,9 @@
       "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "8ea0f81647c4eb42375bff4332d5ea675bec35a7",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "5572ce1948673b9cae34ff616fb535ccbc51b358",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "blob": "93dd7777deb6f0442816ff419c1a0803227d10b1",
         "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
@@ -1066,10 +1070,10 @@
     {
       "path": "Tests/NetNewsWireTests/MarkStatusCommandTests.swift",
       "group": "consumer-tests",
-      "standards": "New to ledger at65be895; independent bounded review pending.",
-      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "previous_path": null,
-      "blob": "9d7f448c2a9410141a420e48141d215522d18827"
+      "blob": "00741a24a7373d8be6305bff1c00c153862a981d"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
@@ -1213,9 +1217,9 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "20407529e721b088f36355d0739ba29758043d52",
-      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "blob": "ee45108278386718a939055417415a68824b6332",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
       "prior_review": {
         "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
         "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
@@ -1259,8 +1263,8 @@
       }
     }
   ],
-  "current_branch_head": "a85ac897758debe408b5a08e616fc97836966a2d",
-  "native_resource": "Original T30 ownerR21 has focused native red/green grant to finish connected R17 correction. T03 is idle at00c2665 awaiting paired source reviews. No competing native benchmark/build; final full/build/iOS deferred.",
+  "current_branch_head": "51d169e477d96bf103c5dd98a673786a50bd363c",
+  "native_resource": "T30 released source/native. Original T03ownerR14 has strict standalone native/controller component/runtime/deadline grant after P1 source/functional readiness; no fullXcode/app/GUI/Keychain grant. T30 final full/build/iOS await source gates.",
   "review_reports": {
     "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
     "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
@@ -1268,7 +1272,7 @@
     "page_delete_r17": "docs/acceptance/t30-page-delete-review-r17.md",
     "admission_assessment": "docs/acceptance/t30-admission-assessment.md"
   },
-  "previous_candidate": "926bbe30e9dec29d29c5ad3341022d1829a533be",
+  "previous_candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
   "review_scopes": {
     "cloudkit_page_delete": {
       "base": "e46b1b4d03b55204f2c379c26444266168c9776d",
@@ -1284,6 +1288,33 @@
         "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift"
       ],
       "state": "R17 complete changed-hunk coverage8/8 at65be895. Standards0 material Standards findings and separate1SpecP1; Spec2P1. Changes requested; regression and fresh recheck required. Connected runtime/callback/commit gaps explicit."
+    },
+    "transaction_page_durability": {
+      "base": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+      "candidate": "51d169e477d96bf103c5dd98a673786a50bd363c",
+      "source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
+      "paths": [
+        "Modules/Account/Sources/Account/Account.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitReceiveStatusOperation.swift",
+        "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
+        "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+        "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+        "Modules/Account/Tests/AccountTests/FeedSettingsDatabaseTests.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
+        "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
+        "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
+        "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+        "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
+        "Tests/NetNewsWireTests/MarkStatusCommandTests.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "state": "Ready for paired R18:19paths671additions229deletions; source-only review, actual native and wider source gates remain separate."
     }
   }
 }

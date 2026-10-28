@@ -1,5 +1,13 @@
 # Execution findings
 
+2026-10-28 — Connected R17 review candidate:
+- T30 source49d80d0 and evidence51d169e differ only in the worker evidence document. Root independently read217focused passes/0fail/0skip at15-57-10. Owner reports actual COMMIT/cache/callback/admission red/green with synthetic checkpoint; no real server token/full page atomicity/current full-plan claim.19-path connected correction ready for fresh paired R18.
+- T03 partialf96d605 reports render/cancel cleanup but still leaves queued-save P1. Same ownerR14 now finishes transaction-coupled outcomes and native recovery; root grants strict standalone/component checks only after source/functional readiness. Full app/GUI/Keychain remain pending.
+
+2026-10-28 — Cooperative error lifecycle and source-policy preservation:
+- R5 source review found failed/expired acknowledgement can conceal a later queued Save commit, plus error-queue exhaustion, lost render budget and completed-preview cancellation retention. Root directly reproduced/fixed only acknowledged-error queue exhaustion atdd58d6e; forty errors and retries no longer block later operations. Two real stdio cases pass14.057s. Original ownerR13 handles the remaining connected lifecycle issues; no native proof added.
+- Bounded IO source audit confirms disabled/normal/important modes, separate scoring/body strategies, authored-null preservation, navigation-only folders, independent subscription evidence, full-scope mode-only bulk behavior and idempotent folder cutover. Exact source hashes match the earlier identity contract. Added T04 handoff without a new Kit/model inheritance requirement, new checkout or implementation claim.
+
 2026-10-28 — Current cooperative/durability checkpoints:
 - Root independently ran the exact00c2665 authenticated large-report preview/Apply/queue/cancel/replacement/rollback/restart case:1pass17.188s under system Python with ResourceWarning as error. This is functional protocol proof, not native per-request timing, EOF/expiry or controller-wiring proof. T03 ledger pins21paths;7-path cooperative correction is ready for paired review.
 - Root independently read T30's15-25-17xcresult208pass/0fail/0skip. Owner's partiala85ac89 still leaves other article/status precommit callbacks and callback/admission proof open. Same ownerR21 continues with exclusive focused native grant; final full/build/iOS remain deferred.

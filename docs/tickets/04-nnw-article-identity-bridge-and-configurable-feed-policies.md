@@ -16,6 +16,8 @@ A native subscription can be mapped to IO observations and configured for media,
 
 ## Implementation contract
 
+[Feed-policy source audit](../research/io-feed-policy-source-audit.md) records the existing modes, separate scoring/body routes, explicit-null origin, full-scope bulk mode behavior and one-time folder migration. Preserve these guarantees alongside native prompt binding; source route names are not permission to invent fallback or workflow stages. Its public scenarios are preparation, not completed NoNews tests.
+
 [IO sync ownership and continuity](../specs/io-sync-ownership.md), especially canonical content versus device/account observation identity. This adds concrete checks to the existing identity/parity requirement, not runtime evidence.
 
 [Native source identity and processing contexts](../specs/native-source-identity.md) specifies namespaced native observation bindings, independent source contexts, coherent result selection, preserved legacy pins and the public bridge checks. Current IO's single per-item pin/latest-result lookup does not already implement these requirements.

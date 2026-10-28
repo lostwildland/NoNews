@@ -1,5 +1,15 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Connected transaction handoff and remaining Save P1
+
+- T03 original owner reports partialf96d605 render-envelope/unread-preview cleanup and3migration passes; queued-save P1 remains. Same ownerR14 now focuses on one-transaction receipts and native recovery, preserving dd58queue correction. After T30 release, granted strict standalone native/component/runtime/deadline checks only once P1 source/function tests are ready; full app/GUI/Keychain remain pending.
+- T30 source49d80d0/evidence51d169e clean/remote verified; only evidence document differs across the pair. Root independently read15-57-10xcresult217pass/0fail/0skip. Owner reports status/article COMMIT rollback/cache, status creation/search-index failures, exact record-error callback red/synthetic checkpoint recovery and admission red/green. No real CKtoken/fullpageatomicity/currentfullbuild claim. Updated106-path ledger and19-path connected R18 review scope; native resource released.
+
+## 2026-10-28 — R5 error-queue fix and T04 source handoff
+
+- R5 paired7/7hunk review returned Standards0independent findings (separateSpec3P2) and Spec1P1+3P2. Root's final authenticated regression reproduces migration_busy at pinned00c2665; dd58d6e marks both delivered success and error outcomes read. Forty errors/retries, continued status/settings and the full large-report case pass together:2tests14.057s, ResourceWarning error, systemPython. Commit pushed/remote-verified; no prepared/native proof. Same ownerR13 resumes queued-save truth/recovery, render envelope budget and cancellation resource cleanup.
+- Completed a bounded, code-only T04 feed-policy source audit with three source hashes and concrete public checks. Added ticket/spec pointers; no active IO module/configuration or personal data was executed/read and no T04 implementation was started. Preserved explicit prompt/service bindings rather than introducing hidden Kit/model inheritance. Accepted count remains3/31.
+
 ## 2026-10-28 — Cooperative source checkpoint and partial durability proof
 
 - T03 delivered clean/pushed00c2665 with cooperative migration polling, separate queued mutation transactions, durable Apply operation receipt and reported editor guards/captured copy input. Root independently ran the exact-commit authenticated large-report scenario:1pass17.188s, system Python, ResourceWarning error; not a native/request latency bound. Created21-path original-base ledger and7-path cooperative correction review scope. Controller-wiring tests, strict native/deadline/EOF-expiry/payload and full UI acceptance remain pending.

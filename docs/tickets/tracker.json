@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Clean pushed00c2665 adds cooperative migration operations, queued isolated writes, durable Apply operation receipt and general editor response guards. Root exact-commit authenticated large report testPASS1case17.188s; no native latency claim. Controller-wiring regressions unwritten; strictSwift6/native deadline/EOF-expiry/payload integrity and complete reviews pending. T30 retains focused native grant.",
+      "implementation_state": "Partial R5f96d605 reports render budget/published-preview cancellation cleanup and3migration passes. Rootdd58 error-queue red/green retained. Queued-save P1 still open; same original ownerR14 now finishes transaction-coupled receipt/native recovery, with strict component/runtime grant once source ready. Controller wiring/full app/Keychain/HIG and fresh review remain pending.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
+      "last_reported_head": "f96d605107231383ae07f3aa8eb976d2dca97251",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -101,7 +101,8 @@
         "docs/acceptance/t03-preview-binding-review-r3.md"
       ],
       "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md",
-      "review_coverage": "docs/acceptance/t03-review-coverage.json"
+      "review_coverage": "docs/acceptance/t03-review-coverage.json",
+      "cooperative_review": "docs/acceptance/t03-cooperative-review-r5.md"
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -118,7 +119,9 @@
         "scope": "docs/research/io-script-ticket-coverage.md",
         "bound_entries": 15,
         "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
-      }
+      },
+      "source_policy_audit": "docs/research/io-feed-policy-source-audit.md",
+      "preparation_state": "Code-only source contract audit and public scenario handoff; no implementation owner/worktree started. Blocked by acceptedT03API, not cleared by source preparation."
     },
     "05": {
       "url": "https://github.com/lostwildland/NoNews/issues/7",
@@ -569,9 +572,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Partial R17a85ac89 pushed/clean. Root independently read208focused passes. Real deferred DELETE COMMIT rollback/pending-page retention and receive/admission green are owner evidence; positive callback recovery/exact incomplete-page red/admission red and other update/status commit callbacks remain unresolved. Same original ownerR21 continues complete connected durability correction with focused native grant. No full/build/iOS acceptance.",
+      "implementation_state": "Connected R17source49d80d0/evidence51d169e clean/pushed;217focused passes independently read. Owner reports real status/article COMMIT rollback/cache, status-creation/index errors, callback incomplete-page red/synthetic checkpoint recovery and admission red/green. Fresh19path paired review and other scopes pending. No realCKtoken/fullpageatomicity/fullMac/build/iOS/T30 acceptance. Native/source released.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "a85ac897758debe408b5a08e616fc97836966a2d",
+      "last_reported_head": "51d169e477d96bf103c5dd98a673786a50bd363c",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
