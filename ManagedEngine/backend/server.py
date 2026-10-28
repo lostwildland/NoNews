@@ -54,6 +54,8 @@ class Application:
             if mutation_id is not None:
                 with InformationDB(self.database, read_only=True) as db:
                     saved = self._mutation_receipt(db.db, mutation_id)
+                    if saved is not None and not self._receipt_matches(db.db, mutation_id, method, path):
+                        raise configuration.ConfigurationError('Mutation identity belongs to another operation')
                     outcome = None if saved is not None else self._mutation_outcome(db.db, mutation_id)
                 if saved is not None:
                     return saved

@@ -103,40 +103,58 @@ def service(db, method, body):
                     raise ConfigurationError('Service is in use by pending work')
             db.execute('DELETE FROM app_settings WHERE key=?', (f"nonews.service.{value['id']}",))
         return {'deleted': True}
-    if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error', 'credentialState'}:
-        raise ConfigurationError('Invalid service fields')
-    identity = body.get('id')
-    prior = _record(db, 'service', identity) if identity is not None else None
-    name = _required(body.get('name'))
-    kind = body.get('type')
-    if kind not in {'magpie', 'openai-compatible'}:
-        raise ConfigurationError('Unsupported service')
-    endpoint = _required(body.get('endpoint'), 2048)
-    try:
-        parsed = urlsplit(endpoint.strip())
-        if parsed.scheme not in {'http', 'https'} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ConfigurationError('Invalid endpoint')
-        parsed.port
-        if kind == 'openai-compatible' and parsed.scheme != 'https' and parsed.hostname not in {'localhost', '127.0.0.1', '::1'}:
-            raise ConfigurationError('Bearer credentials require HTTPS')
-    except ValueError as error:
-        raise ConfigurationError('Invalid endpoint') from error
-    path = parsed.path.rstrip('/')
-    if path.endswith('/v1'):
-        path = path[:-3]
-    value = {'id': identity or uuid.uuid4().hex, 'name': name, 'type': kind,
-             'endpoint': urlunsplit((parsed.scheme, parsed.netloc, path, '', ''))}
-    if prior and prior['endpoint'] == value['endpoint'] and prior['type'] == kind:
-        value.update({key: prior.get(key) for key in ('targets', 'checkedAt', 'stale', 'error')})
-    else:
-        value.update({'targets': [], 'checkedAt': None, 'stale': True, 'error': None})
-    credential_state = body.get('credentialState', prior.get('credentialState') if prior else None)
-    if kind == 'magpie':
-        value['credentialState'] = 'not_required'
-    else:
-        value['credentialState'] = credential_state if credential_state in {'unverified', 'incomplete', 'verified'} else 'unverified'
-    _store(db, 'service', value)
-    return value
+    with transaction(db):
+        if set(body) <= {'id', 'credentialState', 'expectedRevision'} and 'id' in body:
+            prior = _record(db, 'service', body.get('id'))
+            if not prior.get('revision') or body.get('expectedRevision') != prior['revision'] or prior['type'] != 'openai-compatible':
+                raise ConfigurationError('Service changed during credential update')
+            state = body.get('credentialState')
+            if state not in {'unverified', 'incomplete', 'verified'}:
+                raise ConfigurationError('Invalid credential state')
+            value = dict(prior)
+            value['credentialState'] = state
+            value['revision'] = uuid.uuid4().hex
+            _store(db, 'service', value)
+            return value
+        if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error', 'credentialState', 'revision'}:
+            raise ConfigurationError('Invalid service fields')
+        identity = body.get('id')
+        prior = _record(db, 'service', identity) if identity is not None else None
+        if prior and 'revision' in body and body['revision'] != prior.get('revision'):
+            raise ConfigurationError('Service changed during save')
+        if 'credentialState' in body and (not prior or not prior.get('revision')
+                or body.get('revision') != prior['revision'] or body['credentialState'] != prior['credentialState']):
+            raise ConfigurationError('Credential changes require a scoped update')
+        name = _required(body.get('name'))
+        kind = body.get('type')
+        if kind not in {'magpie', 'openai-compatible'}:
+            raise ConfigurationError('Unsupported service')
+        endpoint = _required(body.get('endpoint'), 2048)
+        try:
+            parsed = urlsplit(endpoint.strip())
+            if parsed.scheme not in {'http', 'https'} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+                raise ConfigurationError('Invalid endpoint')
+            parsed.port
+            if kind == 'openai-compatible' and parsed.scheme != 'https' and parsed.hostname not in {'localhost', '127.0.0.1', '::1'}:
+                raise ConfigurationError('Bearer credentials require HTTPS')
+        except ValueError as error:
+            raise ConfigurationError('Invalid endpoint') from error
+        path = parsed.path.rstrip('/')
+        if path.endswith('/v1'):
+            path = path[:-3]
+        value = {'id': identity or uuid.uuid4().hex, 'revision': uuid.uuid4().hex, 'name': name, 'type': kind,
+                 'endpoint': urlunsplit((parsed.scheme, parsed.netloc, path, '', ''))}
+        if prior and prior['endpoint'] == value['endpoint'] and prior['type'] == kind:
+            value.update({key: prior.get(key) for key in ('targets', 'checkedAt', 'stale', 'error')})
+        else:
+            value.update({'targets': [], 'checkedAt': None, 'stale': True, 'error': None})
+        credential_state = body.get('credentialState', prior.get('credentialState') if prior else None)
+        if kind == 'magpie':
+            value['credentialState'] = 'not_required'
+        else:
+            value['credentialState'] = credential_state if credential_state in {'unverified', 'incomplete', 'verified'} else 'unverified'
+        _store(db, 'service', value)
+        return value
 
 
 class _NoRedirect(HTTPRedirectHandler):

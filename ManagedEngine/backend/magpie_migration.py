@@ -5,6 +5,7 @@ import base64
 import re
 import hashlib
 import hmac
+from json.encoder import encode_basestring_ascii
 
 from . import configuration, settings
 from .core import transaction, utcnow
@@ -13,6 +14,7 @@ from .job_stream import text_chunks
 SNAPSHOT_KEEP = 2
 SNAPSHOT_CAPACITY = 512 * 1024 * 1024
 SNAPSHOT_ROW_CAPACITY = 8 * 1024 * 1024
+JSON_STRING_CHUNK = 1024
 
 
 class SnapshotCapacity(ValueError):
@@ -102,6 +104,46 @@ class MigrationBusy(ValueError):
     code = 'migration_busy'
 
 
+def _json_chunks(value, encoder):
+    """Encode report values without asking json to materialize a huge scalar."""
+    if isinstance(value, str):
+        yield '"'
+        for start in range(0, len(value), JSON_STRING_CHUNK):
+            escaped = encode_basestring_ascii(value[start:start + JSON_STRING_CHUNK])[1:-1]
+            for offset in range(0, len(escaped), 16_000):
+                yield escaped[offset:offset + 16_000]
+        yield '"'
+    elif isinstance(value, dict):
+        yield '{'
+        for position, (key, item) in enumerate(value.items()):
+            if position:
+                yield ','
+            if not isinstance(key, str):
+                raise TypeError('Migration report keys must be strings')
+            yield from _json_chunks(key, encoder)
+            yield ':'
+            yield from _json_chunks(item, encoder)
+        yield '}'
+    elif isinstance(value, (list, tuple)):
+        yield '['
+        for position, item in enumerate(value):
+            if position:
+                yield ','
+            yield from _json_chunks(item, encoder)
+        yield ']'
+    else:
+        yield from encoder.iterencode(value)
+
+
+def _ensure_row_capacity(value):
+    encoder = json.JSONEncoder(ensure_ascii=True, separators=(',', ':'))
+    size = 0
+    for chunk in _json_chunks(value, encoder):
+        size += len(chunk.encode('ascii'))
+        if size > SNAPSHOT_ROW_CAPACITY:
+            raise SnapshotCapacity('Migration report row exceeds snapshot capacity')
+
+
 def save(db, key, value):
     db.execute('INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?) '
                'ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at',
@@ -179,6 +221,7 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
         _, binding = association(db, 'migration-binding', role_key)
         value = {'kit': row['kit_id'], 'role': row['role'], 'old': old, 'target': target if not reason else None,
                  'basis': basis, 'serviceId': binding['serviceId'] if binding else None, 'blocked': reason}
+        _ensure_row_capacity(value)
         if staged:
             db.execute('INSERT INTO migration_preview_models(kit,role,target,payload) VALUES (?,?,?,?)',
                        (value['kit'], value['role'], value['target'], json.dumps(value, ensure_ascii=True, separators=(',', ':'))))
@@ -219,6 +262,7 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
                  'editorTarget': job['editor_target'], 'editorServiceId': binding.get('serviceId') if binding else None,
                  'proposedEditorServiceId': (proposed or (binding.get('serviceId') if binding else service_id)) if job['editor_target'] else None,
                  'editorAssociationExplicit': bool(binding or proposed)}
+        _ensure_row_capacity(value)
         if staged:
             db.execute('INSERT INTO migration_preview_pending(job_id,payload) VALUES (?,?)',
                        (value['id'], json.dumps(value, ensure_ascii=True, separators=(',', ':'))))
@@ -299,14 +343,14 @@ def snapshot_report(db, report):
                     if position:
                         yield ','
                     row_bytes = 0
-                    for chunk in encoder.iterencode(item):
+                    for chunk in _json_chunks(item, encoder):
                         row_bytes += len(chunk.encode('ascii'))
                         if row_bytes > SNAPSHOT_ROW_CAPACITY:
                             raise SnapshotCapacity('Migration report row exceeds snapshot capacity')
                         yield chunk
                 yield ']'
             else:
-                yield from encoder.iterencode(value)
+                yield from _json_chunks(value, encoder)
         yield '}'
     with transaction(db):
         for piece in pieces():
@@ -364,7 +408,7 @@ def browse_snapshot(db, report):
                 buffer = bytearray()
                 parts = 0
                 row_bytes = 0
-                for piece in encoder.iterencode(item):
+                for piece in _json_chunks(item, encoder):
                     for start in range(0, len(piece), 16000):
                         data = piece[start:start + 16000].encode('ascii')
                         row_bytes += len(data)
@@ -422,11 +466,11 @@ def editor_review_digest(db, connection, choices, editor_services, report):
             for position, item in enumerate(payload[key]):
                 if position:
                     digest.update(b',')
-                for piece in encoder.iterencode(item):
+                for piece in _json_chunks(item, encoder):
                     digest.update(piece.encode('ascii'))
             digest.update(b']')
         else:
-            for piece in encoder.iterencode(payload[key]):
+            for piece in _json_chunks(payload[key], encoder):
                 digest.update(piece.encode('ascii'))
     digest.update(b'}')
     return digest.hexdigest()

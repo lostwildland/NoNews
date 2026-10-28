@@ -99,6 +99,34 @@ class ConfigurationTest(unittest.TestCase):
                              ('authentication', True, ['Route/Exact', 'route/exact']))
             self.assertEqual(failed['checkedAt'], result['checkedAt'])
             self.assertNotIn('synthetic-token', json.dumps(call('GET', '/api/config/services', {'id': direct['id']})))
+            newer = call('PUT', '/api/config/services', {**failed, 'name': 'Newer',
+                'endpoint': f'http://127.0.0.1:{server.server_port}/new'})
+            process.stdin.write(json.dumps({'id': 5, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
+                'body': {'id': direct['id'], 'credentialState': 'verified',
+                         'expectedRevision': direct['revision']}}) + '\n')
+            process.stdin.flush()
+            self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
+            self.assertEqual(call('GET', '/api/config/services', {'id': direct['id']})['name'], newer['name'])
+            self.assertEqual(call('GET', '/api/config/services', {'id': direct['id']})['endpoint'], newer['endpoint'])
+            # Reject the former late full-body credential callback as well as scoped stale callbacks.
+            for stale in ({**direct, 'credentialState': 'verified'},
+                          {'id': direct['id'], 'credentialState': 'verified', 'expectedRevision': failed['revision']}):
+                process.stdin.write(json.dumps({'id': 6, 'token': token, 'method': 'PUT',
+                    'path': '/api/config/services', 'body': stale}) + '\n')
+                process.stdin.flush()
+                self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
+            updated = call('PUT', '/api/config/services', {'id': newer['id'], 'credentialState': 'incomplete',
+                           'expectedRevision': newer['revision']})
+            self.assertEqual((updated['name'], updated['endpoint'], updated['credentialState']),
+                             (newer['name'], newer['endpoint'], 'incomplete'))
+            renamed = call('PUT', '/api/config/services', {**updated, 'name': 'Latest name'})
+            process.stdin.write(json.dumps({'id': 7, 'token': token, 'method': 'PUT',
+                'path': '/api/config/services', 'body': {'id': updated['id'], 'credentialState': 'verified',
+                'expectedRevision': updated['revision']}}) + '\n')
+            process.stdin.flush()
+            self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
+            self.assertEqual(call('GET', '/api/config/services', {'id': direct['id']}), renamed)
+
 
     def test_prompt_history_copy_and_restore_keep_visible_binding(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'

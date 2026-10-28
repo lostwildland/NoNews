@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tracemalloc
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -48,6 +49,19 @@ class MigrationTest(unittest.TestCase):
                                   'body': {'operationId': mutation}})
             self.assertEqual(recovered['result']['state'], 'complete')
             self.assertEqual(recovered['result']['result'], saved)
+            self.assertEqual(exchange({'id': 4, 'token': token, 'method': 'PUT',
+                                       'path': '/api/config/services', 'mutationId': mutation,
+                                       'body': {'name': 'Ignored retry body'}})['result'], saved)
+            mismatched_path = exchange({'id': 4, 'token': token, 'method': 'PUT',
+                                        'path': '/api/settings/processing', 'mutationId': mutation,
+                                        'body': {'processors': 2}})
+            self.assertEqual(mismatched_path['code'], 'invalid_configuration')
+            mismatched_method = exchange({'id': 5, 'token': token, 'method': 'DELETE',
+                                          'path': '/api/config/services', 'mutationId': mutation,
+                                          'body': {'id': saved['id']}})
+            self.assertEqual(mismatched_method['code'], 'invalid_configuration')
+            self.assertEqual(exchange({'id': 6, 'token': token, 'method': 'GET',
+                                       'path': '/api/settings/processing', 'body': {}})['result']['processors'], 1)
             process.stdin.close(); process.stdout.close(); self.assertEqual(process.wait(timeout=30), 0)
 
     def test_queued_save_receipt_survives_restart_and_rolls_back_with_save(self):
@@ -203,6 +217,117 @@ class MigrationTest(unittest.TestCase):
             self.assertIn(response['code'], {'snapshot_expired', 'invalid_configuration'})
         self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
         self.assertEqual(call('PUT', '/api/settings/processing', {'processors': 2})['result']['processors'], 2)
+
+    def test_scalar_capacity_covers_staging_preserves_snapshots_and_in_cap_values(self):
+        from ManagedEngine.backend.server import Application
+        from ManagedEngine.backend.magpie_migration import SnapshotCapacity
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = Application(root / 'information.sqlite', root / 'raw', root / 'artifacts',
+                              token='a' * 32, write_scope='settings')
+            try:
+                service = app.handle('PUT', '/api/config/services', {},
+                                     {'name': 'Synthetic', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:9'})
+                with closing(sqlite3.connect(app.database)) as db, db:
+                    service.update(targets=['old/model'], stale=False, checkedAt='2999-01-01T00:00:00+00:00')
+                    db.execute('UPDATE app_settings SET value=? WHERE key=?',
+                               (json.dumps(service), 'nonews.service.' + service['id']))
+                    db.execute('INSERT INTO model_configs VALUES (?,?,?,?)',
+                               ('fixture', 'curator', json.dumps({'target': '\0' * (1024 * 1024)}), 'now'))
+                # A >6 MiB escaped scalar remains supported in both report protocols.
+                for browse in (False, True):
+                    report = app.handle('POST', '/api/config/migration/preview', {},
+                                        {'serviceId': service['id'], 'browse': browse})
+                    fragments = []
+                    if browse:
+                        part = 0
+                        while True:
+                            page = app.handle('POST', '/api/config/migration/preview', {},
+                                {'snapshotId': report['snapshotId'], 'section': 'models', 'index': 0, 'part': part})
+                            fragments.append(base64.b64decode(page['chunk']))
+                            if page['nextPart'] is None: break
+                            part = page['nextPart']
+                        row = json.loads(b''.join(fragments))
+                    else:
+                        page = report
+                        while True:
+                            fragments.append(base64.b64decode(page['chunk']))
+                            if page['next'] is None: break
+                            page = app.handle('POST', '/api/config/migration/preview', {}, page['next'])
+                        row = json.loads(b''.join(fragments))['models'][0]
+                    self.assertEqual(row['old']['target'], '\0' * (1024 * 1024))
+                prior_id = report['snapshotId']
+                first = app.handle('POST', '/api/config/migration/preview', {},
+                    {'snapshotId': prior_id, 'section': 'models', 'index': 0, 'part': 0})
+                with closing(sqlite3.connect(app.database)) as db, db:
+                    prior = db.execute("SELECT key,value FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%' ORDER BY key").fetchall()
+                    db.execute('UPDATE model_configs SET config_json=?',
+                               (json.dumps({'target': '\0' * (2 * 1024 * 1024)}),))
+                for browse in (False, True):
+                    tracemalloc.start()
+                    try:
+                        with self.assertRaises(SnapshotCapacity):
+                            app.handle('POST', '/api/config/migration/preview', {},
+                                       {'serviceId': service['id'], 'browse': browse})
+                        peak = tracemalloc.get_traced_memory()[1]
+                    finally:
+                        tracemalloc.stop()
+                    # The input JSON itself is 12 MiB; reject before a second expanded staging encoding.
+                    self.assertLess(peak, 24 * 1024 * 1024)
+                    print(f'Scalar refusal browse={browse}: Python allocation peak {peak} bytes')
+                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 41)
+                    self.assertEqual(app.handle('POST', '/api/config/migration/preview', {},
+                        {'snapshotId': prior_id, 'section': 'models', 'index': 0, 'part': 0}), first)
+                    with closing(sqlite3.connect(app.database)) as db:
+                        self.assertEqual(db.execute("SELECT key,value FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%' ORDER BY key").fetchall(), prior)
+            finally:
+                app.close()
+
+    def test_single_oversized_scalar_is_rejected_without_publishing_snapshot(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 's' * 32
+        with tempfile.TemporaryDirectory() as root:
+            process = subprocess.Popen([sys.executable, '-B', str(script), root], stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE, text=True,
+                                       env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            def cleanup():
+                if process.stdin and not process.stdin.closed:
+                    process.stdin.close()
+                if process.stdout and not process.stdout.closed:
+                    process.stdout.close()
+                process.wait(timeout=30)
+            self.addCleanup(cleanup)
+
+            def call(method, path, body):
+                process.stdin.write(json.dumps({'id': 1, 'token': token, 'method': method,
+                                                'path': path, 'body': body}) + '\n')
+                process.stdin.flush()
+                return json.loads(process.stdout.readline())
+
+            process.stdin.write(json.dumps({'token': token}) + '\n')
+            process.stdin.flush()
+            self.assertEqual(json.loads(process.stdout.readline()), {'status': 'ready'})
+            service = call('PUT', '/api/config/services',
+                           {'name': 'Oversized', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:9'})['result']
+            database = Path(root) / 'information.sqlite'
+            with closing(sqlite3.connect(database)) as db, db:
+                value = json.loads(db.execute('SELECT value FROM app_settings WHERE key=?',
+                                               ('nonews.service.' + service['id'],)).fetchone()[0])
+                value.update({'targets': ['oversized'], 'checkedAt': '2999-01-01T00:00:00+00:00', 'stale': False,
+                              'error': None})
+                db.execute('UPDATE app_settings SET value=? WHERE key=?',
+                           (json.dumps(value), 'nonews.service.' + service['id']))
+                scalar = '\x00' * (2 * 1024 * 1024)
+                db.execute('INSERT INTO model_configs VALUES (?,?,?,?)',
+                           ('oversized', 'curator', json.dumps({'target': scalar}), 'now'))
+            for browse in (False, True):
+                response = call('POST', '/api/config/migration/preview',
+                                {'serviceId': service['id'], 'browse': browse})
+                self.assertEqual(response.get('code'), 'snapshot_capacity')
+                self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
+                with closing(sqlite3.connect(database)) as db:
+                    self.assertEqual(db.execute("SELECT count(*) FROM app_settings "
+                                                "WHERE key LIKE 'nonews.migration-snapshot.%.count'").fetchone()[0], 0)
 
     def test_report_over_16_mib_survives_restart_and_concurrent_changes(self):
         class Directory(BaseHTTPRequestHandler):

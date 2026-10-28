@@ -6,13 +6,20 @@ import Secrets
 }
 
 @MainActor final class ProcessingEnginePreferencesRequestClient: ProcessingPreferencesRequesting {
+	let engine: ProcessingEngine
+	init(engine: ProcessingEngine) { self.engine = engine }
 	func request(method: String, path: String, body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
-		ProcessingEngine.shared.request(method: method, path: path, body: body, completion: completion)
+		engine.request(method: method, path: path, body: body, completion: completion)
 	}
 }
 
 @MainActor final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate, NSTextViewDelegate {
 	private let requestClient: ProcessingPreferencesRequesting
+	private let engine: ProcessingEngine
+#if DEBUG
+	private var debugCredentialStore: ((String, String) throws -> Void)?
+	private var debugCredentialRead: ((String) throws -> String?)?
+#endif
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
 	private let recoveryButton = NSButton(title: "Acknowledge Unknown Saves", target: nil, action: nil)
@@ -21,6 +28,7 @@ import Secrets
 	private let serviceType = NSPopUpButton()
 	private let endpoint = NSTextField()
 	private let credential = NSSecureTextField()
+	private var credentialRow: NSView?
 	private let prompts = NSPopUpButton()
 	private let promptName = NSTextField()
 	private let role = NSPopUpButton()
@@ -39,6 +47,7 @@ import Secrets
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
 	private var currentPrompt: [String: Any]?
+	private var promptSelectionID: String?
 	private var selectedBinding: [String: Any]?
 	private var versions: [[String: Any]] = []
 	private let legacyTarget = NSPopUpButton()
@@ -46,6 +55,8 @@ import Secrets
 	private let reportSection = NSPopUpButton()
 	private let reportPosition = NSTextField(labelWithString: "No report")
 	private let reportDetail = NSTextView()
+	private var reportDetailHeight: NSLayoutConstraint?
+	private var instructionsHeight: NSLayoutConstraint?
 	private let migrationStatus = NSTextField(wrappingLabelWithString: "Review legacy routing only when migrating existing settings.")
 	private var reportSnapshot: String?
 	private var reportCounts: [String: Int] = [:]
@@ -68,14 +79,17 @@ import Secrets
 	private var serviceRequestGeneration = 0
 	private var listGeneration = 0
 	private var recoveringMutations = Set<String>()
+	private var acknowledgingMutations = false
 
-	init(requestClient: ProcessingPreferencesRequesting = ProcessingEnginePreferencesRequestClient()) {
-		self.requestClient = requestClient
+	init(requestClient: ProcessingPreferencesRequesting? = nil, engine: ProcessingEngine = .shared) {
+		self.engine = engine
+		self.requestClient = requestClient ?? ProcessingEnginePreferencesRequestClient(engine: engine)
 		super.init(nibName: nil, bundle: nil)
 	}
 
 	required init?(coder: NSCoder) {
-		self.requestClient = ProcessingEnginePreferencesRequestClient()
+		self.engine = .shared
+		self.requestClient = ProcessingEnginePreferencesRequestClient(engine: .shared)
 		super.init(coder: coder)
 	}
 
@@ -132,14 +146,28 @@ import Secrets
 			feedback.trailingAnchor.constraint(equalTo: tabs.trailingAnchor),
 			feedback.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16)
 		])
-		NotificationCenter.default.addObserver(self, selector: #selector(updateStatus), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
+		NotificationCenter.default.addObserver(self, selector: #selector(updateStatus), name: ProcessingEngine.didChange, object: engine)
 		updateStatus()
 	}
 
 	@objc private func acknowledgeUnknownSaves() {
-		ProcessingEngine.shared.acknowledgeUnknownMutations()
-		recoveryButton.isHidden = true
-		feedback.stringValue = "Unknown save receipts acknowledged. Review the saved configuration before retrying."
+		guard engine.state == .ready, !acknowledgingMutations, !engine.unconfirmedMutations.isEmpty else { return }
+		acknowledgingMutations = true
+		recoveryButton.isEnabled = false
+		feedback.stringValue = "Acknowledging unknown save receipts…"
+		engine.acknowledgeUnknownMutations { [weak self] result in
+			guard let self else { return }
+			self.acknowledgingMutations = false
+			let remaining = !engine.unconfirmedMutations.isEmpty
+			self.recoveryButton.isHidden = !remaining
+			self.recoveryButton.isEnabled = remaining && engine.state == .ready
+			switch result {
+			case .success:
+				self.feedback.stringValue = "Unknown save receipts acknowledged. Review the saved configuration before retrying."
+			case .failure:
+				self.feedback.stringValue = "Some save receipts could not be acknowledged. Keep processing ready and try again."
+			}
+		}
 	}
 
 	private func button(_ title: String, _ action: Selector) -> NSButton {
@@ -155,6 +183,36 @@ import Secrets
 		return result
 	}
 
+	private func updateCredentialAvailability() {
+		let required = serviceType.indexOfSelectedItem == 1
+		credentialRow?.isHidden = !required
+		credential.isEnabled = required && engine.state == .ready
+		if !required { credential.stringValue = "" }
+	}
+
+	private func resizeTextView(_ textView: NSTextView, height: NSLayoutConstraint?, minimum: CGFloat) {
+		guard let container = textView.textContainer, let layout = textView.layoutManager else { return }
+		layout.ensureLayout(for: container)
+		let required = max(minimum, ceil(layout.usedRect(for: container).height) + 2 * textView.textContainerInset.height)
+		if height?.constant != required { height?.constant = required }
+	}
+
+	override func viewDidLayout() {
+		super.viewDidLayout()
+		resizeTextView(instructions, height: instructionsHeight, minimum: 160)
+		resizeTextView(reportDetail, height: reportDetailHeight, minimum: 150)
+	}
+
+	private func setReportDetail(_ value: String) {
+		reportDetail.string = value
+		resizeTextView(reportDetail, height: reportDetailHeight, minimum: 150)
+	}
+
+	private func setInstructions(_ value: String) {
+		instructions.string = value
+		resizeTextView(instructions, height: instructionsHeight, minimum: 160)
+	}
+
 	private func form(_ controls: [NSView]) -> NSView {
 		let stack = NSStackView(views: controls)
 		stack.orientation = .vertical
@@ -168,6 +226,11 @@ import Secrets
 			stack.trailingAnchor.constraint(equalTo: scroll.contentView.trailingAnchor, constant: -12),
 			stack.topAnchor.constraint(equalTo: scroll.contentView.topAnchor, constant: 12),
 			stack.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor, constant: -24)])
+		for control in controls {
+			control.setContentHuggingPriority(.defaultLow, for: .horizontal)
+			if control is NSButton { control.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor).isActive = true }
+			else { control.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
+		}
 		return scroll
 	}
 
@@ -186,27 +249,36 @@ import Secrets
 		confirmLegacyOutput.target = self
 		confirmLegacyOutput.action = #selector(promptInputChanged)
 		credential.placeholderString = "Stored in Keychain"
-		let actions = NSStackView(views: [button("New", #selector(newService)), button("Save", #selector(saveService)), button("Refresh Models or Targets", #selector(refreshService)), button("Delete", #selector(deleteService))])
+		updateCredentialAvailability()
+		let actions = NSStackView(views: [button("New", #selector(newService)), button("Save", #selector(saveService)), button("Refresh Directory", #selector(refreshService)), button("Delete", #selector(deleteService))])
 		reportSection.addItems(withTitles: ["Models", "Pending", "Evidence"])
 		reportSection.target = self
 		reportSection.action = #selector(changeReportSection)
-		let navigation = NSStackView(views: [reportSection, button("Previous", #selector(previousReportRow)), reportPosition, button("Next", #selector(nextReportRow)), button("Retry Entry", #selector(retryReportRow))])
-		let details = NSScrollView()
-		details.hasVerticalScroller = true
-		details.borderType = .bezelBorder
-		details.documentView = reportDetail
-		details.widthAnchor.constraint(equalToConstant: 530).isActive = true
-		details.heightAnchor.constraint(equalToConstant: 150).isActive = true
+		let navigation = NSStackView(views: [button("Previous", #selector(previousReportRow)), reportPosition, button("Next", #selector(nextReportRow)), button("Retry Entry", #selector(retryReportRow))])
 		reportDetail.isEditable = false
 		reportDetail.isSelectable = true
 		reportDetail.isRichText = false
+		reportDetail.setAccessibilityLabel("Routing report entry")
+		reportDetail.isVerticallyResizable = false
+		reportDetail.translatesAutoresizingMaskIntoConstraints = false
+		reportDetail.isHorizontallyResizable = false
+		reportDetail.textContainer?.widthTracksTextView = true
+		reportDetailHeight = reportDetail.heightAnchor.constraint(equalToConstant: 150)
+		reportDetailHeight?.isActive = true
+		let credentialRow = row("Bearer credential", credential)
+		self.credentialRow = credentialRow
+		updateCredentialAvailability()
 		let mapping = NSStackView(views: [legacyTarget, button("Choose Mapping for Shown Model", #selector(chooseMapping))])
+		mapping.orientation = .vertical
+		mapping.alignment = .leading
 		let editorMapping = NSStackView(views: [editorGateway, button("Confirm Shown Editor Gateway", #selector(chooseEditorGateway))])
+		editorMapping.orientation = .vertical
+		editorMapping.alignment = .leading
 		let migration = NSStackView(views: [button("Preview Routing", #selector(previewMigration)), button("Pause Claims", #selector(pauseMigration)), button("Apply Mappings", #selector(applyMigration))])
 		return form([NSTextField(wrappingLabelWithString: "Reading works without AI. Refresh checks the directory only."),
 			row("Service", services), row("Name", serviceName), row("Type", serviceType), row("Endpoint", endpoint),
-			row("Bearer credential", credential), actions, NSTextField(labelWithString: "Advanced: Legacy Magpie Routing"),
-			migrationStatus, navigation, details, mapping, editorMapping, migration])
+			credentialRow, actions, NSTextField(labelWithString: "Advanced: Legacy Magpie Routing"),
+			migrationStatus, row("Report section", reportSection), navigation, reportDetail, mapping, editorMapping, migration])
 	}
 
 	private func promptForm() -> NSView {
@@ -226,20 +298,22 @@ import Secrets
 		advancedOutput.spacing = 6
 		advancedOutput.addArrangedSubview(row("Title language", titleLanguage))
 		advancedOutput.addArrangedSubview(row("Typography", typography))
+		for row in advancedOutput.arrangedSubviews { row.widthAnchor.constraint(equalTo: advancedOutput.widthAnchor).isActive = true }
 		advancedOutput.isHidden = true
-		let textScroll = NSScrollView()
-		textScroll.hasVerticalScroller = true
-		textScroll.borderType = .bezelBorder
-		textScroll.documentView = instructions
-		textScroll.widthAnchor.constraint(equalToConstant: 530).isActive = true
-		textScroll.heightAnchor.constraint(equalToConstant: 160).isActive = true
 		instructions.isRichText = false
+		instructions.setAccessibilityLabel("Prompt instructions")
 		instructions.isEditable = true
+		instructions.isVerticallyResizable = false
+		instructions.translatesAutoresizingMaskIntoConstraints = false
+		instructions.isHorizontallyResizable = false
+		instructions.textContainer?.widthTracksTextView = true
+		instructionsHeight = instructions.heightAnchor.constraint(equalToConstant: 160)
+		instructionsHeight?.isActive = true
 		let actions = NSStackView(views: [button("New", #selector(newPrompt)), button("Save", #selector(savePrompt)), button("Save as Copy", #selector(copyPromptAction)), button("Cancel", #selector(cancelPrompt)), button("Delete", #selector(deletePrompt))])
 		let historyActions = NSStackView(views: [history, button("Preview", #selector(previewHistory)), button("Restore Text", #selector(restoreHistory))])
 		return form([NSTextField(wrappingLabelWithString: "Prompts are reusable. Curator and Editor are chosen independently."),
 			row("Prompt", prompts), row("Name", promptName), row("Role", role), row("Service", binding), row("Model or target", target),
-			NSTextField(labelWithString: "Instructions"), textScroll,
+			NSTextField(labelWithString: "Instructions"), instructions,
 			NSTextField(wrappingLabelWithString: "Available inputs include {{title}}, {{content}}, {{description}} and, for Paper, {{abstract}}. The system validates required output."),
 			advancedButton, advancedOutput, confirmLegacyOutput, usedBy, actions,
 			button("Copy Instructions", #selector(copyInstructions)), button("Import Legacy Prompt", #selector(importLegacy)),
@@ -251,12 +325,16 @@ import Secrets
 	}
 
 	@objc private func updateStatus() {
-		switch ProcessingEngine.shared.state {
+		switch engine.state {
 		case .stopped:
+			recoveryButton.isHidden = true
+			recoveryButton.isEnabled = false
 			statusLabel.stringValue = NSLocalizedString("Stopped", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Start", comment: "Processing action")
 			actionButton.isEnabled = true
 		case .starting:
+			recoveryButton.isHidden = true
+			recoveryButton.isEnabled = false
 			statusLabel.stringValue = NSLocalizedString("Starting…", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
 			actionButton.isEnabled = true
@@ -264,37 +342,60 @@ import Secrets
 			statusLabel.stringValue = NSLocalizedString("Ready", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
 			actionButton.isEnabled = true
-			recoveryButton.isHidden = ProcessingEngine.shared.unconfirmedMutations.isEmpty
+			recoveryButton.isHidden = engine.unconfirmedMutations.isEmpty
+			recoveryButton.isEnabled = !acknowledgingMutations && !engine.unconfirmedMutations.isEmpty
 			loadLists()
-			for identity in ProcessingEngine.shared.unconfirmedMutations where recoveringMutations.insert(identity).inserted {
-				ProcessingEngine.shared.recoverMutation(identity) { [weak self] result in
+			for identity in engine.unconfirmedMutations where recoveringMutations.insert(identity).inserted {
+				engine.recoverMutation(identity) { [weak self] result in
 					guard let self else { return }
 					self.recoveringMutations.remove(identity)
+					guard !self.acknowledgingMutations else { return }
 					switch result {
 					case .success:
 						self.feedback.stringValue = "A previous save was confirmed. Review the saved configuration."
 						self.loadLists()
 					case .failure(let error):
-						self.feedback.stringValue = error as? ProcessingEngine.EngineError == .mutationNotSaved ? "The save was cancelled before it started. Your configuration was not changed." : "A previous save is still being confirmed."
+						if let error = error as? ProcessingEngine.EngineError {
+							self.feedback.stringValue = self.recoveryMessage(for: error)
+						} else {
+							self.feedback.stringValue = "A previous save is still being confirmed. Restart processing and check the saved configuration before retrying."
+						}
 					}
 				}
 			}
 		case .stopping:
+			recoveryButton.isHidden = true
+			recoveryButton.isEnabled = false
 			statusLabel.stringValue = NSLocalizedString("Stopping…", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
 			actionButton.isEnabled = false
 		case .failed(let message):
+			recoveryButton.isHidden = true
+			recoveryButton.isEnabled = false
 			statusLabel.stringValue = message
 			actionButton.title = NSLocalizedString("Retry", comment: "Processing action")
 			actionButton.isEnabled = true
 		}
-		setEnabled(ProcessingEngine.shared.state == .ready, in: configurationTabs)
+		setEnabled(engine.state == .ready, in: configurationTabs)
+		updateCredentialAvailability()
+		role.isEnabled = engine.state == .ready && currentPrompt == nil
 	}
 
 	private func setEnabled(_ enabled: Bool, in view: NSView) {
 		if let control = view as? NSControl { control.isEnabled = enabled }
 		if let text = view as? NSTextView { text.isEditable = enabled && text !== reportDetail }
 		for child in view.subviews { setEnabled(enabled, in: child) }
+	}
+
+	private func recoveryMessage(for error: ProcessingEngine.EngineError) -> String {
+		switch error {
+		case .mutationNotSaved:
+			return "The save was cancelled before it started. Your configuration was not changed."
+		case .invalidConfiguration, .mutationRejected:
+			return "The previous save was rejected. Configuration is invalid or in use; your configuration was not changed."
+		default:
+			return "A previous save is still being confirmed. Restart processing and check the saved configuration before retrying."
+		}
 	}
 
 	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], onFailure: (() -> Void)? = nil, then: @escaping ([String: Any]) -> Void) {
@@ -305,6 +406,8 @@ import Secrets
 				if let onFailure { onFailure(); return }
 				if case .some(.outcomeUnknown(_)) = error as? ProcessingEngine.EngineError {
 					self?.feedback.stringValue = "The save is being confirmed. Restart processing and check the saved configuration before retrying."
+				} else if error as? ProcessingEngine.EngineError == .mutationRejected {
+					self?.feedback.stringValue = "The save was rejected. Review the saved configuration before retrying."
 				} else if error as? ProcessingEngine.EngineError == .migrationBusy {
 					self?.feedback.stringValue = "Routing is being updated. Try this change again when it finishes."
 				} else if error as? ProcessingEngine.EngineError == .snapshotExpired {
@@ -366,9 +469,10 @@ import Secrets
 		}
 	}
 
-	private func loadLists() {
+	private func loadLists(selectPromptID: String? = nil) {
 		listGeneration += 1
 		let generation = listGeneration
+		let selectionGeneration = promptGeneration
 		loadPage("services", after: nil, collected: []) { [weak self] rows in
 			guard let self, self.listGeneration == generation else { return }
 			let bindingID = self.visibleBindingID()
@@ -389,7 +493,7 @@ import Secrets
 		}
 		loadPage("prompts", after: nil, collected: []) { [weak self] rows in
 			guard let self, self.listGeneration == generation else { return }
-			let selectedID: String? = self.promptRows.indices.contains(self.prompts.indexOfSelectedItem) ? self.promptRows[self.prompts.indexOfSelectedItem]["id"] as? String : nil
+			let selectedID = self.promptGeneration == selectionGeneration ? (selectPromptID ?? self.promptSelectionID) : self.promptSelectionID
 			let rows = rows.sorted {
 				let first = ($0["role"] as? String ?? "", $0["name"] as? String ?? "")
 				let second = ($1["role"] as? String ?? "", $1["name"] as? String ?? "")
@@ -446,6 +550,7 @@ import Secrets
 			self.serviceName.stringValue = value["name"] as? String ?? ""
 			self.endpoint.stringValue = value["endpoint"] as? String ?? ""
 			self.serviceType.selectItem(at: value["type"] as? String == "magpie" ? 0 : 1)
+			self.updateCredentialAvailability()
 			self.credential.stringValue = ""
 			let checked = value["checkedAt"] as? String ?? "never"
 			if value["credentialState"] as? String == "incomplete" {
@@ -472,6 +577,7 @@ import Secrets
 		serviceName.stringValue = ""
 		endpoint.stringValue = ""
 		credential.stringValue = ""
+		updateCredentialAvailability()
 	}
 
 	private func clearMigrationReport() {
@@ -502,58 +608,76 @@ import Secrets
 		var body: [String: Any] = ["name": serviceName.stringValue, "type": serviceType.indexOfSelectedItem == 0 ? "magpie" : "openai-compatible", "endpoint": endpoint.stringValue]
 		if let id = currentService?["id"] as? String { body["id"] = id }
 		let secret = credential.stringValue
+		serviceGeneration += 1
 		let generation = serviceGeneration
 		request("PUT", "/api/config/services", body) { [weak self] value in
 			guard let self, let id = value["id"] as? String else { return }
-			let current = self.serviceGeneration == generation
-			if body["type"] as? String == "openai-compatible", !secret.isEmpty {
-				do {
-					try CredentialsManager.storeCredentials(Credentials(type: .oauthAccessToken, username: "credential", secret: secret), server: "nonews-ai-\(id)")
-					self.updateCredentialState(id: id, state: "verified", from: body) { result in
-						guard current else { return }
-						switch result {
-						case .success(let updated):
-							self.currentService = updated
-							if self.credential.stringValue == secret { self.credential.stringValue = "" }
-							self.feedback.stringValue = "Service saved and credential verified. Refresh its directory before choosing a target."
-						case .failure:
-							self.currentService = value
-							self.feedback.stringValue = "Service saved, but credential state could not be persisted. The connection is incomplete."
-						}
-						self.loadLists()
-					}
-					return
-				} catch {
-					self.updateCredentialState(id: id, state: "incomplete", from: body) { _ in }
-					if current { self.feedback.stringValue = "Service saved, but the credential could not be stored. The connection is incomplete." }
-					self.loadLists()
-					return
-				}
+			guard self.serviceGeneration == generation else { self.loadLists(); return }
+			self.currentService = value
+			guard value["type"] as? String == "openai-compatible" else {
+				self.feedback.stringValue = "Service saved. Refresh its directory before choosing a target."
+				self.loadLists()
+				return
 			}
-			if body["type"] as? String == "openai-compatible" {
-				do {
-					guard try CredentialsManager.retrieveCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") != nil else {
-						if current { self.currentService = value; self.feedback.stringValue = "Service saved without a credential. Add one to complete the connection." }
-						self.loadLists()
-						return
-					}
-				} catch {
-					self.updateCredentialState(id: id, state: "incomplete", from: body) { _ in }
-					if current { self.currentService = value; self.feedback.stringValue = "Service saved, but its credential could not be read. The connection is incomplete." }
-					self.loadLists()
-					return
-				}
+			let state: String
+			let message: String
+			do {
+				if !secret.isEmpty { try self.storeCredential(secret, serviceID: id) }
+				let present: Bool
+				if !secret.isEmpty { present = true }
+				else { present = try self.readCredential(serviceID: id) != nil }
+				state = present ? "verified" : "incomplete"
+				message = present ? "Service saved and credential verified. Refresh its directory before choosing a target." : "Service saved without a credential. Add one to complete the connection."
+			} catch {
+				state = "incomplete"
+				message = "Service saved, but its credential could not be stored or read. The connection is incomplete."
 			}
-			if current { self.currentService = value; self.feedback.stringValue = "Service saved. Refresh its directory before choosing a target." }
-			self.loadLists()
+			self.updateCredentialState(id: id, state: state, from: value) { [weak self] result in
+				guard let self, self.serviceGeneration == generation else { return }
+				switch result {
+				case .success(let updated):
+					self.currentService = updated
+					if state == "verified", self.credential.stringValue == secret { self.credential.stringValue = "" }
+					self.feedback.stringValue = message
+				case .failure:
+					self.feedback.stringValue = "Service saved, but credential state could not be confirmed. Review the connection before retrying."
+				}
+				self.loadLists()
+			}
 		}
 	}
 
-	private func updateCredentialState(id: String, state: String, from body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
-		var update = body
-		update["id"] = id
-		update["credentialState"] = state
-		request("PUT", "/api/config/services", update, completion: completion)
+	private func updateCredentialState(id: String, state: String, from saved: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		guard let revision = saved["revision"] as? String else {
+			completion(.failure(ProcessingEngine.EngineError.invalidRequest))
+			return
+		}
+		requestClient.request(method: "PUT", path: "/api/config/services",
+			body: ["id": id, "credentialState": state, "expectedRevision": revision], completion: completion)
+	}
+
+	private func storeCredential(_ secret: String, serviceID: String) throws {
+#if DEBUG
+		if let debugCredentialStore { try debugCredentialStore(serviceID, secret); return }
+#endif
+		try CredentialsManager.storeCredentials(Credentials(type: .oauthAccessToken, username: "credential", secret: secret), server: "nonews-ai-\(serviceID)")
+	}
+
+	private func readCredential(serviceID: String) throws -> String? {
+#if DEBUG
+		if let debugCredentialRead { return try debugCredentialRead(serviceID) }
+#endif
+		return try CredentialsManager.retrieveCredentials(type: .oauthAccessToken, server: "nonews-ai-\(serviceID)", username: "credential")?.secret
+	}
+
+	private func markCredentialIncomplete(_ service: [String: Any], generation: Int) {
+		guard let id = service["id"] as? String else { return }
+		updateCredentialState(id: id, state: "incomplete", from: service) { [weak self] result in
+			guard let self, self.serviceGeneration == generation else { return }
+			if case .success(let updated) = result { self.currentService = updated }
+			else { self.feedback.stringValue = "The credential is unavailable and its state could not be saved. Review the connection before retrying." }
+			self.loadLists()
+		}
 	}
 
 	@objc private func refreshService() {
@@ -567,12 +691,17 @@ import Secrets
 				return
 			}
 			do {
-				guard let stored = try CredentialsManager.retrieveCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") else {
+				guard let stored = try readCredential(serviceID: id) else {
+					markCredentialIncomplete(service, generation: generation)
 					feedback.stringValue = "Add and save the service credential first."
 					return
 				}
-				body["credential"] = stored.secret
-			} catch { feedback.stringValue = "Could not read the service credential from Keychain."; return }
+				body["credential"] = stored
+			} catch {
+				markCredentialIncomplete(service, generation: generation)
+				feedback.stringValue = "Could not read the service credential from Keychain."
+				return
+			}
 		}
 		request("POST", "/api/config/refresh", body) { [weak self] value in
 			guard let self, self.serviceGeneration == generation, self.currentService?["id"] as? String == id else { return }
@@ -595,9 +724,20 @@ import Secrets
 		serviceRequestGeneration += 1
 		migrationReview.invalidate(); cancelMigrationPreview(); releaseMigrationReport()
 	}
-	func textDidChange(_ notification: Notification) { if notification.object as? NSTextView === instructions { promptGeneration += 1 } }
+	func textDidChange(_ notification: Notification) {
+		if notification.object as? NSTextView === instructions {
+			promptGeneration += 1
+			resizeTextView(instructions, height: instructionsHeight, minimum: 160)
+		}
+	}
 	@objc private func promptInputChanged() { promptGeneration += 1 }
-	@objc private func migrationInputChanged() { serviceGeneration += 1; serviceRequestGeneration += 1; migrationReview.invalidate(); cancelMigrationPreview() }
+	@objc private func migrationInputChanged() {
+		serviceGeneration += 1
+		serviceRequestGeneration += 1
+		updateCredentialAvailability()
+		migrationReview.invalidate()
+		cancelMigrationPreview()
+	}
 
 	private func currentMigrationInput() -> MigrationReviewState.Input? {
 		let index = services.indexOfSelectedItem
@@ -717,7 +857,7 @@ import Secrets
 		reportCounts = [:]
 		reportRow = [:]
 		reportPosition.stringValue = "No report"
-		reportDetail.string = ""
+		setReportDetail("")
 	}
 
 	@objc private func changeReportSection() { reportIndex = 0; loadReportRow() }
@@ -736,12 +876,12 @@ import Secrets
 		reportRow = [:]
 		guard let snapshot = reportSnapshot, reportIndex < count else {
 			reportPosition.stringValue = "0 of \(count)"
-			reportDetail.string = "No entries in this section."
+			setReportDetail("No entries in this section.")
 			return
 		}
 		let index = reportIndex
 		reportPosition.stringValue = "\(index + 1) of \(count)"
-		reportDetail.string = "Loading…"
+		setReportDetail("Loading…")
 		loadReportPart(snapshot: snapshot, section: section, index: index, part: 0, data: Data(), generation: generation)
 	}
 
@@ -751,22 +891,22 @@ import Secrets
 			guard let self else { return }
 			self.reportRequestInFlight = false
 			guard self.reportGeneration == generation else { self.loadReportRow(); return }
-			self.reportDetail.string = "Could not load this entry. Preview again if the report expired."
+			self.setReportDetail("Could not load this entry. Preview again if the report expired.")
 		}) { [weak self] result in
 			guard let self else { return }
 			self.reportRequestInFlight = false
 			guard self.reportGeneration == generation, self.reportSnapshot == snapshot else { self.loadReportRow(); return }
 			guard result["snapshotId"] as? String == snapshot, result["section"] as? String == section,
 				  result["index"] as? Int == index, result["part"] as? Int == part,
-				  let encoded = result["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { self.reportDetail.string = "The entry could not be read. Preview again."; return }
+				  let encoded = result["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { self.setReportDetail("The entry could not be read. Preview again."); return }
 			var record = data
 			record.append(chunk)
 			if let next = result["nextPart"] as? Int {
 				self.loadReportPart(snapshot: snapshot, section: section, index: index, part: next, data: record, generation: generation)
 			} else if let item = try? JSONSerialization.jsonObject(with: record, options: .fragmentsAllowed) {
 				self.reportRow = item as? [String: Any] ?? [:]
-				self.reportDetail.string = self.describeReportRow(item, section: section)
-			} else { self.reportDetail.string = "The entry could not be read. Preview again." }
+				self.setReportDetail(self.describeReportRow(item, section: section))
+			} else { self.setReportDetail("The entry could not be read. Preview again.") }
 		}
 	}
 
@@ -828,6 +968,7 @@ import Secrets
 		promptGeneration += 1
 		bindingGeneration += 1
 		let generation = promptGeneration
+		promptSelectionID = id
 		currentPrompt = nil
 		selectedBinding = nil
 		target.removeAllItems()
@@ -837,6 +978,7 @@ import Secrets
 		request("GET", "/api/config/prompts", ["id": id]) { [weak self] value in
 			guard let self, self.promptGeneration == generation else { return }
 			self.currentPrompt = value
+			self.promptSelectionID = value["id"] as? String
 			self.promptName.stringValue = value["name"] as? String ?? ""
 			self.role.selectItem(at: value["role"] as? String == "curator" ? 0 : 1)
 			self.role.isEnabled = false
@@ -844,7 +986,7 @@ import Secrets
 			self.typography.selectItem(at: value["typography"] as? String == "chinese" ? 1 : 0)
 			self.confirmLegacyOutput.isHidden = value["legacyOutputStatus"] as? String != "needs_review"
 			self.confirmLegacyOutput.state = .off
-			self.instructions.string = value["text"] as? String ?? ""
+			self.setInstructions(value["text"] as? String ?? "")
 			self.loadHistory(id, before: nil, collected: [])
 			self.loadReferences(id, after: nil, collected: []) { [weak self] refs in
 				let names = refs.compactMap { $0["name"] as? String }
@@ -864,6 +1006,8 @@ import Secrets
 	}
 
 	private func resetPrompt() {
+		promptSelectionID = nil
+		prompts.selectItem(at: -1)
 		promptGeneration += 1
 		bindingGeneration += 1
 		currentPrompt = nil
@@ -872,7 +1016,7 @@ import Secrets
 		target.removeAllItems()
 		role.isEnabled = true
 		promptName.stringValue = ""
-		instructions.string = ""
+		setInstructions("")
 		titleLanguage.selectItem(at: 0)
 		typography.selectItem(at: 0)
 		confirmLegacyOutput.isHidden = true
@@ -921,8 +1065,8 @@ import Secrets
 			self.request("POST", "/api/config/import-legacy", ["kit": kit, "role": role, "name": name.stringValue,
 				"serviceId": serviceID, "target": selectedTarget]) { [weak self] value in
 				guard let self, let id = value["id"] as? String else { return }
-				self.loadLists()
-				guard self.promptGeneration == generation else { return }
+				guard self.promptGeneration == generation else { self.loadLists(); return }
+				self.loadLists(selectPromptID: id)
 				self.currentPrompt = nil
 				self.showPrompt(id)
 				self.feedback.stringValue = "Imported. Review and confirm output preferences before processing."
@@ -1088,7 +1232,12 @@ import Secrets
 							self.loadLists()
 							guard self.matchesPrompt(body, generation: generation) else { return }
 							self.currentPrompt = value
-							self.instructions.string = value["text"] as? String ?? ""
+							self.promptSelectionID = value["id"] as? String
+							self.promptGeneration += 1
+							self.loadLists(selectPromptID: value["id"] as? String)
+							if let id = value["id"] as? String { self.loadHistory(id, before: nil, collected: []) }
+							self.usedBy.stringValue = "Used by: none"
+							self.setInstructions(value["text"] as? String ?? "")
 							self.feedback.stringValue = "Restored as an independent copy."
 						}
 					}
@@ -1101,7 +1250,8 @@ import Secrets
 				self.loadLists()
 				guard self.matchesPrompt(body, generation: generation) else { return }
 				self.currentPrompt = value
-				self.instructions.string = value["text"] as? String ?? ""
+				self.promptSelectionID = value["id"] as? String
+				self.setInstructions(value["text"] as? String ?? "")
 				self.feedback.stringValue = "Instructions restored with the selected service, target, and output preferences."
 				self.loadHistory(id, before: nil, collected: [])
 			}
@@ -1136,6 +1286,9 @@ import Secrets
 			self.loadLists()
 			guard self.matchesPrompt(body, generation: generation) else { return }
 			self.currentPrompt = value
+			self.promptSelectionID = value["id"] as? String
+			self.role.isEnabled = false
+			self.loadLists(selectPromptID: value["id"] as? String)
 			if let id = value["id"] as? String { self.loadHistory(id, before: nil, collected: []) }
 			self.feedback.stringValue = "Prompt saved. Future processing uses this configuration."
 		}
@@ -1150,9 +1303,13 @@ import Secrets
 		guard let id = body["id"] as? String else { return }
 		request("POST", "/api/config/copy", ["id": id, "name": body["name"] ?? "Copy", "configuration": body]) { [weak self] value in
 			guard let self else { return }
-			self.loadLists()
 			guard self.matchesPrompt(body, generation: generation) else { return }
 			self.currentPrompt = value
+			self.promptSelectionID = value["id"] as? String
+			self.promptGeneration += 1
+			if let id = value["id"] as? String { self.loadHistory(id, before: nil, collected: []) }
+			self.usedBy.stringValue = "Used by: none"
+			self.loadLists(selectPromptID: value["id"] as? String)
 			self.feedback.stringValue = "Copy saved independently. Existing source references were not changed."
 		}
 	}
@@ -1181,9 +1338,9 @@ import Secrets
 	}
 
 	@objc private func changeState(_ sender: Any?) {
-		switch ProcessingEngine.shared.state {
-		case .starting, .ready: ProcessingEngine.shared.stop()
-		case .stopped, .failed: ProcessingEngine.shared.start()
+		switch engine.state {
+		case .starting, .ready: engine.stop()
+		case .stopped, .failed: engine.start()
 		case .stopping: break
 		}
 	}
@@ -1194,6 +1351,61 @@ import Secrets
 		binding.removeAllItems()
 		binding.addItems(withTitles: rows.map { serviceLabel($0) })
 	}
+
+	func debugSetCredentialRead(_ read: @escaping (String) throws -> String?) { debugCredentialRead = read }
+	func debugRefreshService() { refreshService() }
+	func debugSelectedPromptID() -> String? {
+		let index = prompts.indexOfSelectedItem
+		return promptRows.indices.contains(index) ? promptRows[index]["id"] as? String : nil
+	}
+
+	func debugSetCredentialStore(_ store: @escaping (String, String) throws -> Void) {
+		debugCredentialStore = store
+	}
+
+	func debugSetServiceEditor(_ body: [String: Any]) {
+		serviceGeneration += 1
+		currentService = body
+		serviceName.stringValue = body["name"] as? String ?? ""
+		endpoint.stringValue = body["endpoint"] as? String ?? ""
+		serviceType.selectItem(at: body["type"] as? String == "magpie" ? 0 : 1)
+		credential.stringValue = body["credential"] as? String ?? ""
+		updateCredentialAvailability()
+	}
+
+	func debugSaveService() { saveService() }
+	func debugAcknowledgeUnknownSaves() { acknowledgeUnknownSaves() }
+	func debugRecoveryControl() -> (hidden: Bool, enabled: Bool, feedback: String) {
+		(recoveryButton.isHidden, recoveryButton.isEnabled, feedback.stringValue)
+	}
+	func debugServiceSnapshot() -> [String: Any] { currentService ?? [:] }
+	func debugCredentialVisible() -> Bool { credentialRow?.isHidden == false }
+	func debugCredentialText() -> String { credential.stringValue }
+	func debugLayout(_ identifier: String, width: CGFloat) -> [String] {
+		configurationTabs.selectTabViewItem(withIdentifier: identifier)
+		view.setFrameSize(NSSize(width: width, height: 620))
+		view.layoutSubtreeIfNeeded()
+		guard let scroll = configurationTabs.selectedTabViewItem?.view as? NSScrollView,
+			let document = scroll.documentView else { return ["No form document"] }
+		var problems: [String] = []
+		func inspect(_ child: NSView) {
+			if child !== scroll, child is NSScrollView { problems.append("Nested scroll view") }
+			if child is NSControl || child is NSTextView {
+				let rect = child.superview?.convert(child.alignmentRect(forFrame: child.frame), to: document) ?? child.frame
+				if !child.isHiddenOrHasHiddenAncestor && (rect.minX < -1 || rect.maxX > document.bounds.width + 1 || rect.width <= 0) {
+					problems.append("Overflow or zero width: \(type(of: child)) \(rect), document \(document.bounds)")
+				}
+			}
+			if !(child is NSControl) { for subview in child.subviews { inspect(subview) } }
+		}
+		inspect(document)
+		let text = identifier == "prompts" ? instructions : reportDetail
+		if text.bounds.height < 150 { problems.append("Unsized text document: \(text.frame), bounds \(text.bounds)") }
+		return problems
+	}
+
+	func debugSetReportDetail(_ text: String) { setReportDetail(text) }
+	func debugEditorHeights() -> (CGFloat, CGFloat) { (instructionsHeight?.constant ?? 0, reportDetailHeight?.constant ?? 0) }
 
 	func debugSelectBinding(_ id: String, selected: String? = nil) {
 		guard let index = serviceRows.firstIndex(where: { $0["id"] as? String == id }) else { return }
@@ -1214,8 +1426,9 @@ import Secrets
 	func debugSetPromptEditor(_ body: [String: Any]) {
 		promptGeneration += 1
 		currentPrompt = body
+		promptSelectionID = body["id"] as? String
 		promptName.stringValue = body["name"] as? String ?? ""
-		instructions.string = body["text"] as? String ?? ""
+		setInstructions(body["text"] as? String ?? "")
 		role.selectItem(at: body["role"] as? String == "curator" ? 0 : 1)
 		guard let serviceID = body["serviceId"] as? String,
 			  let service = serviceRows.first(where: { $0["id"] as? String == serviceID }) else { return }
@@ -1226,7 +1439,7 @@ import Secrets
 		target.selectItem(at: 0)
 	}
 
-	func debugEditPromptText(_ text: String) { promptGeneration += 1; instructions.string = text }
+	func debugEditPromptText(_ text: String) { promptGeneration += 1; setInstructions(text) }
 	func debugCopyPrompt() { copyPromptAction() }
 	func debugApplyResult(_ result: [String: Any], input: MigrationReviewState.Input) {
 		migrationChoices = input.choices
@@ -1241,6 +1454,9 @@ import Secrets
 	}
 	func debugReadbackFailure(_ input: MigrationReviewState.Input) -> String {
 		migrationReview.readbackFailure(for: input)
+	}
+	func debugRecoveryMessage(_ error: ProcessingEngine.EngineError) -> String {
+		recoveryMessage(for: error)
 	}
 #endif
 }

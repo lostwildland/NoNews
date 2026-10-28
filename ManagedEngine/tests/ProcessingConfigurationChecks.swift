@@ -14,7 +14,7 @@ import Foundation
 		let data: Data = try await withCheckedThrowingContinuation { continuation in
 			engine.request(method: method, path: path, body: body) { result in
 				do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: result.get())) }
-				catch { print("Request failed: \(method) \(path): \(error)"); continuation.resume(throwing: error) }
+				catch { FileHandle.standardError.write(Data("Request failed: \(method) \(path): \(error)\n".utf8)); continuation.resume(throwing: error) }
 			}
 		}
 		guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw NSError(domain: "Configuration response", code: 1) }
@@ -41,7 +41,8 @@ import Foundation
 	@MainActor static func main() async throws {
 		let root = URL(fileURLWithPath: CommandLine.arguments[1])
 		let runtime = root.appendingPathComponent("ManagedEngine/.prepared/python/bin/python3")
-		let entry = root.appendingPathComponent("ManagedEngine/.prepared/stdio_service.py")
+		let packaged = ProcessInfo.processInfo.environment["NONEWS_CHECK_PACKAGED"] == "1"
+		let entry = root.appendingPathComponent(packaged ? "ManagedEngine/.prepared/stdio_service.py" : "ManagedEngine/stdio_service.py")
 		let directory = Process()
 		let output = Pipe()
 		directory.executableURL = runtime
@@ -110,12 +111,23 @@ import Foundation
 		}
 		for _ in 0..<100 where !migrationStarted { try await Task.sleep(for: .milliseconds(10)) }
 		precondition(migrationStarted)
+		let previousMutations = engine.unconfirmedMutations
 		var callbackCount = 0
 		var recoveryID: String?
 		engine.request(method: "PUT", path: "/api/config/services", body: ["name": "Stopped fixture", "type": "magpie", "endpoint": "http://127.0.0.1:1"]) { result in
 			callbackCount += 1
 			if case .failure(ProcessingEngine.EngineError.outcomeUnknown(let identity)) = result { recoveryID = identity }
 		}
+		guard let queuedID = engine.unconfirmedMutations.first(where: { !previousMutations.contains($0) }) else {
+			throw NSError(domain: "Missing queued mutation identity", code: 1)
+		}
+		var accepted = false
+		for _ in 0..<100 {
+			let observed = try await request(engine, "POST", "/api/config/migration/operation", ["operationId": queuedID])
+			if observed["state"] as? String == "running" { accepted = true; break }
+			try await Task.sleep(for: .milliseconds(10))
+		}
+		precondition(accepted, "Observe service acceptance before testing cancellation of queued work")
 		engine.stop()
 		try lockInput.fileHandleForWriting.write(contentsOf: Data("release\n".utf8))
 		lock.waitUntilExit()
