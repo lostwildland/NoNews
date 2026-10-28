@@ -116,6 +116,9 @@ final class ProcessingEngine {
 			self.pollAcknowledgement(operation, receipt: identity)
 		}
 	}
+	private func dropMutation(_ identity: String) {
+		UserDefaults.standard.set(unconfirmedMutations.filter { $0 != identity }, forKey: recoveryKey)
+	}
 	private func pollAcknowledgement(_ operation: String, receipt: String) {
 		request(method: "POST", path: "/api/config/migration/ack", body: ["operationId": operation]) { [weak self] response in
 			guard let self, case .success(let value) = response else { return }
@@ -280,11 +283,14 @@ final class ProcessingEngine {
 			return
 		}
 		if let mutation { rememberMutation(mutation) }
-		pending[id] = { result in
+		pending[id] = { [weak self] result in
 			guard let mutation else { completion(result); return }
 			if case .failure(let error) = result, error as? EngineError == .unavailable {
 				completion(.failure(EngineError.outcomeUnknown(mutation)))
-			} else { completion(result) }
+			} else {
+				self?.dropMutation(mutation)
+				completion(result)
+			}
 		}
 		timers[id] = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
 			Task { @MainActor in self?.requestTimedOut(id) }

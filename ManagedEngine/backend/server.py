@@ -51,9 +51,17 @@ class Application:
         if path == '/api/jobs' and method == 'GET':
             return self._jobs(query)
         if not _queued and method != 'GET' and not (path == '/api/config/migration/preview' and 'snapshotId' in body):
+            if mutation_id is not None:
+                with InformationDB(self.database, read_only=True) as db:
+                    saved = self._mutation_receipt(db.db, mutation_id)
+                    outcome = None if saved is not None else self._mutation_outcome(db.db, mutation_id)
+                if saved is not None:
+                    return saved
+                if outcome is not None:
+                    raise magpie_migration.MigrationBusy('Mutation has a definitive outcome')
             with self.migration_lock:
                 busy = any(not item['done'] for item in self.migration_operations.values())
-                if busy or mutation_id is not None:
+                if busy:
                     pending = self._start_migration('mutation', {'method': method, 'path': path, 'query': query, 'body': body, 'response_budget': response_budget}, identity=mutation_id)
                     return {'_pendingMutation': pending['operationId']}
         read_only = method == 'GET' or (path == '/api/config/migration/preview' and 'snapshotId' in body)
@@ -177,6 +185,16 @@ class Application:
                     operation['cancel'].set()
         for operation in operations:
             operation['thread'].join()
+        for operation in operations:
+            if operation['action'] == 'mutation' and operation.get('result') is None and operation.get('error') is None:
+                try:
+                    with InformationDB(self.database, read_only=True) as db:
+                        committed = self._mutation_receipt(db.db, operation['id']) is not None
+                    if not committed:
+                        outcome = 'cancelled' if not operation.get('started') else 'notCommitted'
+                        operation['result'] = {'_outcome': self._write_mutation_outcome(operation['id'], outcome, 'service_stopped')}
+                except Exception:
+                    pass
         for operation in operations:
             if operation.get('cleanup'):
                 operation['cleanup'].join()

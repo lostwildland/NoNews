@@ -76,11 +76,7 @@ class MigrationTest(unittest.TestCase):
             p = start()
             self.assertEqual(call('/api/config/migration/operation', {'operationId': prompt_id})['result']['result'], original)
             self.assertEqual(call('/api/config/migration/operation', {'operationId': prompt_id})['result']['result']['versionId'], original['versionId'])
-            retry = call('/api/config/prompts', {'name': 'Different', 'role': 'curator', 'text': 'different', 'serviceId': service['id'], 'target': 'model'}, 'PUT', mutation_id=prompt_id)['result']['_pendingMutation']
-            while True:
-                response = call('/api/config/migration/operation', {'operationId': retry})['result']
-                if response['state'] == 'complete': break
-                time.sleep(.01)
+            response = call('/api/config/prompts', {'name': 'Different', 'role': 'curator', 'text': 'different', 'serviceId': service['id'], 'target': 'model'}, 'PUT', mutation_id=prompt_id)
             self.assertEqual(response['result'], original)
             self.assertNotIn('Different', [row['name'] for row in call('/api/config/prompts', {}, 'GET')['result']['prompts']])
             with closing(sqlite3.connect(database)) as lock:

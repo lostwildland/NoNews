@@ -1,7 +1,18 @@
 import AppKit
 import Secrets
 
-final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate, NSTextViewDelegate {
+@MainActor protocol ProcessingPreferencesRequesting {
+	func request(method: String, path: String, body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void)
+}
+
+@MainActor final class ProcessingEnginePreferencesRequestClient: ProcessingPreferencesRequesting {
+	func request(method: String, path: String, body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		ProcessingEngine.shared.request(method: method, path: path, body: body, completion: completion)
+	}
+}
+
+@MainActor final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate, NSTextViewDelegate {
+	private let requestClient: ProcessingPreferencesRequesting
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
 	private let services = NSPopUpButton()
@@ -55,6 +66,16 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private var serviceRequestGeneration = 0
 	private var listGeneration = 0
 	private var recoveringMutations = Set<String>()
+
+	init(requestClient: ProcessingPreferencesRequesting = ProcessingEnginePreferencesRequestClient()) {
+		self.requestClient = requestClient
+		super.init(nibName: nil, bundle: nil)
+	}
+
+	required init?(coder: NSCoder) {
+		self.requestClient = ProcessingEnginePreferencesRequestClient()
+		super.init(coder: coder)
+	}
 
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
@@ -250,7 +271,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], onFailure: (() -> Void)? = nil, then: @escaping ([String: Any]) -> Void) {
-		ProcessingEngine.shared.request(method: method, path: path, body: body) { [weak self] result in
+		requestClient.request(method: method, path: path, body: body) { [weak self] result in
 			switch result {
 			case .success(let value): then(value)
 			case .failure(let error):
@@ -587,16 +608,17 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			guard let self, self.currentMigrationInput() == input else { return }
 			self.migrationStatus.stringValue = "Apply could not be confirmed. Preview the durable routing status before retrying."
 		}, started: { [weak self] identity in self?.pendingApply = (identity, applyTicket) }) { [weak self] result in
-			guard let self else { return }
-			if self.pendingApply?.id == result["operationId"] as? String { self.pendingApply = nil }
-			guard self.migrationReview.recordApply(status: result["status"] as? String ?? "", ticket: applyTicket),
-				  self.currentMigrationInput() == applyTicket.input else {
-				return
-			}
-			self.migrationStatus.stringValue = result["status"] as? String == "applied" ? "Mappings applied. Refreshing the routing report." : "Claims remain paused while work drains. Refreshing the routing report."
-			self.migrationWaiting = result["status"] as? String == "waiting"
-			if self.currentMigrationInput() == input { self.startMigrationPreview() }
+			self?.acceptApplyResult(result, ticket: applyTicket)
 		}
+	}
+
+	private func acceptApplyResult(_ result: [String: Any], ticket: MigrationReviewState.ApplyTicket) {
+		if pendingApply?.id == result["operationId"] as? String { pendingApply = nil }
+		guard migrationReview.recordApply(status: result["status"] as? String ?? "", ticket: ticket),
+			  currentMigrationInput() == ticket.input else { return }
+		migrationStatus.stringValue = result["status"] as? String == "applied" ? "Mappings applied. Refreshing the routing report." : "Claims remain paused while work drains. Refreshing the routing report."
+		migrationWaiting = result["status"] as? String == "waiting"
+		if currentMigrationInput() == ticket.input { startMigrationPreview() }
 	}
 
 	@objc private func chooseMapping() {
@@ -1104,4 +1126,60 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		case .stopping: break
 		}
 	}
+
+#if DEBUG
+	func debugSetServices(_ rows: [[String: Any]]) {
+		serviceRows = rows
+		binding.removeAllItems()
+		binding.addItems(withTitles: rows.map { serviceLabel($0) })
+	}
+
+	func debugSelectBinding(_ id: String, selected: String? = nil) {
+		guard let index = serviceRows.firstIndex(where: { $0["id"] as? String == id }) else { return }
+		binding.selectItem(at: index)
+		loadBinding(id, selected: selected)
+	}
+
+	func debugVisibleBinding() -> String? { visibleBindingID() }
+	func debugTargets() -> [String] { target.itemArray.compactMap { $0.title } }
+	func debugPromptBody() -> [String: Any]? { promptBody() }
+
+	func debugShowPrompt(_ id: String) { showPrompt(id) }
+	func debugPromptSnapshot() -> [String: Any] {
+		["id": currentPrompt?["id"] as Any, "text": instructions.string,
+		 "serviceId": selectedBinding?["id"] as Any, "target": target.selectedItem?.title as Any]
+	}
+
+	func debugSetPromptEditor(_ body: [String: Any]) {
+		promptGeneration += 1
+		currentPrompt = body
+		promptName.stringValue = body["name"] as? String ?? ""
+		instructions.string = body["text"] as? String ?? ""
+		role.selectItem(at: body["role"] as? String == "curator" ? 0 : 1)
+		guard let serviceID = body["serviceId"] as? String,
+			  let service = serviceRows.first(where: { $0["id"] as? String == serviceID }) else { return }
+		selectedBinding = service
+		if let index = serviceRows.firstIndex(where: { $0["id"] as? String == serviceID }) { binding.selectItem(at: index) }
+		target.removeAllItems()
+		target.addItem(withTitle: body["target"] as? String ?? "")
+		target.selectItem(at: 0)
+	}
+
+	func debugEditPromptText(_ text: String) { promptGeneration += 1; instructions.string = text }
+	func debugCopyPrompt() { copyPromptAction() }
+	func debugApplyResult(_ result: [String: Any], input: MigrationReviewState.Input) {
+		migrationChoices = input.choices
+		editorServices = input.editorServices
+		currentService = serviceRows.first(where: { $0["id"] as? String == input.serviceID })
+		if let index = serviceRows.firstIndex(where: { $0["id"] as? String == input.serviceID }) { services.selectItem(at: index) }
+		let ticket = migrationReview.beginApply(input)
+		acceptApplyResult(result, ticket: ticket)
+	}
+	func debugApplyAcknowledgement(_ input: MigrationReviewState.Input) -> String {
+		migrationReview.applyAcknowledgement(for: input)
+	}
+	func debugReadbackFailure(_ input: MigrationReviewState.Input) -> String {
+		migrationReview.readbackFailure(for: input)
+	}
+#endif
 }

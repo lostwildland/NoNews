@@ -104,6 +104,12 @@ import Foundation
 		lock.standardOutput = lockOutput
 		try lock.run()
 		precondition(String(data: lockOutput.fileHandleForReading.availableData, encoding: .utf8)?.contains("locked") == true)
+		var migrationStarted = false
+		engine.request(method: "POST", path: "/api/config/migration/preview", body: ["serviceId": serviceID, "browse": true, "cooperative": true]) { result in
+			if case .success(let value) = result, value["state"] as? String == "running" { migrationStarted = true }
+		}
+		for _ in 0..<100 where !migrationStarted { try await Task.sleep(for: .milliseconds(10)) }
+		precondition(migrationStarted)
 		var callbackCount = 0
 		var recoveryID: String?
 		engine.request(method: "PUT", path: "/api/config/services", body: ["name": "Stopped fixture", "type": "magpie", "endpoint": "http://127.0.0.1:1"]) { result in
@@ -118,16 +124,19 @@ import Foundation
 		engine.start()
 		try await wait(engine, state: .ready)
 		guard let recoveryID else { throw NSError(domain: "Recovery identity", code: 1) }
+		let rawRecovery = try await request(engine, "POST", "/api/config/migration/operation", ["operationId": recoveryID])
+		print("Stopped-save recovery state: \(rawRecovery)")
 		do {
-			let recovered = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+			_ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
 				engine.recoverMutation(recoveryID) { result in
 					do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: result.get())) }
 					catch { continuation.resume(throwing: error) }
 				}
 			}
-			let value = try JSONSerialization.jsonObject(with: recovered) as? [String: Any]
-			precondition(value?["name"] as? String == "Stopped fixture")
-		} catch ProcessingEngine.EngineError.operation { }
+			throw NSError(domain: "Expected cancelled save", code: 1)
+		} catch ProcessingEngine.EngineError.mutationNotSaved { }
+		let servicesAfterStop = try await request(engine, "GET", "/api/config/services")
+		precondition(!(servicesAfterStop["services"] as? [[String: Any]] ?? []).contains { $0["name"] as? String == "Stopped fixture" })
 		precondition(callbackCount == 1)
 		func fixture(_ mutate: Bool) throws {
 			let process = Process()
