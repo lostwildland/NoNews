@@ -98,6 +98,41 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		try await manager.deleteAccount(account)
 	}
 
+	@Test func failedStatusReadAbortsFeedbinReconciliation() async throws {
+		let manager = TestAccountManager()
+		try await manager.withAccount(type: .feedbin) { account in
+			let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+			await delegate.waitForSyncInitializationForTesting()
+			await account.waitForFixtureBackgroundWorkForTesting()
+			#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["42"]))
+			_ = try await account.database.markAndFetchNewAsync(articleIDs: ["42"], statusKey: .read, flag: false)
+			let notifications = NotificationCounter()
+			let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
+				notifications.count.withLock { $0 += 1 }
+			}
+			defer { NotificationCenter.default.removeObserver(observer) }
+			guard account.database.setStatusTableUnavailableForTesting(true) else { throw CocoaError(.fileWriteUnknown) }
+			defer { #expect(account.database.setStatusTableUnavailableForTesting(false)) }
+			do {
+				_ = try await account.fetchUnreadArticleIDsAsync()
+				Issue.record("Failed account status query returned successful IDs")
+			} catch {
+				#expect(!(error is CancellationError))
+				#expect((error as NSError).domain == "FMDatabase" && (error as NSError).code == 1)
+			}
+			do {
+				_ = try await delegate.syncArticleReadState(account: account, articleIDs: [42])
+				Issue.record("Feedbin reconciled after a failed local status query")
+			} catch {
+				#expect(!(error is CancellationError))
+				#expect((error as NSError).domain == "FMDatabase" && (error as NSError).code == 1)
+			}
+			#expect(notifications.count.withLock { $0 } == 0)
+			#expect(try await delegate.syncDatabase.selectPendingCount() == 0)
+			#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT read FROM fixture_saved_statuses WHERE articleID = '42'") == "0")
+		}
+	}
+
 	@Test func admittedStatusWritePersistsWhileCloseWaits() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)

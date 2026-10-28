@@ -94,7 +94,7 @@
  @see hasAnotherRow
  */
 
-- (BOOL)nextWithError:(NSError **)outErr;
+- (BOOL)nextWithError:(NSError **)outErr NS_SWIFT_NOTHROW;
 
 /** Did the last call to `<next>` succeed in retrieving another row?
 

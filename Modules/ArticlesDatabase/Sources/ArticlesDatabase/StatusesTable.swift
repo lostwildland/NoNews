@@ -154,9 +154,14 @@ final class StatusesTable: DatabaseTable, Sendable {
 				return
 			}
 
-			let articleIDs = resultSet.mapToSet { $0.swiftString(forColumnIndex: 0) }
+			var articleIDs = Set<String>()
+			var queryError: NSError?
+			while resultSet.nextWithError(&queryError) {
+				if let articleID = resultSet.swiftString(forColumnIndex: 0) { articleIDs.insert(articleID) }
+			}
+			let result: Result<Set<String>, Error> = queryError.map { .failure($0) } ?? .success(articleIDs)
 			DispatchQueue.main.async {
-				completion(.success(articleIDs))
+				completion(result)
 			}
 		}
 	}
