@@ -32,7 +32,7 @@
 
 ## 执行与保护
 
-产品、规格与 UX 由主代理负责。一个开发 ticket 由一个 GPT-6.1 Terra high 子代理实施及测试。并行开发使用 T3 隔离 worktree；同一个构建资源只运行一个大型 Xcode build，避免磁盘争用。每 ticket 起始 commit 为独立 Standards/Spec review 的固定点，主代理发起两条独立评审，修复后复核。每个完成 ticket 提交并 push，维护版本与依赖。
+产品、规格与 UX 由主代理负责。按用户 2026-10-28 最新要求，开发及测试改由 GPT-6.1 Sol、high reasoning effort 承担，每 ticket 同时仅一个开发 owner；独立 Standards/Spec 评审保留双轴要求。并行开发使用已有隔离 worktree，本阶段不新建。更换 owner 前停止旧任务并保留分支及未提交修改。同一个构建资源只运行一个大型 Xcode build，避免磁盘争用。每 ticket 起始 commit 为独立评审的固定点，修复后复核。每个完成 ticket 提交并 push，维护版本与依赖。
 
 生产迁移使用一致性数据库备份而非复制活动 WAL 文件；核对完整性、表／记录／内容版本／文件清单及独立恢复。凭据只通过 Keychain 或私密通道处理，不进入仓库、日志、测试 fixture 或同步普通记录。旧源不删除，外部用户改动不得覆盖。
 

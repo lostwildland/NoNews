@@ -1,5 +1,11 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Switch development to Sol/high
+
+- User changed development to GPT-6.1 Sol/high. Stopped both Terra runs and confirmed no active run before replacements. Preserved T03's9unfinished files with private patch/hash backup and clean T30source4850b7c; no new worktree or discarded source.
+- Started one Sol/high owner per existing T03/T30 worktree. T03 prioritizes a coherent operable configuration correction and strict controller check entry; T30 resolves durable intent, stale acknowledged-response and startup reset schedules as one persistence change. Independent review and all acceptance gates remain unchanged.
+- R25 reviewed11/11correction paths: Standards3P2, Spec1P1+1P2. Root read149/0/0 and150/0/0 (10Sync tests within latter). No full/iOS/live-provider rerun; accepted count remains3/31.
+
 ## 2026-10-28 — T30 e44 correction and T03 final source
 
 - T30 correction `e44f338` fixes the release-only DEBUG reference, FTS `sqlite3_step` error propagation, CloudKit outbox insertion/deletion result handling, selection BEGIN/COMMIT rollback, and serializes CloudKit status mutation checks. Formal acceptance test passed 827 top-level tests with zero failures/skips (300 dynamic runs); the new SyncStatus transaction regression passed. Fresh paired R21 review is pending; iOS, final artifact, live CloudKit, production deletion and UI remain open.

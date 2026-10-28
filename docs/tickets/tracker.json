@@ -79,12 +79,12 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Committed2ee43f0 has a complete23-path ledger. Both R10 source axes read61hunks/23paths and request changes: Spec3P1/1P2; Standards2P1/2P2 plus3Spec-onlyP2, with overlap. Root public probes reproduce wrong-endpoint receipt success and stale-credential metadata overwrite. Original owner correcting source, controller check entry and native layout/state; app/Keychain/payload/HIG/T11 acceptance open.",
+      "implementation_state": "Sol/high owner started on existing T03 worktree after preserving9unfinished files at2ee43f0. Complete R10 reviews request changes; public receipt/credential/scalar probes remain baseline evidence. Coherent correction/current strict controller checks pending; no app/Keychain/HIG/T11 acceptance.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
       "last_reported_head": "2ee43f01ea187aad232c5d45916e9b11f8760219",
-      "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
+      "implementation_thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t03-sol-high-handoff-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
         "inventory": "docs/research/io-script-entrypoints.json",
@@ -104,7 +104,13 @@
       ],
       "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md",
       "review_coverage": "docs/acceptance/t03-review-coverage.json",
-      "cooperative_review": "docs/acceptance/t03-cooperative-review-r5.md"
+      "cooperative_review": "docs/acceptance/t03-cooperative-review-r5.md",
+      "previous_implementation_threads": [
+        "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1"
+      ],
+      "implementation_model": "gpt-6.1-sol",
+      "implementation_reasoning_effort": "high",
+      "owner_handoff": "User-requested model change; prior Terra task stopped and inactive before Sol launch; existing worktree and unfinished source preserved."
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -574,17 +580,27 @@
         "28",
         "29"
       ],
-      "implementation_state": "Committed candidate 835cda3 has a complete 109-path blob ledger. Paired R24 finds two distinct provider outbox/reconciliation defects (worst P1); owner correction in progress. Root independently read historical 19-24-18 summary:827/0/0 with generic runtime warning; private tested-source equality not verified. Final artifact/iOS/live sync/migration/UI acceptance open.",
+      "implementation_state": "Sol/high replacement owner started on clean4850b7c. Complete110-path manifest. R25 Standards3P2/Spec1P1+1P2 leave three overlapping durability/reconciliation/reset schedules open. Root read focused149/0/0 and150/0/0 including10Sync tests. No full/artifact/iOS/live-provider/migration/UI acceptance.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+      "last_reported_head": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
         "docs/acceptance/t30-cloudkit-review-r14.md",
         "docs/acceptance/t30-provider-review-r15.md",
         "docs/acceptance/t30-account-core-review-r12.md",
-        "docs/acceptance/t30-provider-compensation-review-r24.md"
-      ]
+        "docs/acceptance/t30-provider-compensation-review-r24.md",
+        "docs/acceptance/t30-provider-correction-review-r25.md"
+      ],
+      "previous_implementation_threads": [
+        "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t30-native-fixture-lifetime-20261028-r1"
+      ],
+      "implementation_thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t30-sol-high-handoff-20261028-r1",
+      "implementation_model": "gpt-6.1-sol",
+      "implementation_reasoning_effort": "high",
+      "owner_handoff": "User-requested model change; prior Terra task stopped and inactive before Sol launch; existing worktree and unfinished source preserved.",
+      "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f5bca9ed",
+      "implementation_base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2"
     }
   },
   "spec": {

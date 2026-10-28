@@ -1,5 +1,10 @@
 # Execution findings
 
+2026-10-28 — User-directed Sol/high development handoff:
+- Capabilities confirm codex/gpt-6.1-sol with high. task_cancel stopped both Terra development runs; authoritative thread reads show interrupted/activeRunId=null. No xcodebuild/swiftc/swift-frontend/xctest was present before replacement launch.
+- T03 HEAD2ee43f0 retained9unfinished files (~400insertions/71deletions); T30 retained clean4850b7c. Private patch/per-file SHA256 manifests live only under the repository's task-owned .git handoff directory. No branch reset, cleanup, new worktree or loss of edits.
+- New Sol/high owners launched for T03 and T30 in their existing worktrees. R25 complete reviews identify three underlying provider schedules (Standards3P2, Spec1P1+1P2); error reporting alone does not clear durable-intent loss. Root independently read149/0/0 and150/0/0 with10Sync tests. Latest free disk read4.9GiB; full builds remain deferred.
+
 2026-10-28 — Complete-path scalar-capacity measurement:
 - Exact2ee43f0 Application.handle normal/browse preview both refuse an over-cap scalar, but only after43,004,394/43,001,702bytes Python allocation peaks. Fixture is2,097,152NUL characters in a legacy target,12,582,963serialized input bytes; setup excluded from tracing. No snapshot rows published and subsequent status/schema41 remains available. No RSS/crash/general deadline inference.
 - Connected staging uses json.dumps before snapshot serialization; guarding only the latter does not bound the earlier allocation. Original owner received this complete-path regression requirement. Worker dirty files untouched; temporary source/profile closed and removed.

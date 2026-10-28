@@ -428,5 +428,15 @@
     ],
     "removed_from_ledger": [],
     "coverage_limit": "Hash/path completeness does not establish changed-hunk or connected-seam review clearance. Historical verdicts retained per blob."
+  },
+  "implementation_owner": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "high",
+    "thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t03-sol-high-handoff-20261028-r1",
+    "previous_owner_state": "interrupted, activeRunId null before replacement launch",
+    "preserved_dirty_files_at_handoff": 9,
+    "new_worktree_created": false,
+    "user_instruction_date": "2026-10-28"
   }
 }

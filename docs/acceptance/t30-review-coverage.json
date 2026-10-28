@@ -1,8 +1,8 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
-  "source": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
-  "state": "Exact committed 835cda3 manifest refreshed to 109 paths. R24 reports two distinct provider durability/reconciliation defects: Standards 2 P2; Spec 1 P1 and 1 P2. Worker correction in progress; no final artifact/platform/live-sync acceptance.",
+  "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+  "source": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+  "state": "Exact4850b7c original-base manifest:110paths. R25 Standards3P2, Spec1P1/1P2 identify three overlapping durability/reconciliation/reset schedules. Sol/high replacement development owner started after Terra stopped. Root read149/0/0 and150/0/0 focused results; full/platform/live-provider acceptance remains open.",
   "groups": {
     "account-core": 7,
     "account-delegates": 16,
@@ -11,7 +11,7 @@
     "consumer-tests": 4,
     "consumers": 27,
     "harness": 12,
-    "storage": 18,
+    "storage": 19,
     "storage-tests": 9
   },
   "evidence": {
@@ -41,6 +41,27 @@
       "xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_19-24-18-+0800.xcresult",
       "independent_summary_read": "827 passed, 0 failed, 0 skipped; 1076 device-level passes; result Passed; generic main-thread runtime warning remains. Summary read with xcresulttool, no test rerun.",
       "acceptance_limit": "Historical test evidence; does not clear R24 defects or subsequent worker source."
+    },
+    "provider_compensation_r25": {
+      "reported_source": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "source_boundary": "Owner reports current correction source; root inspected xcresult summaries/tree but did not rerun tests or prove private test-source-copy equality.",
+      "first_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_20-14-35-+0800.xcresult",
+      "first_summary": {
+        "passed": 149,
+        "failed": 0,
+        "skipped": 0,
+        "runtime_warnings": 0
+      },
+      "later_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_20-20-17-+0800.xcresult",
+      "later_summary": {
+        "passed": 150,
+        "failed": 0,
+        "skipped": 0,
+        "runtime_warnings": 0,
+        "sync_database_subset_passed": 10
+      },
+      "subset_proof": "Root read test tree:all10SyncStatusTableTests passed, including fallback error/requeue and gate serialization. This does not prove the full cross-database failure schedule.",
+      "limits": "Focused result read only; no full build/iOS/live provider/sync/UI acceptance."
     }
   },
   "files": [
@@ -169,22 +190,28 @@
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "f26331cbc1c30fea762b84f949c87bba448dbfca",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "cab3673c9b694a8f44f851e6e32f72e4cadcfc58",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "edc5574b9d37682c19205a54250816331f75d932",
-        "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
-        "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "f26331cbc1c30fea762b84f949c87bba448dbfca",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
-          "blob": "8761d6b04b4f90d7639fabc9510d52d1d4f2dcd2",
-          "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
-          "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending.",
+          "blob": "edc5574b9d37682c19205a54250816331f75d932",
+          "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
+          "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
           "earlier": {
-            "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
-            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "8761d6b04b4f90d7639fabc9510d52d1d4f2dcd2",
+            "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+            "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending.",
+            "earlier": {
+              "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
           }
         }
       },
@@ -335,22 +362,28 @@
       "path": "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "7fa86490e264975b2eabf45a3f5caa484cf1a3ae",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "fb1a6bfd421c8178efb8241842769fec1b5c0f04",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "313192ee005a7f15d93a7f30a0f94ea2b4b4317f",
-        "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
-        "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "7fa86490e264975b2eabf45a3f5caa484cf1a3ae",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
-          "blob": "6b0fcd3efb08eff0eae5272f3e1e4b9ddfc70434",
-          "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
-          "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+          "blob": "313192ee005a7f15d93a7f30a0f94ea2b4b4317f",
+          "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
           "earlier": {
-            "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
-            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "6b0fcd3efb08eff0eae5272f3e1e4b9ddfc70434",
+            "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+            "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+            "earlier": {
+              "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
           }
         }
       },
@@ -360,17 +393,23 @@
       "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "f7131042a83ac48f971193640d8052689d72c3d1",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "0f6c6f21aaf2d1ebabdf48421a9087c486458636",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "ec94d7a6fbb4b451e35b32e28426cd83dd6728a8",
-        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
-        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "f7131042a83ac48f971193640d8052689d72c3d1",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
-          "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-          "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          "blob": "ec94d7a6fbb4b451e35b32e28426cd83dd6728a8",
+          "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+          "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+          "earlier": {
+            "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
+            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          }
         }
       },
       "change": "M"
@@ -447,17 +486,23 @@
       "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "7b005ee9815455f42b011a6068ba07fccefead94",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "a796c4da389a09da7424e9a3d1ca8270e9ddf45d",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "0c741ea00f0d4807570b20f7286b0df93e4997b0",
-        "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
-        "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "7b005ee9815455f42b011a6068ba07fccefead94",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
-          "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-          "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          "blob": "0c741ea00f0d4807570b20f7286b0df93e4997b0",
+          "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+          "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+          "earlier": {
+            "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
+            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          }
         }
       },
       "change": "M"
@@ -466,17 +511,23 @@
       "path": "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "59bf251a87245d308d27f982e1f51c1cbc5dc70e",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "03cba5fb48eee8aeb1a754d29141483d424e72db",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "f850f32ae0ca7ca024cd60aff87f6d66c017df1b",
-        "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
-        "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "59bf251a87245d308d27f982e1f51c1cbc5dc70e",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
-          "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-          "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          "blob": "f850f32ae0ca7ca024cd60aff87f6d66c017df1b",
+          "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+          "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+          "earlier": {
+            "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
+            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          }
         }
       },
       "change": "M"
@@ -499,17 +550,23 @@
       "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
-      "blob": "9c583febbe5972c607caec5532679c881f3fd14d",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "d792bea3eacab2a56a38c277a563c348e32d8e54",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "9a0b41b58d4e8c04ac209fda01311d0b47e52e24",
-        "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
-        "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "9c583febbe5972c607caec5532679c881f3fd14d",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
-          "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-          "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          "blob": "9a0b41b58d4e8c04ac209fda01311d0b47e52e24",
+          "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+          "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+          "earlier": {
+            "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
+            "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+            "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+          }
         }
       },
       "change": "M"
@@ -541,22 +598,28 @@
       "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
       "previous_path": null,
       "group": "account-tests",
-      "blob": "4736ed87de702d28dec0053eafbc4963732a152c",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "1e45da5297a4f8248aa745e4d67f1bebf63ef61b",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "9050d2eda6596463abcde385d716e00d46272727",
-        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
-        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "4736ed87de702d28dec0053eafbc4963732a152c",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
-          "blob": "2417245ecd5ed39a8012e541230e43c3bcf830ae",
-          "standards": "Changed since pinned review; correction review pending after consolidated verification",
-          "spec": "Changed since pinned review; correction review pending after consolidated verification",
+          "blob": "9050d2eda6596463abcde385d716e00d46272727",
+          "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+          "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
           "earlier": {
-            "blob": "9db5fa390446adfffb4afa191b0d0130fca9d0f3",
-            "standards": "Pending fresh bounded review at current pin",
-            "spec": "Pending fresh bounded review at current pin"
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "2417245ecd5ed39a8012e541230e43c3bcf830ae",
+            "standards": "Changed since pinned review; correction review pending after consolidated verification",
+            "spec": "Changed since pinned review; correction review pending after consolidated verification",
+            "earlier": {
+              "blob": "9db5fa390446adfffb4afa191b0d0130fca9d0f3",
+              "standards": "Pending fresh bounded review at current pin",
+              "spec": "Pending fresh bounded review at current pin"
+            }
           }
         }
       },
@@ -1042,26 +1105,41 @@
       "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "915fdc1c7d2da04940c9b9ef0bd5a96a97019dac",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "1be07228b834f1941e974f3b7bca23742fc1b9e0",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "78237f7f77ead658085fa74e9bd10ef092b4350c",
-        "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
-        "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "915fdc1c7d2da04940c9b9ef0bd5a96a97019dac",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
-          "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
-          "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
-          "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+          "blob": "78237f7f77ead658085fa74e9bd10ef092b4350c",
+          "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
           "earlier": {
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
             "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
-            "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
-            "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+            "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+            "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+            "earlier": {
+              "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
+              "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+              "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+            }
           }
         }
       },
       "change": "M"
+    },
+    {
+      "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift",
+      "group": "storage",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+      "blob": "51c0af5088f64246fd4437155213829fb47f7cb2",
+      "change": "M",
+      "previous_path": null
     },
     {
       "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncStatusTable.swift",
@@ -1075,14 +1153,20 @@
     {
       "path": "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
       "group": "storage-tests",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "previous_path": null,
-      "blob": "07cbb004bee86993a19478abfb5931111d38f7b6",
+      "blob": "6a1e4cd87035ec8c0525ca9b9bb6992b000feef3",
       "prior_review": {
-        "blob": "89e865d27ef76c6bcd353cee64a947074f9ba7bd",
-        "standards": "New to ledger at65be895; independent bounded review pending.",
-        "spec": "New to ledger at65be895; independent bounded review pending."
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "07cbb004bee86993a19478abfb5931111d38f7b6",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+        "earlier": {
+          "blob": "89e865d27ef76c6bcd353cee64a947074f9ba7bd",
+          "standards": "New to ledger at65be895; independent bounded review pending.",
+          "spec": "New to ledger at65be895; independent bounded review pending."
+        }
       },
       "change": "M"
     },
@@ -1290,7 +1374,7 @@
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "dea802e9542afcac15875d8d589a3195ce31623c",
       "standards": "Pending fresh bounded review at current pin",
@@ -1300,11 +1384,11 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R082"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "888d60247e0fafbd89a714bc39ad67e4e67415b7",
       "standards": "Pending fresh bounded review at current pin",
@@ -1314,11 +1398,11 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R100"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "b2f340c9232ff5cb57c10a3b8c6df3b6588f8886",
       "standards": "Pending fresh bounded review at current pin",
@@ -1328,11 +1412,11 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R079"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "241eb8a7adc0d2be59f23f3aa8ded70b9ee83e23",
       "standards": "Pending fresh bounded review at current pin",
@@ -1342,11 +1426,11 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R083"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "3e69a2f920cb1fe595dadf262a4aade473874d4d",
       "standards": "Pending fresh bounded review at current pin",
@@ -1356,11 +1440,11 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R088"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.txt",
-      "previous_path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.applescript",
+      "previous_path": null,
       "group": "harness",
       "blob": "ce8548918228275c90568c3ac2db6a1a18178f60",
       "standards": "Pending fresh bounded review at current pin",
@@ -1370,7 +1454,7 @@
         "standards": "pending bounded scope review",
         "spec": "pending bounded scope review"
       },
-      "change": "R082"
+      "change": "A"
     },
     {
       "path": "Tests/NetNewsWireTests/WidgetSnapshotStoreTests.swift",
@@ -1413,22 +1497,28 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "eff390bd62b606a52f4fc23c5ebf8103b81df734",
-      "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
-      "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+      "blob": "1e892c6c695a97f38650188877a0dc821cf1f12d",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
       "prior_review": {
-        "blob": "ee45108278386718a939055417415a68824b6332",
-        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
-        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "eff390bd62b606a52f4fc23c5ebf8103b81df734",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
         "earlier": {
-          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
-          "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
-          "standards": "Changed since pinned review; correction review pending after consolidated verification",
-          "spec": "Changed since pinned review; correction review pending after consolidated verification",
+          "blob": "ee45108278386718a939055417415a68824b6332",
+          "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+          "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
           "earlier": {
-            "blob": "f463bb746bdd1adb03f986115d2cdd3db684c8d4",
-            "standards": "Pending fresh bounded review at current pin",
-            "spec": "Pending fresh bounded review at current pin"
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
+            "standards": "Changed since pinned review; correction review pending after consolidated verification",
+            "spec": "Changed since pinned review; correction review pending after consolidated verification",
+            "earlier": {
+              "blob": "f463bb746bdd1adb03f986115d2cdd3db684c8d4",
+              "standards": "Pending fresh bounded review at current pin",
+              "spec": "Pending fresh bounded review at current pin"
+            }
           }
         }
       },
@@ -1468,7 +1558,7 @@
       "change": "M"
     }
   ],
-  "current_branch_head": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+  "current_branch_head": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
   "native_resource": "This ledger grants no native resource. Resource scheduling and uncommitted worker source are coordinated separately.",
   "review_reports": {
     "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
@@ -1478,9 +1568,10 @@
     "admission_assessment": "docs/acceptance/t30-admission-assessment.md",
     "committed_writes_r18": "docs/acceptance/t30-committed-writes-review-r18.md",
     "shared_helper_r19": "docs/acceptance/t30-shared-helper-review-r19.md",
-    "provider_compensation_r24": "docs/acceptance/t30-provider-compensation-review-r24.md"
+    "provider_compensation_r24": "docs/acceptance/t30-provider-compensation-review-r24.md",
+    "provider_correction_r25": "docs/acceptance/t30-provider-correction-review-r25.md"
   },
-  "previous_candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
+  "previous_candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
   "review_scopes": {
     "cloudkit_page_delete": {
       "base": "e46b1b4d03b55204f2c379c26444266168c9776d",
@@ -1534,9 +1625,66 @@
         "docs/acceptance/t30-native-fixture-lifetime.md"
       ],
       "state": "R19 Standards complete: no Standards findings;1SpecP1 remains in SyncStatusTable.insertStatuses BEGIN/COMMIT rollback path. Owner correction and behavioral validation required."
+    },
+    "provider_compensation_r25": {
+      "base": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+      "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "paths": [
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+        "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+        "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+        "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+        "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+        "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+        "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift",
+        "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "hunks": 53,
+      "standards": {
+        "verdict": "changes_requested",
+        "changed_paths_read": 11,
+        "p2": 3,
+        "runtime_reproduced": false
+      },
+      "spec": {
+        "verdict": "changes_requested",
+        "changed_paths_read": 11,
+        "p1": 1,
+        "p2": 1,
+        "runtime_reproduced": false
+      },
+      "contract": "R24 outbox durability and provider refresh/send/gate coverage; report error visibility separately from durable repair.",
+      "review_report": "docs/acceptance/t30-provider-correction-review-r25.md"
     }
   },
   "manifest_verification": {
+    "date": "2026-10-28",
+    "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
+    "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+    "path_count": 110,
+    "method": "Exact original-base three-dot name/status manifest and candidate blob resolution; excludes future worker changes.",
+    "added_to_ledger": [
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift"
+    ],
+    "changed_blob_paths": [
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+      "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+      "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+      "docs/acceptance/t30-native-fixture-lifetime.md"
+    ],
+    "removed_from_ledger": [],
+    "coverage_limit": "Source identity only; current correction and remaining original-base coverage not accepted."
+  },
+  "prior_manifest_verification": {
     "date": "2026-10-28",
     "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
     "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
@@ -1564,5 +1712,15 @@
     ],
     "removed_from_ledger": [],
     "coverage_limit": "Hash/path completeness does not establish changed-hunk or connected-seam review clearance. Historical verdicts retained per blob."
+  },
+  "implementation_owner": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "high",
+    "thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t30-sol-high-handoff-20261028-r1",
+    "previous_owner_state": "interrupted, activeRunId null before replacement launch",
+    "preserved_dirty_files_at_handoff": 0,
+    "new_worktree_created": false,
+    "user_instruction_date": "2026-10-28"
   }
 }
