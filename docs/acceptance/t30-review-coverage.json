@@ -1,7 +1,7 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
   "candidate": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
-  "state": "Fixture-lifetime repair only; full T30 product/migration/sync/UI acceptance remains open. Previous broad reviews were incomplete. Each new group review must inspect every changed hunk and connected seam; unrelated unchanged lines are not the coverage criterion.",
+  "state": "R6 account changed hunks16/16 inspected on both axes, connected-seam coverage incomplete. Standards2P2/Spec2P2; coordinator trigger/caller-context patches uncommitted, syntax/whitespace only. Original owner must complete callback/download drain and runtime regressions. Full T30 remains open.",
   "groups": {
     "account": 16,
     "storage": 14,
@@ -20,48 +20,48 @@
       "previous_path": null,
       "group": "account",
       "blob": "c311894d36b4bcd6ea771c63d0bf687201ea4fb1",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/AccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "415057384283d09cae62747b9bb4aa867484411b",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/Container.swift",
       "previous_path": null,
       "group": "account",
       "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/Feed.swift",
       "previous_path": null,
       "group": "account",
       "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/FeedSettings.swift",
       "previous_path": null,
       "group": "account",
       "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
@@ -76,80 +76,80 @@
       "previous_path": null,
       "group": "account",
       "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/Folder.swift",
       "previous_path": null,
       "group": "account",
       "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
       "previous_path": null,
       "group": "account",
       "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "98daa7ce7c0bf766ba666b0313c891093c7ed564",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
       "previous_path": null,
       "group": "account",
       "blob": "553bf86139f5115dad7f173107375b45eb7b2119",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
       "previous_path": null,
       "group": "account",
       "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/OPMLFile.swift",
       "previous_path": null,
       "group": "account",
       "blob": "d132500bd6528202567e2cd24e151fb798236db3",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
+      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
     {
       "path": "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
@@ -447,5 +447,28 @@
       "standards": "pending bounded scope review",
       "spec": "pending bounded scope review"
     }
-  ]
+  ],
+  "account_subgroups": {
+    "core": [
+      "Modules/Account/Sources/Account/Account.swift",
+      "Modules/Account/Sources/Account/AccountDelegate.swift",
+      "Modules/Account/Sources/Account/Container.swift",
+      "Modules/Account/Sources/Account/Feed.swift",
+      "Modules/Account/Sources/Account/FeedSettings.swift",
+      "Modules/Account/Sources/Account/Folder.swift",
+      "Modules/Account/Sources/Account/OPMLFile.swift"
+    ],
+    "delegates": [
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
+      "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
+      "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
+      "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift"
+    ]
+  },
+  "working_tree_note": "Only Account.swift has coordinator uncommitted trigger/caller-context patches; no source SHA or runtime pass is claimed for them."
 }

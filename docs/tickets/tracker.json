@@ -419,10 +419,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "Final-source normal build357f463 passed isolated identity/deep signature; coordinator verified artifact/hash. Prior769 full tests remain scoped to2d1b273. New54-path ledger splits account16/storage14/fixtures13/harness11; review and fullT30 remain open.",
+      "implementation_state": "R6 account scopes report Standards2P2/Spec2P2 with incomplete connected seams. Coordinator small trigger/caller-context patches are uncommitted and syntax-only; original owner must complete local download admission/drain plus deterministic runtime tests. Prior769 passes historical.",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
-      "review_evidence": "docs/acceptance/t30-fixture-review-r4.md"
+      "review_evidence": "docs/acceptance/t30-account-review-r6.md"
     }
   },
   "spec": {
