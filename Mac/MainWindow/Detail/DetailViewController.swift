@@ -117,6 +117,12 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
 		let controller = webViewController(for: mode)
 		controller.setNativeSourceBinding(nil)
+		switch mode {
+		case .regular:
+			detailStateForRegular = state
+		case .search:
+			detailStateForSearch = state
+		}
 		if case let .article(article, _) = state {
 			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
 				guard let controller, ProcessingEngine.shared.state == .ready, let current = controller.article,
@@ -135,12 +141,6 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 				}
 				controller.setNativeSourceBinding(binding)
 			}
-		}
-		switch mode {
-		case .regular:
-			detailStateForRegular = state
-		case .search:
-			detailStateForSearch = state
 		}
 	}
 
