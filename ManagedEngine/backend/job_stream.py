@@ -25,7 +25,7 @@ def text_chunks(db, table, column, rowid):
 
 
 class SnapshotTooLarge(ValueError):
-    pass
+    code = 'job_record_too_large'
 
 
 class SnapshotWriter:

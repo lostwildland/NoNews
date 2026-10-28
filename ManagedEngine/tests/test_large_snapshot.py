@@ -149,7 +149,7 @@ sys.exit(stdio_service.main())
                                  input=''.join(json.dumps(x)+'\n' for x in messages),
                                  text=True, capture_output=True, check=True, timeout=15)
             replies = [json.loads(x) for x in run.stdout.splitlines()]
-            self.assertEqual(replies[1], {'id':1,'error':'invalid query'})
+            self.assertEqual(replies[1], {'id':1,'error':'job record is too large','code':'job_record_too_large'})
             self.assertEqual(replies[2]['result']['schemaVersion'], 41)
             with closing(sqlite3.connect(data/'information.sqlite')) as db:
                 self.assertEqual(db.execute('SELECT error FROM processing_jobs').fetchone()[0], 'x'*1000)
@@ -179,7 +179,7 @@ sys.exit(stdio_service.main())
                                input=''.join(json.dumps(x)+'\n' for x in requests),
                                text=True,capture_output=True,check=True,timeout=15)
             replies=[json.loads(x) for x in run.stdout.splitlines()]
-            self.assertEqual(replies[1], {'id':1,'error':'invalid query'})
+            self.assertEqual(replies[1], {'id':1,'error':'job record is too large','code':'job_record_too_large'})
             self.assertEqual(replies[2]['result']['schemaVersion'], 41)
             with closing(sqlite3.connect(data/'information.sqlite')) as db:
                 self.assertEqual(db.execute('SELECT result_json FROM processing_jobs').fetchone()[0], stored)

@@ -98,8 +98,11 @@ def main():
                 continue
             try:
                 send({**correlation, 'result': app.handle(method, path, query, body)})
-            except ValueError:
-                send({**correlation, 'error': 'invalid query'})
+            except ValueError as error:
+                if getattr(error, 'code', None) == 'job_record_too_large':
+                    send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
+                else:
+                    send({**correlation, 'error': 'invalid query'})
             except Exception:
                 send({**correlation, 'error': 'operation failed'})
     except Exception:
