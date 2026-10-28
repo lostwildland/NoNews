@@ -256,9 +256,9 @@ class Application:
                     raise magpie_migration.SnapshotExpired('Migration operation cancelled')
             if not operation['done']:
                 return {'state': 'running', 'operationId': operation['id']}
+            operation['read'] = True
             if operation['error']:
                 raise operation['error']
-            operation['read'] = True
             return {'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}
 
     def _run_migration(self, operation, body, previous):

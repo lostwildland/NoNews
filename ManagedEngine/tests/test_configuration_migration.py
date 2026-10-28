@@ -15,6 +15,38 @@ from threading import Thread
 
 
 class MigrationTest(unittest.TestCase):
+    def test_acknowledged_operation_failures_do_not_exhaust_queue(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'f' * 32
+        root = self.enterContext(tempfile.TemporaryDirectory())
+        process = self.enterContext(subprocess.Popen([sys.executable, '-B', str(script), root],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+            env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}))
+        process.stdin.write(json.dumps({'token': token}) + '\n')
+        process.stdin.flush()
+        self.assertEqual(json.loads(process.stdout.readline()), {'status': 'ready'})
+        def call(method, path, body):
+            process.stdin.write(json.dumps({'id': 1, 'token': token, 'method': method,
+                'path': path, 'body': body}) + '\n')
+            process.stdin.flush()
+            return json.loads(process.stdout.readline())
+        for _ in range(40):
+            started = call('POST', '/api/config/migration/preview',
+                {'serviceId': 'missing-service', 'cooperative': True})
+            self.assertIn('result', started)
+            cursor = {'operationId': started['result']['operationId']}
+            deadline = time.monotonic() + 5
+            while True:
+                response = call('POST', '/api/config/migration/preview', cursor)
+                if 'error' in response:
+                    break
+                self.assertLess(time.monotonic(), deadline, 'Operation did not finish')
+                time.sleep(.001)
+            self.assertEqual(response['code'], 'invalid_configuration')
+            self.assertEqual(call('POST', '/api/config/migration/preview', cursor), response)
+        self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
+        self.assertEqual(call('PUT', '/api/settings/processing', {'processors': 2})['result']['processors'], 2)
+
     def test_report_over_16_mib_survives_restart_and_concurrent_changes(self):
         class Directory(BaseHTTPRequestHandler):
             def do_GET(self):
