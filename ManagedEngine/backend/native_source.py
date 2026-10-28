@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS native_observation_identities(
   identity_type TEXT NOT NULL,
   identity_value TEXT NOT NULL,
   raw_identity_value TEXT NOT NULL DEFAULT '',
-  evidence_state TEXT NOT NULL CHECK(evidence_state IN ('verified','conflict')),
+  evidence_state TEXT NOT NULL CHECK(evidence_state IN ('verified','unresolved','conflict')),
   observed_at TEXT NOT NULL,
   UNIQUE(observation_id, media_type, identity_type, identity_value)
 );
@@ -282,6 +282,8 @@ def observe(db, body):
                     state = "conflict"
                     item_id = existing["item_id"] if existing else None
         if existing and existing["identity_state"] == "conflict":
+            state = "conflict"
+        if db.execute("SELECT 1 FROM native_observation_identities WHERE observation_id=? AND evidence_state='conflict' LIMIT 1", (observation_id,)).fetchone():
             state = "conflict"
         if existing:
             if identity:
