@@ -131,6 +131,9 @@ def ensure_schema(db) -> None:
     if "raw_identity_value" not in {row[1] for row in db.execute("PRAGMA table_info(native_observation_identities)")}:
         db.execute("ALTER TABLE native_observation_identities ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='item_feed_contracts'").fetchone() and db.execute("SELECT 1 FROM item_feed_contracts LIMIT 1").fetchone() and db.execute("SELECT 1 FROM native_processing_contexts LIMIT 1").fetchone() is None:
+        raise RuntimeError("native_context_migration_required")
+
     if "service_id" not in policy_columns:
         db.execute("ALTER TABLE native_feed_policies ADD COLUMN service_id TEXT")
 
@@ -356,7 +359,16 @@ def context_results(db, method, body):
                 raise ValueError("Material result provenance does not match context")
         with transaction(db):
             db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
-    return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
+    stored = [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=?", (context_id,))]
+    known = {(row["result_type"], row["result_id"]) for row in stored}
+    context_item = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+    if context_item:
+        for result_type, stage, key, table in (("curator", "curator", "run_id", "curator_runs"), ("draft", "editor", "draft_id", "editor_drafts")):
+            for result_id, created_at in db.execute("SELECT json_extract(p.result_json, '$." + key + "'),p.updated_at FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage=? AND p.result_json IS NOT NULL", (context_id, stage)):
+                if result_id and (result_type, result_id) not in known and db.execute("SELECT 1 FROM " + table + " WHERE id=? AND item_id=?", (result_id, context_item[0])).fetchone():
+                    stored.append({"result_type": result_type, "result_id": result_id, "created_at": created_at})
+    stored.sort(key=lambda row: (row["created_at"], row["result_id"]), reverse=True)
+    return {"contextID": context_id, "results": stored}
 
 def observation(db, identity, namespace=None):
     if namespace is not None:
