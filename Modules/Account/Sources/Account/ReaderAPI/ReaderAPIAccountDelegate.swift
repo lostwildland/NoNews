@@ -678,7 +678,12 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		do {
+			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		} catch {
+			_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+			throw error
+		}
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}
@@ -996,7 +1001,7 @@ private extension ReaderAPIAccountDelegate {
 		if !unsendableArticleIDs.isEmpty {
 			Self.logger.error("ReaderAPIAccountDelegate: dropping \(unsendableArticleIDs.count) unsendable article IDs from the status queue")
 			account.postSyncError(ReaderAPIAccountDelegateError.unsendableStatuses(unsendableArticleIDs.count), operation: "Sending article status")
-			await syncDatabase.deleteSelectedForProcessing(unsendableArticleIDs, key: key)
+			try await syncDatabase.deleteSelectedForProcessingOrThrow(unsendableArticleIDs, key: key)
 		}
 		let sendableArticleIDs = articleIDs.filter { articleIDIsSendable($0) }
 
@@ -1007,7 +1012,7 @@ private extension ReaderAPIAccountDelegate {
 
 			do {
 				try await account.logRefreshPage(kind: .sendArticleStatuses, message: { _ in "\(articleIDGroup.count) \(label)" }, { try await apiCall(articleIDGroup) })
-				guard await syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup), key: key) else { throw CancellationError() }
+				try await syncDatabase.deleteSelectedForProcessingOrThrow(Set(articleIDGroup), key: key)
 				sentCount += articleIDGroup.count
 			} catch is CancellationError {
 				throw CancellationError()

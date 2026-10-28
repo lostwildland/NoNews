@@ -370,7 +370,7 @@ import Secrets
 						let unmarkableIDs = Self.unmarkableAsReadArticleIDs(articleIDs, datesByArticleID: datesByArticleID, cutoffDate: cutoffDate)
 						if !unmarkableIDs.isEmpty {
 							Self.logger.info("Feedly: dropping \(unmarkableIDs.count) mark-as-read statuses past Feedly's marker limit")
-							guard await syncDatabase.deleteSelectedForProcessing(unmarkableIDs, key: .read) else { throw CancellationError() }
+							try await syncDatabase.deleteSelectedForProcessingOrThrow(unmarkableIDs, key: .read)
 							articleIDs.subtract(unmarkableIDs)
 						}
 						guard !articleIDs.isEmpty else {
@@ -388,7 +388,7 @@ import Secrets
 						let chunkIDs = Set(chunk)
 						do {
 							try await account.logRefreshPage(kind: .sendArticleStatuses, message: { _ in "\(chunkIDs.count) \(pairing.action.rawValue)" }, { try await caller.mark(chunkIDs, as: pairing.action) })
-							guard await syncDatabase.deleteSelectedForProcessing(chunkIDs, key: pairing.key) else { throw CancellationError() }
+							try await syncDatabase.deleteSelectedForProcessingOrThrow(chunkIDs, key: pairing.key)
 							sentCount += chunkIDs.count
 						} catch {
 							Self.logger.error("Feedly: Article status sync call failed: \(error.localizedDescription)")
@@ -818,7 +818,12 @@ import Secrets
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		do {
+			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		} catch {
+			_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+			throw error
+		}
 		if !syncStatuses.isEmpty {
 			lastNoChangeSyncDate = nil
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)

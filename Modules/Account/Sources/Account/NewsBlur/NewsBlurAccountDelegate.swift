@@ -503,12 +503,17 @@ import Secrets
 		guard let account else {
 			return
 		}
-		_ = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 		let syncStatuses = Set(articleIDs.map { articleID in
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		do {
+			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		} catch {
+			_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+			throw error
+		}
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}

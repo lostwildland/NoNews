@@ -461,7 +461,12 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		do {
+			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+		} catch {
+			_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+			throw error
+		}
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}
@@ -814,7 +819,7 @@ private extension FeedbinAccountDelegate {
 		for articleIDGroup in articleIDGroups {
 			do {
 				try await apiCall(articleIDGroup)
-				guard await self.syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup.map { String($0) }), key: key) else { throw CancellationError() }
+				try await self.syncDatabase.deleteSelectedForProcessingOrThrow(Set(articleIDGroup.map { String($0) }), key: key)
 				sentCount += articleIDGroup.count
 			} catch is CancellationError {
 				throw CancellationError()

@@ -77,7 +77,8 @@ private extension CloudKitArticlesZoneDelegate {
 			return
 		}
 
-		guard let account, await account.delete(articleIDs: deletableArticleIDs), await syncDatabase.deleteSelectedForProcessing(deletableArticleIDs) else { throw CancellationError() }
+		guard let account, await account.delete(articleIDs: deletableArticleIDs) else { throw CancellationError() }
+		try await syncDatabase.deleteSelectedForProcessingOrThrow(deletableArticleIDs)
 	}
 
 	func update(records: [CKRecord], pendingReadStatusArticleIDs: Set<String>, pendingStarredStatusArticleIDs: Set<String>) async throws {

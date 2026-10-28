@@ -37,6 +37,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 	/// Whether any statuses failed to send. Read after the operation completes.
 	private(set) var didFail = false
 	private(set) var cancellation: CancellationError?
+	private(set) var failure: Error?
 
 	init(account: Account, articlesZone: CloudKitArticlesZone, database: SyncDatabase, syncArticleContentForUnreadArticles: @escaping @Sendable () -> Bool, syncErrorHandler: CloudKitSyncErrorHandler?) {
 		self.account = account
@@ -53,7 +54,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 		if let runForTesting {
 			DatabaseWork.$current.withValue(work) {
 				Task { @MainActor in
-					do { try await runForTesting() } catch { cancellation = error as? CancellationError; didFail = true }
+					do { try await runForTesting() } catch { cancellation = error as? CancellationError; failure = error; didFail = true }
 					didComplete()
 				}
 			}
@@ -86,6 +87,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 				}
 			} catch {
 				self.cancellation = error as? CancellationError
+				self.failure = error
 				self.didFail = true
 				Self.logger.debug("iCloud: Send status error: \(error.localizedDescription)")
 				activityLog.didFail(id: activityID, error: error)
@@ -102,6 +104,12 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 
 	/// Returns the total number of statuses sent and the subset whose article content was also uploaded.
 	func selectForProcessing() async throws -> SendResult {
+		try await syncDatabase.withStatusMutation { [self] in
+			try await selectForProcessingLocked()
+		}
+	}
+
+	private func selectForProcessingLocked() async throws -> SendResult {
 		let syncStatuses = try await syncDatabase.selectForProcessing(limit: blockSize)
 		guard !syncStatuses.isEmpty else {
 			return (0, 0)
@@ -111,16 +119,14 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 			return (0, 0)
 		}
 
-		let rest = try await selectForProcessing()
+		let rest = try await selectForProcessingLocked()
 		return (batch.sent + rest.sent, batch.withContent + rest.withContent)
 	}
 
 	/// Returns the batch's send counts, or nil if processing should stop
 	/// (account/zone gone, or no usable articles for the batch).
 	func processStatuses(_ syncStatuses: [SyncStatus]) async throws -> SendResult? {
-		try await syncDatabase.withStatusMutation { [self] in
-			try await processStatusesLocked(syncStatuses)
-		}
+		try await processStatusesLocked(syncStatuses)
 	}
 
 	private func processStatusesLocked(_ syncStatuses: [SyncStatus]) async throws -> SendResult? {
