@@ -247,3 +247,7 @@
 
 - T03cf95ccd adds transactional queued-save receipts/native recovery; focused14pass/1optional skip. Strict native execution preceded the final missing-receipt change, and restart recovery still reports an explicit unknown. P1 remains open.
 - T30 R18 found failed article lookup success-empty and remote deletion of pending read status. Root9ab2069 adds shared BEGIN/COMMIT error capture, SyncStatusTable mapping, first-batch-failure stop and tests; the four-path correction is source-only and needs compile/behavioral validation.
+
+## 2026-10-28 — T03 Sol/high checkpoint
+
+- T03 Sol/high completed preserved correction checkpoint `80528c1`, clean/remote matched. Root ran `run_configuration_native_checks.sh` with accepted T02 Debug products: strict Swift current Engine + Preferences controller compiled/executed; Processing configuration and Preferences controller wiring passed. Reported Python suite18 total,17 passed,1 optional skip. Fresh paired review against24-path current candidate is required. Prepared payload remains stale; full app/Keychain/UI/HIG/signed bundle/T11/platform gates remain open.

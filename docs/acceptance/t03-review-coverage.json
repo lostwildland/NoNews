@@ -1,11 +1,11 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
-  "state": "Exact2ee43f0 original-base manifest:23paths. Both R10 reviews inspected61/61hunks and23/23paths; changes requested. Spec3P1/1P2; Standards2P1/2P2 plus3Spec-onlyP2, with overlapping recovery finding. Root independently reproduced receipt endpoint mismatch and stale-credential backend overwrite. Owner correcting source; no app/Keychain/HIG clearance.",
+  "candidate": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2",
+  "state": "Exact80528c1 original-base manifest:24paths. Sol/high owner completed the preserved correction and strict native checks; fresh paired review is required. Reported Python18 total/17passed/1optional skip and current controller/configuration executables passed. Prepared payload is stale; app/Keychain/UI/HIG/signed bundle/T11/full platform acceptance remain open.",
   "groups": {
     "backend": 4,
     "evidence": 3,
-    "fixtures-and-measurements": 5,
+    "fixtures-and-measurements": 6,
     "native": 2,
     "native-checks": 4,
     "packaging": 1,
@@ -15,41 +15,59 @@
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
-      "blob": "8bd50a6846654ed717c329b9507009e80f4850de",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "f482e7310b3cf73c4e65923b3ead0489fbdb5a8f",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "80f3bf4699b8673e903509a2f3fc730748dc1289",
-        "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
-        "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "8bd50a6846654ed717c329b9507009e80f4850de",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "80f3bf4699b8673e903509a2f3fc730748dc1289",
+          "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+          "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        }
       },
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
-      "blob": "18aa907826fc445c87f964da99633ab3aa93ea21",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "e45aa989679f03cdb493169d804369ecd8576f7e",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "943631f2a411fd0000863d2620a933d5d99dbf5c",
-        "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
-        "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "18aa907826fc445c87f964da99633ab3aa93ea21",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "943631f2a411fd0000863d2620a933d5d99dbf5c",
+          "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+          "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        }
       },
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
       "path": "ManagedEngine/backend/configuration.py",
       "group": "backend",
-      "blob": "a5b8e6b036d8626faee2de55f17bafbc47efb36c",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "055421ea02382a1d01d374a32c9db002091a20df",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "c95bf84a8e1c46817c16725586f9ff6972980326",
-        "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
-        "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "a5b8e6b036d8626faee2de55f17bafbc47efb36c",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "c95bf84a8e1c46817c16725586f9ff6972980326",
+          "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+          "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        }
       },
       "change": "A",
       "previous_path": null
@@ -57,13 +75,19 @@
     {
       "path": "ManagedEngine/backend/magpie_migration.py",
       "group": "backend",
-      "blob": "b6d17c095eba9ac395997be0e131449048ed4c00",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "d857842dbe8d8ced6a39ae71f4fe7a35984b8ee1",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "ed9b4922fc80ad9f709a3096b66681153120979a",
-        "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
-        "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "b6d17c095eba9ac395997be0e131449048ed4c00",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "ed9b4922fc80ad9f709a3096b66681153120979a",
+          "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+          "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        }
       },
       "change": "A",
       "previous_path": null
@@ -71,15 +95,21 @@
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "backend",
-      "blob": "daf110df5ff452a0ddcd82fc463bb7c5b27a15a1",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "73ea60a3d888a3775f1876ec368f7b7227dc6b65",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "fe24cc2dd6cb26ed925a0a9ed080e97ac5fe0b64",
-        "standards": "Changed at partial R5f96d605; source recheck pending.",
-        "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "daf110df5ff452a0ddcd82fc463bb7c5b27a15a1",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "fe24cc2dd6cb26ed925a0a9ed080e97ac5fe0b64",
+          "standards": "Changed at partial R5f96d605; source recheck pending.",
+          "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
+        }
       },
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
@@ -88,7 +118,7 @@
       "blob": "1ed2f8516c9bcc2f1192c2cc5d68a3eafc26cff9",
       "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
       "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
@@ -97,7 +127,7 @@
       "blob": "029e49b1a304fffab8edf9903dfc93c1b3aad23a",
       "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
       "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
@@ -112,22 +142,34 @@
     {
       "path": "ManagedEngine/tests/PreferencesControllerChecks.swift",
       "group": "native-checks",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "blob": "3f4c97d0f639b8e40e4c7ee2c373a8d9af86a7eb",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
+      "blob": "a114fc16e25f7cabe81a422dd86403225aaa5a20",
       "change": "A",
-      "previous_path": null
+      "previous_path": null,
+      "prior_review": {
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "3f4c97d0f639b8e40e4c7ee2c373a8d9af86a7eb",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance."
+      }
     },
     {
       "path": "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
       "group": "native-checks",
-      "blob": "a632007e58db62db74ab391eefbdd1ed26883a8b",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "16e2871efc15543ae954321521d80698fa094ff4",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "5685ffb398c0dbbc48f5fb98e87f9698b90b3e48",
-        "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
-        "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "a632007e58db62db74ab391eefbdd1ed26883a8b",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "5685ffb398c0dbbc48f5fb98e87f9698b90b3e48",
+          "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+          "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+        }
       },
       "change": "A",
       "previous_path": null
@@ -160,6 +202,15 @@
       "previous_path": null
     },
     {
+      "path": "ManagedEngine/tests/configuration_recovery_fixture.py",
+      "group": "fixtures-and-measurements",
+      "standards": "New T03 recovery fixture at80528c1; fresh review pending.",
+      "spec": "New public recovery fixture at80528c1; current review pending.",
+      "blob": "0836a4522f092f1e0fad92dff6ed2d0ec412cacc",
+      "change": "A",
+      "previous_path": null
+    },
+    {
       "path": "ManagedEngine/tests/measure_migration_preview.py",
       "group": "fixtures-and-measurements",
       "blob": "b16f842d4e89f75698bf0fd5627d92c7b30cc6d3",
@@ -174,17 +225,23 @@
       "blob": "c8923c7b29c161f3ba8af7e3ec7a40bcd903f06c",
       "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
       "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
       "path": "ManagedEngine/tests/run_configuration_native_checks.sh",
       "group": "native-checks",
-      "blob": "c70a9a3bee9a5bc4d1588137cc18908aa0a6b177",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "58637669efaa8437a463f2a673931d24c6fd2ab1",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "change": "A",
-      "previous_path": null
+      "previous_path": null,
+      "prior_review": {
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "c70a9a3bee9a5bc4d1588137cc18908aa0a6b177",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance."
+      }
     },
     {
       "path": "ManagedEngine/tests/test_channel.py",
@@ -192,28 +249,40 @@
       "blob": "3d504fea1d9a8318055c62f6dfbdbe6f3010ca9d",
       "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
       "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
       "path": "ManagedEngine/tests/test_configuration.py",
       "group": "python-checks",
-      "blob": "766156033164ec7cb7d6817c3cb0826c013a6cf8",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "3477a75465e29e485e8f09b4b316301c0818fb0e",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "change": "A",
-      "previous_path": null
+      "previous_path": null,
+      "prior_review": {
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "766156033164ec7cb7d6817c3cb0826c013a6cf8",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance."
+      }
     },
     {
       "path": "ManagedEngine/tests/test_configuration_migration.py",
       "group": "python-checks",
-      "blob": "91dac486b2c3df10fb9d132fbcf1ae3a43c46173",
-      "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
-      "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+      "blob": "fe57c8e681faf825cd1ceade3be75846c38e9fc0",
+      "standards": "Changed at80528c1; fresh current-source review pending; prior verdicts retain original blob.",
+      "spec": "Changed at80528c1; current source behavior and acceptance pending fresh review.",
       "prior_review": {
-        "blob": "a0477d8e4ffe5bb126df9f628a01b29e8e19aeb2",
-        "standards": "Changed at partial R5f96d605; source recheck pending.",
-        "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
+        "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+        "blob": "91dac486b2c3df10fb9d132fbcf1ae3a43c46173",
+        "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
+        "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
+        "earlier": {
+          "blob": "a0477d8e4ffe5bb126df9f628a01b29e8e19aeb2",
+          "standards": "Changed at partial R5f96d605; source recheck pending.",
+          "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
+        }
       },
       "change": "A",
       "previous_path": null
@@ -224,7 +293,7 @@
       "blob": "09580ef551d42f77bdc6129ae8a8ecc6b5886913",
       "standards": "R10 full original-base Standards review inspected all61hunks/23paths at2ee43f0; changes requested (recovery/text sizing/scrolling/minimum width, plus credential and selection Spec gaps). Source coverage is not native/runtime acceptance.",
       "spec": "R10 full original-base Spec review inspected all61hunks/23paths at2ee43f0; changes requested (controller/credential intent/mutation recovery/acknowledgement). This path identity and hunk coverage do not imply native or connected-runtime acceptance.",
-      "change": "M",
+      "change": "A",
       "previous_path": null
     },
     {
@@ -322,6 +391,38 @@
         "overlap": "Unresolved mutation identity P1 overlaps the Spec review; do not sum both reports as independent findings."
       },
       "scope_limit": "App, Keychain, packaged payload, live providers, keyboard/VoiceOver/appearance/narrow layout and T11 remain unverified."
+    },
+    "sol_correction_r1": {
+      "base": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+      "candidate": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2",
+      "paths": [
+        "Mac/Preferences/ProcessingPreferencesViewController.swift",
+        "Mac/Processing/ProcessingEngine.swift",
+        "ManagedEngine/backend/configuration.py",
+        "ManagedEngine/backend/magpie_migration.py",
+        "ManagedEngine/backend/server.py",
+        "ManagedEngine/payload_sources.py",
+        "ManagedEngine/stdio_service.py",
+        "ManagedEngine/tests/MigrationReviewStateChecks.swift",
+        "ManagedEngine/tests/PreferencesControllerChecks.swift",
+        "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
+        "ManagedEngine/tests/configuration_browse_fixture.py",
+        "ManagedEngine/tests/configuration_directory_fixture.py",
+        "ManagedEngine/tests/configuration_lock_fixture.py",
+        "ManagedEngine/tests/configuration_recovery_fixture.py",
+        "ManagedEngine/tests/measure_migration_preview.py",
+        "ManagedEngine/tests/native_fixture.py",
+        "ManagedEngine/tests/run_configuration_native_checks.sh",
+        "ManagedEngine/tests/test_channel.py",
+        "ManagedEngine/tests/test_configuration.py",
+        "ManagedEngine/tests/test_configuration_migration.py",
+        "ManagedEngine/tests/test_stdio.py",
+        "docs/acceptance/t03-apply-acknowledgement-r4.md",
+        "docs/acceptance/t03-native-processing-configuration.md",
+        "docs/acceptance/t03-preferences-typecheck.md"
+      ],
+      "hunks": 119,
+      "implementation": "Sol/high owner-reported and root-read strict current native check entry; fresh independent Standards/Spec review pending."
     }
   },
   "evidence": {
@@ -398,6 +499,15 @@
       "fixture_setup_in_trace": false,
       "limits": "Python allocations only, not RSS/crash/general deadline proof; source staged serializer runs before snapshot row guards. No live provider/app/private data.",
       "report": "docs/acceptance/t03-current-source-review-r10.md#coordinator-public-scalar-capacity-probe"
+    },
+    "sol_current_checkpoint": {
+      "source": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2",
+      "worktree": "clean and remote matched at owner handoff",
+      "python": "18 total,17 passed,1 optional skip",
+      "native_entry": "run_configuration_native_checks.sh passed Processing configuration and Preferences controller request wiring with strict warnings-as-errors Swift compilation and accepted T02 Debug products",
+      "runtime_output": "Stopped-save reports notSaved/cancelled with stable operation ID; native browse preview1.411s, 2,200 traversal3.844s, max page0.019s",
+      "payload": "stale prepared runtime; not current packaged proof",
+      "limits": "No full Xcode/app/UI/VoiceOver/appearance/Keychain/live provider/signed bundle/T11. Owner evidence and root command output, not independent source review."
     }
   },
   "previous_candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
@@ -409,12 +519,11 @@
   "manifest_verification": {
     "date": "2026-10-28",
     "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-    "candidate": "2ee43f01ea187aad232c5d45916e9b11f8760219",
-    "path_count": 23,
-    "method": "Exact original-base three-dot name/status manifest, HEAD blob resolution and git cat-file type check; excludes dirty worker files.",
+    "candidate": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2",
+    "path_count": 24,
+    "method": "Exact original-base three-dot name manifest and candidate blob/type verification; excludes dirty/future source.",
     "added_to_ledger": [
-      "ManagedEngine/tests/PreferencesControllerChecks.swift",
-      "ManagedEngine/tests/configuration_lock_fixture.py"
+      "ManagedEngine/tests/configuration_recovery_fixture.py"
     ],
     "changed_blob_paths": [
       "Mac/Preferences/ProcessingPreferencesViewController.swift",
@@ -422,21 +531,37 @@
       "ManagedEngine/backend/configuration.py",
       "ManagedEngine/backend/magpie_migration.py",
       "ManagedEngine/backend/server.py",
+      "ManagedEngine/payload_sources.py",
+      "ManagedEngine/stdio_service.py",
+      "ManagedEngine/tests/MigrationReviewStateChecks.swift",
+      "ManagedEngine/tests/PreferencesControllerChecks.swift",
       "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
+      "ManagedEngine/tests/configuration_browse_fixture.py",
+      "ManagedEngine/tests/configuration_directory_fixture.py",
+      "ManagedEngine/tests/configuration_lock_fixture.py",
+      "ManagedEngine/tests/measure_migration_preview.py",
+      "ManagedEngine/tests/native_fixture.py",
+      "ManagedEngine/tests/run_configuration_native_checks.sh",
+      "ManagedEngine/tests/test_channel.py",
+      "ManagedEngine/tests/test_configuration.py",
       "ManagedEngine/tests/test_configuration_migration.py",
-      "docs/acceptance/t03-native-processing-configuration.md"
+      "ManagedEngine/tests/test_stdio.py",
+      "docs/acceptance/t03-apply-acknowledgement-r4.md",
+      "docs/acceptance/t03-native-processing-configuration.md",
+      "docs/acceptance/t03-preferences-typecheck.md"
     ],
     "removed_from_ledger": [],
-    "coverage_limit": "Hash/path completeness does not establish changed-hunk or connected-seam review clearance. Historical verdicts retained per blob."
+    "coverage_limit": "Path/blob identity is not connected review or runtime acceptance."
   },
   "implementation_owner": {
     "provider": "codex",
     "model": "gpt-6.1-sol",
     "reasoningEffort": "high",
     "thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t03-sol-high-handoff-20261028-r1",
-    "previous_owner_state": "interrupted, activeRunId null before replacement launch",
+    "previous_owner_state": "Terra interrupted then Sol completed commit80528c1",
     "preserved_dirty_files_at_handoff": 9,
     "new_worktree_created": false,
-    "user_instruction_date": "2026-10-28"
-  }
+    "current_checkpoint": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2"
+  },
+  "source": "80528c17f4e2ff3fe4ddde01e2bcf4321a3d80d2"
 }
