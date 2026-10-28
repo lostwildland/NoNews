@@ -13,6 +13,7 @@
 - T03 `bd4fffa` adds direct mutation receipts, persisted incomplete/verified credential state, bounded migration snapshot/per-row capacity, bounded unknown recovery IDs and an Advanced output disclosure. The source suite passed 16 tests with one optional skip; fresh paired correction review is pending. XIB layout, full HIG/UI/Keychain and signed runtime acceptance remain open.
 - T30 `d0b9db7` propagates SyncDatabase errors through CloudKit and Feedbin/Feedly/ReaderAPI/NewsBlur selection, insertion and post-send deletion paths, and holds the shared status mutation gate through CloudKit claim/send/delete. The formal macOS plan passed with zero failures/skips; fresh paired R22 review is pending, as are final artifact/iOS/live CloudKit/production deletion gates.
 - T30 R24 Standards recheck at `835cda3` found two P2 provider gaps: fallback compensation errors/notification are not fully preserved, and provider refresh/send schedules bypass the status gate. The implementation owner is correcting these; the paired Spec verdict and current-source ledger refresh remain pending.
+- The paired T30 R24 Spec recheck now confirms one P1 and one P2 at the same pin: double-failure outbox durability can still lose a local read/star intent, and stale provider refresh can overwrite a newer local mark outside the status gate. The owner is addressing both before any final build or acceptance claim.
 
 ## 2026-10-28 — Connected transaction handoff and remaining Save P1
 
