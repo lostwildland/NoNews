@@ -119,7 +119,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		controller.setNativeSourceBinding(nil)
 		if case let .article(article, _) = state {
 			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
-				guard let controller, let current = controller.article,
+				guard let controller, ProcessingEngine.shared.state == .ready, let current = controller.article,
 					current.accountID == article.accountID, current.feedID == article.feedID,
 					current.articleID == article.articleID else {
 					return
@@ -128,7 +128,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 			}
 		} else if case let .extracted(article, _, _) = state {
 			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
-				guard let controller, let current = controller.article,
+				guard let controller, ProcessingEngine.shared.state == .ready, let current = controller.article,
 					current.accountID == article.accountID, current.feedID == article.feedID,
 					current.articleID == article.articleID else {
 					return

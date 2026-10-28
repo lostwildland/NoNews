@@ -346,10 +346,12 @@ def context_results(db, method, body):
         context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
         if row is None or context_item is None or row[0] != context_item[0]:
             raise ValueError("Context result does not belong to item")
-        if result_type == "curator" and (not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None):
-            raise ValueError("Curator result does not match context prompt")
-        if result_type == "draft" and (not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None):
-            raise ValueError("Editor result does not match context prompt")
+        if result_type == "curator":
+            if not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None or not db.execute("SELECT 1 FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage='curator' AND p.status='ready' AND json_extract(p.result_json,'$.run_id')=?", (context_id, result_id)).fetchone():
+                raise ValueError("Curator result does not match context provenance")
+        if result_type == "draft":
+            if not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None or not db.execute("SELECT 1 FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage='editor' AND p.status='ready' AND json_extract(p.result_json,'$.draft_id')=?", (context_id, result_id)).fetchone():
+                raise ValueError("Editor result does not match context provenance")
         if result_type == "material":
             try:
                 provenance = json.loads(row[1]) if row[1] else {}
@@ -364,7 +366,7 @@ def context_results(db, method, body):
     context_item = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
     if context_item:
         for result_type, stage, key, table in (("curator", "curator", "run_id", "curator_runs"), ("draft", "editor", "draft_id", "editor_drafts")):
-            for result_id, created_at in db.execute("SELECT json_extract(p.result_json, '$." + key + "'),p.updated_at FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage=? AND p.result_json IS NOT NULL", (context_id, stage)):
+            for result_id, created_at in db.execute("SELECT json_extract(p.result_json, '$." + key + "'),p.updated_at FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage=? AND p.status='ready' AND p.result_json IS NOT NULL", (context_id, stage)):
                 if result_id and (result_type, result_id) not in known and db.execute("SELECT 1 FROM " + table + " WHERE id=? AND item_id=?", (result_id, context_item[0])).fetchone():
                     stored.append({"result_type": result_type, "result_id": result_id, "created_at": created_at})
     stored.sort(key=lambda row: (row["created_at"], row["result_id"]), reverse=True)
