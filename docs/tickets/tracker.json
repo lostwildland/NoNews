@@ -46,8 +46,8 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "d36d44a79662bb1fad32e1cbc27ad322b0eaf194",
-      "implementation_state": "R29 jobs/controller scopes complete9/9, large-record deadline P2 remains. Capacity misclassification fixed with52total/51pass/1optionalSkip. Bounded cooperative read continuation required; later bundle/review/UI gates open.",
+      "last_reported_head": "20d62dd5d262159ef197efde84bcf8278f627298",
+      "implementation_state": "Cooperative progress committed; owner62total/61pass/1optionalSkip and focused strengthened auth/EOF assertion, native-controller checks. Coordinator prepared/source/compile/diff readback passes. Fresh correction/packaging/cross-group review and signed bundle/UI pending; T30 has native resource.",
       "review_evidence": "docs/acceptance/t02-jobs-review-r29.md"
     },
     "03": {

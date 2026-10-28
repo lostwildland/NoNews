@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "d36d44a79662bb1fad32e1cbc27ad322b0eaf194",
-  "state": "R29 jobs/controller review complete9/9 on both axes: broad/deep supported records still exceed request deadline; capacity misclassification corrected atd36d44a with51passes/1optionalSkip. Cooperative progress implementation required. R11 artifact is stale for new correction; packaging/cross-group/UI remain open.",
+  "candidate": "20d62dd5d262159ef197efde84bcf8278f627298",
+  "state": "Cooperative preparation committed at20d62dd. Owner62total/61pass/1optionalSkip plus strengthened authentication/EOF focused assertion; native controller passed. Coordinator confirms clean remote/source/manifest/compile/diff. Fresh11-file correction review, current packaging and final connected review/bundle/UI remain open. T30 holds native resource.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -12,8 +12,8 @@
   "groups": {
     "packaging": 24,
     "native": 10,
-    "database": 27,
-    "jobs": 8
+    "jobs": 9,
+    "database": 27
   },
   "files": [
     {
@@ -77,18 +77,18 @@
     {
       "path": "ManagedEngine/JOBS-IPC.md",
       "group": "jobs",
-      "blob": "6bf7b44ee97feed92aed3ee64a749375becbdb53",
-      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
-      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
-      "previous_blob": "9668f55781c3dc5f2c9835cce6c16ba183bf3916"
+      "blob": "03b0d546460f2142a5007c79bc5112295fbe7f57",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "6bf7b44ee97feed92aed3ee64a749375becbdb53"
     },
     {
       "path": "ManagedEngine/PROVENANCE.md",
       "group": "packaging",
-      "blob": "a1c46e04f0b84d7ff36cade0dd8c804079f7e1a4",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
-      "previous_blob": "553e61c5a8b14f2cafc492a5543450e1c377ac5c"
+      "blob": "dc002a3b7bc5144d801e74a768ba29cc04235544",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "a1c46e04f0b84d7ff36cade0dd8c804079f7e1a4"
     },
     {
       "path": "ManagedEngine/assemble_payload.py",
@@ -108,10 +108,10 @@
     {
       "path": "ManagedEngine/backend/causes.py",
       "group": "jobs",
-      "blob": "b3f3e6c7bd5071190bed651ea55ad2c71917b895",
-      "standards": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "spec": "inspected in full at2aa0f68;scope has unresolved P2 deep aggregate recursion",
-      "previous_blob": "cf6195b40b7dced2e1d42f7dae8d76b719c26dc2"
+      "blob": "6e52d7a73be049582a15aafb15a1a2390d2331c6",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "b3f3e6c7bd5071190bed651ea55ad2c71917b895"
     },
     {
       "path": "ManagedEngine/backend/content_store.py",
@@ -123,10 +123,10 @@
     {
       "path": "ManagedEngine/backend/core.py",
       "group": "database",
-      "blob": "4a85e7ada498faf8f6a5267e453f19a012daf8cf",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
-      "previous_blob": "c1b372f461d06363a230411d89dbb588795f2913"
+      "blob": "0f3dda70baca690aa1b0b782307540ad29392b07",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "4a85e7ada498faf8f6a5267e453f19a012daf8cf"
     },
     {
       "path": "ManagedEngine/backend/delivery.py",
@@ -152,10 +152,10 @@
     {
       "path": "ManagedEngine/backend/job_stream.py",
       "group": "jobs",
-      "blob": "dd8423f0a324e783512828046bad97bd5ffe1d99",
-      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
-      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
-      "previous_blob": "e7220ba9a6a0b528e65e2af77b3c246b3b11fc98"
+      "blob": "a2984ce74f87f2807b61013ae5b52058101ad71a",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "dd8423f0a324e783512828046bad97bd5ffe1d99"
     },
     {
       "path": "ManagedEngine/backend/jobs.py",
@@ -273,10 +273,10 @@
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "jobs",
-      "blob": "5fdfda8623cfb27ec9c936a288277e6a357c2077",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
-      "previous_blob": "fa016574f80a32fbd7dcae9def3972061abe7362"
+      "blob": "3cda2f6ccee8da0f3a9d7de483dc85e93e122353",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "5fdfda8623cfb27ec9c936a288277e6a357c2077"
     },
     {
       "path": "ManagedEngine/backend/service.py",
@@ -330,18 +330,18 @@
     {
       "path": "ManagedEngine/stdio_service.py",
       "group": "native",
-      "blob": "3421902575297f3cab91158a38164c00eadc8a3b",
-      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
-      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
-      "previous_blob": "835d11c6b8ff69ccf5f5ef3748153b435d08cd86"
+      "blob": "24398b35581d518387e5d8cdf2d0ba19b5f7ce94",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "3421902575297f3cab91158a38164c00eadc8a3b"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
       "group": "native",
-      "blob": "e329864ab15828a32e2556ee2d1793abd2d7213b",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
-      "previous_blob": "9944a2626e864b3a75e011bf7b3ad10a7c1cd697"
+      "blob": "3c42695e4a82c6493945a921eb71e72164a2bbd6",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "e329864ab15828a32e2556ee2d1793abd2d7213b"
     },
     {
       "path": "ManagedEngine/tests/make_large_fixture.py",
@@ -399,10 +399,10 @@
     {
       "path": "ManagedEngine/tests/test_large_snapshot.py",
       "group": "jobs",
-      "blob": "44a93285294a25275d6fc4d0631c5d89ba5c5731",
-      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
-      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
-      "previous_blob": "eb0c6485c60703780292ef010434a0725e1c1cf3"
+      "blob": "5097a4f7c4a56abf8ec058970cb934b2bccad344",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "44a93285294a25275d6fc4d0631c5d89ba5c5731"
     },
     {
       "path": "ManagedEngine/tests/test_packaged_service.py",
@@ -517,10 +517,17 @@
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "ccc30b3b3f0e4523a6e247f83c06623865bcf37d",
-      "standards": "R29 nine-file scope complete with large-record deadline finding; correction review pending",
-      "spec": "R29 large-record/capacity findings; capacity corrected and cooperative progress pending",
-      "previous_blob": "765cf976e4290a8b998c2afcfcf91d1db9972425"
+      "blob": "7714e30f988fc891b4474aa2f699a18b8ddb4967",
+      "standards": "pending cooperative-read/capacity correction review at20d62dd",
+      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "previous_blob": "ccc30b3b3f0e4523a6e247f83c06623865bcf37d"
+    },
+    {
+      "path": "ManagedEngine/tests/test_cooperative_jobs.py",
+      "group": "jobs",
+      "blob": "0fbd6d682831dc2567af18f3abce3d0130b64884",
+      "standards": "pending new cooperative-read correction review",
+      "spec": "pending new cooperative-read correction review"
     }
   ],
   "scope_reviews": {
