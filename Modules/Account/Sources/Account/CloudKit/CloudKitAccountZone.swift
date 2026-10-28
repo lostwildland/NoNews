@@ -48,6 +48,12 @@ enum CloudKitAccountZoneError: LocalizedError {
 		}
 	}
 
+	#if DEBUG
+	init(testing: Void) {
+		zoneID = CKRecordZone.ID(zoneName: "Fixture", ownerName: CKCurrentUserDefaultName)
+	}
+	#endif
+
 	init(container: CKContainer) {
 		self.container = container
 		self.database = container.privateCloudDatabase

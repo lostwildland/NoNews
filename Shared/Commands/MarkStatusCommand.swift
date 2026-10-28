@@ -9,6 +9,7 @@
 import Foundation
 import RSCore
 import Articles
+import Account
 
 // Mark articles read/unread, starred/unstarred, deleted/undeleted.
 
@@ -16,16 +17,21 @@ import Articles
 
 	let undoActionName: String
 	let redoActionName: String
-	let articleIDsByAccountID: [String: Set<String>]
+	var articleIDsByAccountID: [String: Set<String>]
 	let undoManager: UndoManager
 	let flag: Bool
 	let statusKey: ArticleStatus.Key
 	var completion: (() -> Void)?
+	private var pendingMark: Task<[String: Set<String>], Never>?
+	#if DEBUG
+	var accountResolverForTesting: ((String) -> Account?)?
+	var onMarkFinishedForTesting: ((ArticleMarkResult) -> Void)?
+	#endif
 	// Called after every mark, with the flag that was applied, so undo and redo can update
 	// the UI in the right direction. Unlike completion, it’s not one-shot.
-	let didMark: ((Bool) -> Void)?
+	let didMark: ((Bool, [String: Set<String>]) -> Void)?
 
-	init?(initialArticles: [Article], statusKey: ArticleStatus.Key, flag: Bool, undoManager: UndoManager, completion: (() -> Void)? = nil, didMark: ((Bool) -> Void)? = nil) {
+	init?(initialArticles: [Article], statusKey: ArticleStatus.Key, flag: Bool, undoManager: UndoManager, completion: (() -> Void)? = nil, didMark: ((Bool, [String: Set<String>]) -> Void)? = nil) {
 
         // Filter out articles that already have the desired status or can’t be marked.
 		let articlesToMark = MarkStatusCommand.filteredArticles(initialArticles, statusKey, flag)
@@ -53,29 +59,54 @@ import Articles
 		self.init(initialArticles: initialArticles, statusKey: .starred, flag: markingStarred, undoManager: undoManager, completion: completion)
 	}
 
-    func perform() {
-		mark(statusKey, flag)
- 		registerUndo()
-    }
+	func perform() {
+		let isRedo = undoManager.isRedoing
+		if isRedo { registerUndo() }
+		mark(flag, registerAfterSuccess: !isRedo, registeredBefore: isRedo)
+	}
 
-    func undo() {
-		mark(statusKey, !flag)
+	func undo() {
 		registerRedo()
-    }
+		mark(!flag, registerAfterSuccess: false, registeredBefore: true)
+	}
 }
 
 @MainActor private extension MarkStatusCommand {
-
-	func mark(_ statusKey: ArticleStatus.Key, _ flag: Bool) {
+	func mark(_ flag: Bool, registerAfterSuccess: Bool, registeredBefore: Bool) {
+		let previous = pendingMark
+		let initialIDs = articleIDsByAccountID
 		let completion = self.completion
-		let didMark = self.didMark
 		self.completion = nil
-
-		markArticleIDs(articleIDsByAccountID, statusKey: statusKey, flag: flag) {
+		let task = Task { @MainActor [self] in
+			let ids = await previous?.value ?? initialIDs
+			let outcome: ArticleMarkResult
+			if ids.isEmpty {
+				outcome = ArticleMarkResult()
+			} else {
+				#if DEBUG
+				let resolver = accountResolverForTesting
+				#else
+				let resolver: ((String) -> Account?)? = nil
+				#endif
+				outcome = await withCheckedContinuation { continuation in
+					markArticleIDs(ids, statusKey: statusKey, flag: flag, accountResolver: resolver) { continuation.resume(returning: $0) }
+				}
+			}
+			articleIDsByAccountID = outcome.succeeded
+			if outcome.succeeded.isEmpty {
+				if registeredBefore { undoManager.removeAllActions(withTarget: self) }
+			} else {
+				if registerAfterSuccess { registerUndo() }
+				didMark?(flag, outcome.succeeded)
+			}
 			completion?()
-			didMark?(flag)
+			#if DEBUG
+			onMarkFinishedForTesting?(outcome)
+			#endif
+			return outcome.succeeded
 		}
-    }
+		pendingMark = task
+	}
 
 	static private let markReadActionName = NSLocalizedString("Mark Read", comment: "command")
 	static private let markUnreadActionName = NSLocalizedString("Mark Unread", comment: "command")

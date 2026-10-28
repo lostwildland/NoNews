@@ -9,6 +9,7 @@
 import Foundation
 import os
 import RSCore
+import RSDatabase
 import CloudKitSync
 import ActivityLog
 
@@ -19,6 +20,7 @@ import ActivityLog
 	private let accountDisplayName: String
 	nonisolated(unsafe) private var userInfo: [AnyHashable: Any]
 	private static let logger = cloudKitLogger
+	private let work = DatabaseWork.current
 
 	init(accountZone: CloudKitAccountZone, articlesZone: CloudKitArticlesZone, accountID: String, accountDisplayName: String, userInfo: [AnyHashable: Any]) {
 		self.accountZone = accountZone
@@ -35,6 +37,7 @@ import ActivityLog
 			return
 		}
 
+		DatabaseWork.$current.withValue(work) {
 		Task { @MainActor in
 			let activityLog = ActivityLog.shared
 			let owner = ActivityOwner.account(accountID: accountID, displayName: accountDisplayName)
@@ -54,6 +57,7 @@ import ActivityLog
 
 			Self.logger.debug("iCloud: Finished processing remote notification")
 			didComplete()
+		}
 		}
 	}
 }

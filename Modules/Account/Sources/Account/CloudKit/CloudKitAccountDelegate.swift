@@ -240,8 +240,10 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 			let op = CloudKitReceiveStatusOperation(articlesZone: articlesZone, accountID: account.accountID, accountDisplayName: account.nameForDisplay)
 			op.completionBlock = { mainThreadOperation in
 				Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
-				if mainThreadOperation.isCanceled {
-					continuation.resume(throwing: CloudKitAccountDelegateError.unknown)
+				if let error = op.failure {
+					continuation.resume(throwing: error)
+				} else if mainThreadOperation.isCanceled {
+					continuation.resume(throwing: CancellationError())
 				} else {
 					continuation.resume(returning: ())
 				}
@@ -1154,8 +1156,10 @@ private extension CloudKitAccountDelegate {
 												 syncErrorHandler: syncErrorHandler)
 			op.completionBlock = { mainThreadOperation in
 				Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
-				if mainThreadOperation.isCanceled {
-					continuation.resume(throwing: CloudKitAccountDelegateError.unknown)
+				if let cancellation = op.cancellation {
+					continuation.resume(throwing: cancellation)
+				} else if mainThreadOperation.isCanceled {
+					continuation.resume(throwing: CancellationError())
 				} else {
 					continuation.resume(returning: (op.sentCount, op.didFail))
 				}

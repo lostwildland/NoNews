@@ -1391,11 +1391,9 @@ struct SidebarItemNode: Hashable, Sendable {
 
 	// The marked articles are in the timeline. Remove them. Undo brings them back.
 	func markAllAsReadInTimeline(_ articlesToMark: [Article], completion: (() -> Void)? = nil) {
-		let articleIDs = Set(articlesToMark.articleIDs())
-
-		markArticlesWithUndo(articlesToMark, statusKey: .read, flag: true, completion: completion) { [weak self] markedAsRead in
+		markArticlesWithUndo(articlesToMark, statusKey: .read, flag: true, completion: completion) { [weak self] markedAsRead, succeeded in
 			if markedAsRead {
-				self?.removeArticlesHiddenByReadFilter(among: articleIDs)
+				self?.removeReadArticles { succeeded[$0.accountID]?.contains($0.articleID) == true }
 			} else {
 				self?.restoreArticlesToTimeline()
 			}
@@ -1928,7 +1926,7 @@ private extension SceneCoordinator {
 		}
 	}
 
-	func markArticlesWithUndo(_ articles: [Article], statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil, didMark: ((Bool) -> Void)? = nil) {
+	func markArticlesWithUndo(_ articles: [Article], statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil, didMark: ((Bool, [String: Set<String>]) -> Void)? = nil) {
 		guard let undoManager = undoManager,
 			  let markReadCommand = MarkStatusCommand(initialArticles: articles, statusKey: statusKey, flag: flag, undoManager: undoManager, completion: completion, didMark: didMark) else {
 			completion?()

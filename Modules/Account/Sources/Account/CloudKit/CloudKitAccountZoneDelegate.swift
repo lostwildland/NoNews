@@ -34,6 +34,7 @@ final class CloudKitAcountZoneDelegate: CloudKitZoneDelegate {
 	}
 
 	@MainActor func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws {
+		guard let account, account.acceptsFixtureWork, !account.isDeleted else { throw CancellationError() }
 		lastChangedCount = changed.count
 		lastDeletedCount = deleted.count
 		for deletedRecordKey in deleted {
@@ -57,6 +58,7 @@ final class CloudKitAcountZoneDelegate: CloudKitZoneDelegate {
 				assertionFailure("Unknown record type: \(changedRecord.recordType)")
 			}
 		}
+		try account.flushCloudKitSubscriptions()
 	}
 
 	@MainActor func addOrUpdateFeed(_ record: CKRecord) {

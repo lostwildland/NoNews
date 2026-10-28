@@ -14,10 +14,12 @@ public final class TestingURLProtocol: URLProtocol {
 	public struct Response: Sendable {
 		public var statusCode: Int
 		public var data: Data?
+		public var headers: [String: String]?
 
-		public init(statusCode: Int = 200, data: Data? = nil) {
+		public init(statusCode: Int = 200, data: Data? = nil, headers: [String: String]? = nil) {
 			self.statusCode = statusCode
 			self.data = data
+			self.headers = headers
 		}
 	}
 
@@ -142,7 +144,7 @@ public final class TestingURLProtocol: URLProtocol {
 
 		let match = Self.response(for: request)
 
-		let httpResponse = HTTPURLResponse(url: url, statusCode: match?.statusCode ?? 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+		let httpResponse = HTTPURLResponse(url: url, statusCode: match?.statusCode ?? 200, httpVersion: "HTTP/1.1", headerFields: match?.headers)!
 		client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)
 
 		if let data = match?.data {

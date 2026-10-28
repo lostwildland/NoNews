@@ -1016,10 +1016,7 @@ extension FeedbinAccountDelegate {
 			return 0
 		}
 
-		let pendingArticleIDs: Set<String>
-		do { pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs() }
-		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		let pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
 
 		let feedbinUnreadArticleIDs = Set(articleIDs.map { String($0) })
 		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
@@ -1046,10 +1043,7 @@ private extension FeedbinAccountDelegate {
 			return 0
 		}
 
-		let pendingArticleIDs: Set<String>
-		do { pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
-		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		let pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
 
 		let feedbinStarredArticleIDs = Set(articleIDs.map { String($0) })
 		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()

@@ -110,6 +110,13 @@ final class CloudKitArticlesZone: CloudKitZone {
 
 	let syncArticleContentForUnreadArticles: @Sendable () -> Bool
 
+	#if DEBUG
+	init(testingSyncArticleContent: @escaping @Sendable () -> Bool) {
+		zoneID = CKRecordZone.ID(zoneName: "Fixture", ownerName: CKCurrentUserDefaultName)
+		syncArticleContentForUnreadArticles = testingSyncArticleContent
+	}
+	#endif
+
 	init(container: CKContainer, syncArticleContentForUnreadArticles: @escaping @Sendable () -> Bool) {
 		self.container = container
 		self.database = container.privateCloudDatabase

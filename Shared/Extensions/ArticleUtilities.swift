@@ -14,19 +14,32 @@ import Images
 
 // These handle multiple accounts.
 
-@MainActor func markArticles(_ articles: Set<Article>, statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil) {
+struct ArticleMarkResult {
+	var succeeded: [String: Set<String>] = [:]
+	var failed: [String: Error] = [:]
+}
+
+@MainActor func markArticles(_ articles: Set<Article>, statusKey: ArticleStatus.Key, flag: Bool, completion: ((ArticleMarkResult) -> Void)? = nil) {
 	markArticleIDs(articleIDsByAccountID(articles), statusKey: statusKey, flag: flag, completion: completion)
 }
 
-@MainActor func markArticleIDs(_ articleIDsByAccountID: [String: Set<String>], statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil) {
+@MainActor func markArticleIDs(_ articleIDsByAccountID: [String: Set<String>], statusKey: ArticleStatus.Key, flag: Bool, accountResolver: ((String) -> Account?)? = nil, completion: ((ArticleMarkResult) -> Void)? = nil) {
 	Task { @MainActor in
+		var outcome = ArticleMarkResult()
 		for (accountID, articleIDs) in articleIDsByAccountID {
-			guard let account = AccountManager.shared.existingAccount(accountID: accountID) else {
+			let resolvedAccount = accountResolver != nil ? accountResolver?(accountID) : AccountManager.shared.existingAccount(accountID: accountID)
+			guard let account = resolvedAccount else {
+				outcome.failed[accountID] = CancellationError()
 				continue
 			}
-			try? await account.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+			do {
+				try await account.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+				outcome.succeeded[accountID] = articleIDs
+			} catch {
+				outcome.failed[accountID] = error
+			}
 		}
-		completion?()
+		completion?(outcome)
 	}
 }
 

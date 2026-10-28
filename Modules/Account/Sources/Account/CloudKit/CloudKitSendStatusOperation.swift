@@ -10,6 +10,7 @@ import Foundation
 import Articles
 import os
 import RSCore
+import RSDatabase
 import RSWeb
 import SyncDatabase
 import CloudKitSync
@@ -23,6 +24,10 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 	private var syncDatabase: SyncDatabase
 	private let syncArticleContentForUnreadArticles: @Sendable () -> Bool
 	private static let logger = cloudKitLogger
+	private let work = DatabaseWork.current
+	#if DEBUG
+	var runForTesting: (@MainActor () async throws -> Void)?
+	#endif
 	let syncErrorHandler: CloudKitSyncErrorHandler?
 
 	/// Number of statuses successfully sent during this run. Read after the
@@ -31,6 +36,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 
 	/// Whether any statuses failed to send. Read after the operation completes.
 	private(set) var didFail = false
+	private(set) var cancellation: CancellationError?
 
 	init(account: Account, articlesZone: CloudKitArticlesZone, database: SyncDatabase, syncArticleContentForUnreadArticles: @escaping @Sendable () -> Bool, syncErrorHandler: CloudKitSyncErrorHandler?) {
 		self.account = account
@@ -43,6 +49,17 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 	}
 
 	@MainActor override func run() {
+		#if DEBUG
+		if let runForTesting {
+			DatabaseWork.$current.withValue(work) {
+				Task { @MainActor in
+					do { try await runForTesting() } catch { cancellation = error as? CancellationError; didFail = true }
+					didComplete()
+				}
+			}
+			return
+		}
+		#endif
 		Self.logger.debug("iCloud: Sending article statuses")
 
 		let activityLog = ActivityLog.shared
@@ -50,6 +67,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 		let activityID = activityLog.createActivity(owner: .account(accountID: accountID, displayName: account?.nameForDisplay ?? accountID), kind: .sendArticleStatuses, detail: "Sending article statuses \(taskNumber)")
 		activityLog.didStart(id: activityID)
 
+		DatabaseWork.$current.withValue(work) {
 		Task { @MainActor in
 			do {
 				let result = try await selectForProcessing()
@@ -67,11 +85,13 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 					activityLog.didComplete(id: activityID, message: message)
 				}
 			} catch {
+				self.cancellation = error as? CancellationError
 				self.didFail = true
 				Self.logger.debug("iCloud: Send status error: \(error.localizedDescription)")
 				activityLog.didFail(id: activityID, error: error)
 			}
 			didComplete()
+		}
 		}
 	}
 }
@@ -82,8 +102,8 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 
 	/// Returns the total number of statuses sent and the subset whose article content was also uploaded.
 	func selectForProcessing() async throws -> SendResult {
-		guard let syncStatuses = try? await syncDatabase.selectForProcessing(limit: blockSize),
-			  !syncStatuses.isEmpty else {
+		let syncStatuses = try await syncDatabase.selectForProcessing(limit: blockSize)
+		guard !syncStatuses.isEmpty else {
 			return (0, 0)
 		}
 

@@ -1,4 +1,7 @@
 import Darwin
+import CloudKit
+import CloudKitSync
+import RSDatabase
 import Foundation
 import SQLite3
 import Testing
@@ -189,6 +192,75 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		#expect(firstCalls == 1 && secondCalls == 1)
 		#expect(feed.conditionalGetInfo?.etag == "fixture-etag")
 		#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Refresh article'") == "Refresh article")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func overlappingNonemptyLocalRefreshWaitsForItsOwnFeeds() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let delegate = try #require(account.delegate as? LocalAccountDelegate)
+		delegate.refreshProtocolClassesForTesting = [GatedRefreshURLProtocol.self]
+		let first = account.createFeed(with: "First", url: "https://fixture.invalid/first-overlap", feedID: "first-overlap", homePageURL: nil)
+		let second = account.createFeed(with: "Second", url: "https://fixture.invalid/second-overlap", feedID: "second-overlap", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(first)
+		let (events, eventSignal) = AsyncStream<String>.makeStream()
+		let (firstRelease, firstReleaseSignal) = AsyncStream<Void>.makeStream()
+		let (secondRelease, secondReleaseSignal) = AsyncStream<Void>.makeStream()
+		let (firstDone, firstDoneSignal) = AsyncStream<Void>.makeStream()
+		let (secondDone, secondDoneSignal) = AsyncStream<Void>.makeStream()
+		var requestsCount = 0
+		var secondCompleted = false
+		GatedRefreshURLProtocol.onRequest = {
+			requestsCount += 1
+			eventSignal.yield("request-\(requestsCount)")
+			if requestsCount == 1 { for await _ in firstRelease { break } }
+			else { for await _ in secondRelease { break } }
+		}
+		defer { GatedRefreshURLProtocol.onRequest = nil }
+		delegate.refresherForTesting.onOverlapForTesting = { eventSignal.yield("overlap") }
+		var iterator = events.makeAsyncIterator()
+		let firstTask = Task { try await account.refreshAll(); firstDoneSignal.yield(()) }
+		#expect(await iterator.next() == "request-1")
+		account.removeFeedFromTreeAtTopLevel(first)
+		account.addFeedToTreeAtTopLevel(second)
+		let secondTask = Task { try await account.refreshAll(); secondCompleted = true; secondDoneSignal.yield(()); eventSignal.yield("second-done") }
+		#expect(await iterator.next() == "overlap")
+		#expect(!secondCompleted && account.lastRefreshCompletedDate == nil)
+		firstReleaseSignal.finish()
+		for await _ in firstDone { break }
+		let nextEvent = await iterator.next()
+		#expect(nextEvent == "request-2")
+		let firstDate = try #require(account.lastRefreshCompletedDate)
+		#expect(!secondCompleted && second.conditionalGetInfo == nil)
+		secondReleaseSignal.finish()
+		for await _ in secondDone { break }
+		try await firstTask.value
+		try await secondTask.value
+		#expect(requestsCount == 2 && second.conditionalGetInfo?.etag == "fixture-etag")
+		#expect(try #require(account.lastRefreshCompletedDate) >= firstDate)
+		#expect(await account.closeForFixtureRemoval())
+		#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE feedID = 'second-overlap'") == "Refresh article")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func feedbinPendingReadFailureDoesNotStoreValidatorsAndRetries() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+		await delegate.waitForSyncInitializationForTesting()
+		TestingURLProtocol.setResponse(.init(data: Data("[42]".utf8), headers: ["ETag": "fixture-unread"]), forURLContaining: "unread_entries.json")
+		TestingURLProtocol.setResponse(.init(data: Data("[42]".utf8), headers: ["ETag": "fixture-starred"]), forURLContaining: "starred_entries.json")
+		#expect(await delegate.syncDatabase.setStatusTableUnavailableForTesting(true))
+		do { try await delegate.refreshArticleStatus(); Issue.record("Failed pending reads reported success") }
+		catch { #expect(!(error is CancellationError)) }
+		#expect(delegate.accountSettings?.conditionalGetInfo(for: FeedbinAPICaller.ConditionalGetKeys.unreadEntries) == nil)
+		#expect(delegate.accountSettings?.conditionalGetInfo(for: FeedbinAPICaller.ConditionalGetKeys.starredEntries) == nil)
+		#expect(await delegate.syncDatabase.setStatusTableUnavailableForTesting(false))
+		try await delegate.refreshArticleStatus()
+		#expect(delegate.accountSettings?.conditionalGetInfo(for: FeedbinAPICaller.ConditionalGetKeys.unreadEntries)?.etag == "fixture-unread")
+		#expect(delegate.accountSettings?.conditionalGetInfo(for: FeedbinAPICaller.ConditionalGetKeys.starredEntries)?.etag == "fixture-starred")
+		#expect(try await account.fetchUnreadArticleIDsAsync().contains("42"))
+		#expect(try await account.fetchStarredArticleIDsAsync().contains("42"))
 		try await manager.deleteAccount(account)
 	}
 
@@ -463,6 +535,129 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		#expect(stages == ["articles", "settings", "delegate"])
 		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'vacuum'") == "Admitted vacuum")
 		#expect(try stringValue(in: path + "/Sync.sqlite3", sql: "SELECT articleID FROM syncStatus WHERE articleID = 'vacuum'") == "vacuum")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitPageUsesAdmittedWorkAndRejectsExpiredWork() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let articlesZone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let zone = CloudKitAccountZone(testing: ())
+		zone.delegate = CloudKitAcountZoneDelegate(account: account, articlesZone: articlesZone)
+		let record = CKRecord(recordType: CloudKitAccountZone.CloudKitContainer.recordType, recordID: CKRecord.ID(recordName: "fixture-folder", zoneID: zone.zoneID))
+		record[CloudKitAccountZone.CloudKitContainer.Fields.name] = "Cloud folder" as CKRecordValue
+		record[CloudKitAccountZone.CloudKitContainer.Fields.isAccount] = "0" as CKRecordValue
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		var committed = 0
+		account.startBackground {
+			let work = DatabaseWork.current
+			startedSignal.yield(())
+			for await _ in release { break }
+			do {
+				try await DatabaseWork.$current.withValue(nil) {
+					try await zone.applyFetchedPage(changed: [record], deleted: [], work: work) {
+						let opml = try? String(contentsOfFile: account.dataFolder + "/Subscriptions.opml", encoding: .utf8)
+						#expect(opml?.contains("Cloud folder") == true)
+						committed += 1
+					}
+				}
+			} catch { Issue.record("Admitted CloudKit page failed: \(error)") }
+		}
+		for await _ in started { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.finish()
+		#expect(await close.value)
+		#expect(committed == 1 && account.existingFolder(with: "Cloud folder") != nil)
+		let opml = try String(contentsOfFile: account.dataFolder + "/Subscriptions.opml", encoding: .utf8)
+		#expect(opml.contains("Cloud folder"))
+		let expired = DatabaseWork(accountID: account.accountID)
+		expired.finish()
+		await #expect(throws: CancellationError.self) {
+			try await zone.applyFetchedPage(changed: [record], deleted: [], work: expired) { committed += 1 }
+		}
+		#expect(committed == 1)
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitFailedSubscriptionSaveDoesNotCommitPage() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let articlesZone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let zone = CloudKitAccountZone(testing: ())
+		zone.delegate = CloudKitAcountZoneDelegate(account: account, articlesZone: articlesZone)
+		let record = CKRecord(recordType: CloudKitAccountZone.CloudKitContainer.recordType, recordID: CKRecord.ID(recordName: "failed-folder", zoneID: zone.zoneID))
+		record[CloudKitAccountZone.CloudKitContainer.Fields.name] = "Retry folder" as CKRecordValue
+		record[CloudKitAccountZone.CloudKitContainer.Fields.isAccount] = "0" as CKRecordValue
+		let path = account.dataFolder + "/Subscriptions.opml"
+		try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: false)
+		var committed = false
+		await #expect(throws: (any Error).self) {
+			try await zone.applyFetchedPage(changed: [record], deleted: [], work: nil) { committed = true }
+		}
+		#expect(!committed)
+		try FileManager.default.removeItem(atPath: path)
+		#expect(await account.closeForFixtureRemoval())
+		#expect(try String(contentsOfFile: path, encoding: .utf8).contains("Retry folder"))
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitPendingReadFailureDoesNotCommitPage() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		#expect(await sync.setStatusTableUnavailableForTesting(true))
+		var committed = false
+		do {
+			try await zone.applyFetchedPage(changed: [], deleted: [], work: nil) { committed = true }
+			Issue.record("Failed pending status query committed a CloudKit page")
+		} catch { #expect(!(error is CancellationError)) }
+		#expect(!committed)
+		#expect(await sync.setStatusTableUnavailableForTesting(false))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitQueuedOperationsKeepTheirOwnWorkAndCancelledSendFails() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let queue = MainThreadOperationQueue()
+		let firstWork = DatabaseWork(accountID: account.accountID)
+		let secondWork = DatabaseWork(accountID: account.accountID)
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (finished, finishedSignal) = AsyncStream<Void>.makeStream()
+		let first = DatabaseWork.$current.withValue(firstWork) { CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil) }
+		let second = DatabaseWork.$current.withValue(secondWork) { CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil) }
+		first.runForTesting = {
+			#expect(DatabaseWork.current === firstWork)
+			startedSignal.yield(())
+			for await _ in release { break }
+			firstWork.finish()
+		}
+		second.runForTesting = { #expect(DatabaseWork.current === secondWork && secondWork.isActive) }
+		second.completionBlock = { _ in finishedSignal.yield(()) }
+		queue.add(first)
+		queue.add(second)
+		for await _ in started { break }
+		sync.beginClosing(accountID: account.accountID)
+		releaseSignal.finish()
+		for await _ in finished { break }
+		let cancelled = CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil)
+		await withCheckedContinuation { continuation in
+			cancelled.completionBlock = { _ in continuation.resume() }
+			queue.add(cancelled)
+		}
+		#expect(cancelled.cancellation is CancellationError && cancelled.didFail)
+		secondWork.finish()
+		#expect(await sync.close())
 		try await manager.deleteAccount(account)
 	}
 

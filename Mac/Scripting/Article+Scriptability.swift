@@ -110,7 +110,7 @@ import Articles
 			article.status.boolStatus(forKey: .read)
 		}
 		set {
-			markArticles([self.article], statusKey: .read, flag: newValue)
+			markForScript(.read, flag: newValue)
 		}
     }
 
@@ -120,9 +120,24 @@ import Articles
 			article.status.boolStatus(forKey: .starred)
 		}
 		set {
-			markArticles([self.article], statusKey: .starred, flag: newValue)
+			markForScript(.starred, flag: newValue)
 		}
     }
+
+	private func markForScript(_ key: ArticleStatus.Key, flag: Bool) {
+		guard let command = NSScriptCommand.current() else {
+			markArticles([article], statusKey: key, flag: flag)
+			return
+		}
+		command.suspendExecution()
+		markArticles([article], statusKey: key, flag: flag) { result in
+			if let error = result.failed.values.first {
+				command.scriptErrorNumber = -128
+				command.scriptErrorString = error.localizedDescription
+			}
+			command.resumeExecution(withResult: nil)
+		}
+	}
 
     @objc(deleted)
     var deleted: Bool {

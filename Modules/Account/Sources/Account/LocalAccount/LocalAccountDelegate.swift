@@ -35,6 +35,7 @@ import Secrets
 
 	#if DEBUG
 	var refreshProtocolClassesForTesting: [AnyClass]?
+	var refresherForTesting: LocalAccountRefresher { refresher }
 	#endif
 
 	private lazy var refresher: LocalAccountRefresher = {
@@ -59,7 +60,7 @@ import Secrets
 		#else
 		let permitsUnitTestRefresh = false
 		#endif
-		guard progressInfo.isComplete, (!Platform.isRunningUnitTests || permitsUnitTestRefresh) else {
+		guard !Platform.isRunningUnitTests || permitsUnitTestRefresh else {
 			return
 		}
 

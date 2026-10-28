@@ -9,6 +9,7 @@
 import Foundation
 import os
 import RSCore
+import RSDatabase
 import CloudKitSync
 import ActivityLog
 
@@ -17,6 +18,8 @@ final class CloudKitReceiveStatusOperation: MainThreadOperation, @unchecked Send
 	private let accountID: String
 	private let accountDisplayName: String
 	private static let logger = cloudKitLogger
+	private let work = DatabaseWork.current
+	private(set) var failure: Error?
 
 	init(articlesZone: CloudKitArticlesZone, accountID: String, accountDisplayName: String) {
 		self.articlesZone = articlesZone
@@ -31,6 +34,7 @@ final class CloudKitReceiveStatusOperation: MainThreadOperation, @unchecked Send
 			return
 		}
 
+		DatabaseWork.$current.withValue(work) {
 		Task { @MainActor in
 			defer {
 				self.didComplete()
@@ -50,6 +54,7 @@ final class CloudKitReceiveStatusOperation: MainThreadOperation, @unchecked Send
 				Self.logger.error("iCloud: Receive status error: \(error.localizedDescription)")
 				activityLog.didFail(id: activityID, error: error)
 			}
+		}
 		}
 	}
 }

@@ -9,6 +9,7 @@
 import CloudKit
 import os
 import RSCore
+import RSDatabase
 
 // Retry on CKError.networkFailure (which is transient).
 private let networkFailureRetryCount = 3
@@ -108,6 +109,15 @@ public extension CloudKitZone {
 			}
 			UserDefaults.standard.set(data, forKey: changeTokenKey)
 		}
+	}
+
+	func applyFetchedPage(changed: [CKRecord], deleted: [CloudKitRecordKey], work: DatabaseWork?, commit: () -> Void) async throws {
+		guard work?.isActive != false, let delegate else { throw CancellationError() }
+		try await DatabaseWork.$current.withValue(work) {
+			try await delegate.cloudKitDidModify(changed: changed, deleted: deleted)
+		}
+		guard work?.isActive != false else { throw CancellationError() }
+		commit()
 	}
 
 	/// Reset the change token used to determine what point in time we are doing changes fetches
@@ -741,6 +751,7 @@ public extension CloudKitZone {
     func fetchChangesInZone(completion: @escaping (Result<Void, Error>) -> Void) {
 
 		Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public)")
+		let work = DatabaseWork.current
 		var savedChangeToken = changeToken
 		var moreComing = false
 
@@ -795,12 +806,13 @@ public extension CloudKitZone {
 				case .success:
 					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 					do {
-						try await self.delegate?.cloudKitDidModify(changed: changedRecords, deleted: deletedRecordKeys)
-						self.changeToken = savedChangeToken
+						try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
+							self.changeToken = savedChangeToken
+						}
 						self.fetchChangesPageHandler?(self.zoneID.zoneName, changedRecords.count, deletedRecordKeys.count, moreComing)
 						if moreComing {
 							Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) more records to fetch, continuing")
-							self.fetchChangesInZone(completion: completion)
+							DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 						} else {
 							completion(.success(()))
 						}
@@ -813,12 +825,13 @@ public extension CloudKitZone {
 					case .success:
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 						do {
-							try await self.delegate?.cloudKitDidModify(changed: changedRecords, deleted: deletedRecordKeys)
-							self.changeToken = savedChangeToken
+							try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
+								self.changeToken = savedChangeToken
+							}
 							self.fetchChangesPageHandler?(self.zoneID.zoneName, changedRecords.count, deletedRecordKeys.count, moreComing)
 							if moreComing {
 								Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) more records to fetch, continuing")
-								self.fetchChangesInZone(completion: completion)
+								DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 							} else {
 								completion(.success(()))
 							}
@@ -830,7 +843,7 @@ public extension CloudKitZone {
 						self.createZoneRecord { result in
 							switch result {
 							case .success:
-								self.fetchChangesInZone(completion: completion)
+								DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 							case .failure(let error):
 								completion(.failure(error))
 							}
@@ -841,11 +854,11 @@ public extension CloudKitZone {
 					case .retry(let timeToWait):
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) zone fetch changes retry in \(timeToWait) seconds")
 						await delaySeconds(timeToWait)
-						self.fetchChangesInZone(completion: completion)
+						DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 					case .changeTokenExpired:
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) failure .changeTokenExpired")
 						self.changeToken = nil
-						self.fetchChangesInZone(completion: completion)
+						DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 					default:
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) failure default")
 						completion(.failure(CloudKitError(error)))

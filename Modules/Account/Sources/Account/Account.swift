@@ -619,6 +619,11 @@ public enum FetchType {
 		}
 	}
 
+	func flushCloudKitSubscriptions() throws {
+		guard acceptsFixtureWork, !isDeleted else { throw CancellationError() }
+		guard opmlFile.flush() else { throw CocoaError(.fileWriteUnknown) }
+	}
+
 	public func saveIfNeeded() {
 		opmlFile.saveToDiskIfNeeded()
 	}
@@ -1141,11 +1146,9 @@ public enum FetchType {
 	}
 
 	// Delete the articles associated with the given set of articleIDs
-	func delete(articleIDs: Set<String>) async {
-		guard !articleIDs.isEmpty else {
-			return
-		}
-		await database.deleteAsync(articleIDs: articleIDs)
+	func delete(articleIDs: Set<String>) async -> Bool {
+		guard !articleIDs.isEmpty else { return true }
+		return await database.deleteAsync(articleIDs: articleIDs)
 	}
 
 	/// Empty caches that can reasonably be emptied. Call when the app goes in the background, for instance.

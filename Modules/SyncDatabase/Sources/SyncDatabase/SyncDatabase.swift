@@ -51,6 +51,12 @@ public actor SyncDatabase {
 		self.databasePath = databasePath
 	}
 
+	#if DEBUG
+	public func setStatusTableUnavailableForTesting(_ unavailable: Bool) -> Bool {
+		database.executeStatements(unavailable ? "ALTER TABLE syncStatus RENAME TO fixture_saved_syncStatus" : "ALTER TABLE fixture_saved_syncStatus RENAME TO syncStatus")
+	}
+	#endif
+
 	// MARK: - API
 
 	public func vacuum() {

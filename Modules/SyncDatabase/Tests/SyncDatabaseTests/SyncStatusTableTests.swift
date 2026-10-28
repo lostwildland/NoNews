@@ -13,6 +13,19 @@ import SyncDatabase
 
 	private let database = SyncDatabase(databasePath: ":memory:")
 
+	@Test func cachedStatusQueriesReportStepFailure() async throws {
+		let fixture = SyncDatabase(databasePath: ":memory:")
+		#expect(try await fixture.selectPendingReadStatusArticleIDs().isEmpty)
+		#expect(try await fixture.selectPendingStarredStatusArticleIDs().isEmpty)
+		#expect(try await fixture.selectForProcessing().isEmpty)
+		#expect(await fixture.setStatusTableUnavailableForTesting(true))
+		await #expect(throws: SyncDatabaseError.self) { _ = try await fixture.selectPendingReadStatusArticleIDs() }
+		await #expect(throws: SyncDatabaseError.self) { _ = try await fixture.selectPendingStarredStatusArticleIDs() }
+		await #expect(throws: SyncDatabaseError.self) { _ = try await fixture.selectForProcessing() }
+		#expect(await fixture.setStatusTableUnavailableForTesting(false))
+		#expect(await fixture.close())
+	}
+
 	/// Status syncing has to keep working on queues larger than SQLite’s
 	/// expression-depth limit of 1000 terms.
 	@Test func selectForProcessingHandlesLargeQueue() async throws {

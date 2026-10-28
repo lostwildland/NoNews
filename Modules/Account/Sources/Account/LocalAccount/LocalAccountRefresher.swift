@@ -64,12 +64,14 @@ import os
 	private var downloadSessionIsComplete = false
 
 	private var refreshWork: DatabaseWork?
+	private var pendingRefreshes = [(feeds: Set<Feed>, work: DatabaseWork?, completion: () -> Void)]()
 	#if DEBUG
 	var protocolClassesForTesting: [AnyClass]?
 	var beforeCompletionForTesting: (() async -> Void)?
 	var afterCompletionForTesting: (() -> Void)?
 	var beforeParseForTesting: (() async -> Void)?
 	var afterParseForTesting: (() -> Void)?
+	var onOverlapForTesting: (() -> Void)?
 	#endif
 	private var completion: (() -> Void)?
 	private var isSuspended = false
@@ -98,7 +100,11 @@ import os
 
 	@MainActor private func refreshFeeds(_ feeds: Set<Feed>, completion: (() -> Void)? = nil) {
 		guard self.completion == nil && outstandingParseTasks == 0 else {
-			completion?()
+			if feeds.isEmpty { completion?() }
+			else if let completion { pendingRefreshes.append((feeds, DatabaseWork.current, completion)) }
+			#if DEBUG
+			onOverlapForTesting?()
+			#endif
 			return
 		}
 		refreshWork = DatabaseWork.current
@@ -143,11 +149,14 @@ import os
 		}
 
 		guard !filteredFeeds.isEmpty else {
+			self.completion = completion
 			// All feeds were skipped. Still need to complete the parent activity.
 			downloadSessionIsComplete = true
 			completeRefreshActivityIfReady()
 			Task { @MainActor in
+				self.completion = nil
 				completion?()
+				startPendingRefreshIfReady()
 			}
 			return
 		}
@@ -447,16 +456,17 @@ import os
 		}
 
 		downloadSessionIsComplete = true
-		completeRefreshActivityIfReady()
 		refreshWork = nil
 		let completion = self.completion
 		self.completion = nil
+		completeRefreshActivityIfReady()
 
 		Task { @MainActor in
 			#if DEBUG
 			await beforeCompletionForTesting?()
 			#endif
 			completion?()
+			startPendingRefreshIfReady()
 			#if DEBUG
 			afterCompletionForTesting?()
 			#endif
@@ -469,15 +479,18 @@ import os
 @MainActor private extension LocalAccountRefresher {
 
 	func completeRefreshActivityIfReady() {
-		guard downloadSessionIsComplete && outstandingParseTasks == 0 else {
-			return
+		guard downloadSessionIsComplete && outstandingParseTasks == 0 else { return }
+		if let refreshActivityID {
+			ActivityLog.shared.didComplete(id: refreshActivityID, message: refreshStatsMessage)
+			self.refreshActivityID = nil
 		}
-		guard let refreshActivityID else {
-			return
-		}
+		startPendingRefreshIfReady()
+	}
 
-		ActivityLog.shared.didComplete(id: refreshActivityID, message: refreshStatsMessage)
-		self.refreshActivityID = nil
+	func startPendingRefreshIfReady() {
+		guard completion == nil && outstandingParseTasks == 0 && !pendingRefreshes.isEmpty else { return }
+		let next = pendingRefreshes.removeFirst()
+		DatabaseWork.$current.withValue(next.work) { refreshFeeds(next.feeds, completion: next.completion) }
 	}
 
 	/// Clean up any leftover per-feed activities at the end of a refresh.

@@ -48,22 +48,16 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 		accumulatedDeletedCount = 0
 	}
 
-	func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws {
+	@MainActor func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws {
+		guard let account, account.acceptsFixtureWork, !account.isDeleted else { throw CancellationError() }
+		let pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
+		let pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
 		lastChangedCount = changed.count
 		lastDeletedCount = deleted.count
 		accumulatedChangedCount += changed.count
 		accumulatedDeletedCount += deleted.count
 
-		let pendingReadStatusArticleIDs: Set<String>
-		let pendingStarredStatusArticleIDs: Set<String>
-		do { pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs() }
-		catch is CancellationError { throw CancellationError() }
-		catch { pendingReadStatusArticleIDs = [] }
-		do { pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
-		catch is CancellationError { throw CancellationError() }
-		catch { pendingStarredStatusArticleIDs = [] }
-
-		await delete(recordKeys: deleted, pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
+		try await delete(recordKeys: deleted, pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
 		try await update(records: changed,
 					 pendingReadStatusArticleIDs: pendingReadStatusArticleIDs,
 					 pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
@@ -72,7 +66,7 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 
 private extension CloudKitArticlesZoneDelegate {
 
-	func delete(recordKeys: [CloudKitRecordKey], pendingStarredStatusArticleIDs: Set<String>) async {
+	func delete(recordKeys: [CloudKitRecordKey], pendingStarredStatusArticleIDs: Set<String>) async throws {
 		let receivedRecordIDs = recordKeys.filter({ $0.recordType == CloudKitArticlesZone.CloudKitArticleStatus.recordType }).map({ $0.recordID })
 		let receivedArticleIDs = Set(receivedRecordIDs.map({ stripPrefix($0.externalID) }))
 		let deletableArticleIDs = receivedArticleIDs.subtracting(pendingStarredStatusArticleIDs)
@@ -81,8 +75,7 @@ private extension CloudKitArticlesZoneDelegate {
 			return
 		}
 
-		await syncDatabase.deleteSelectedForProcessing(deletableArticleIDs)
-		await account?.delete(articleIDs: deletableArticleIDs)
+		guard let account, await syncDatabase.deleteSelectedForProcessing(deletableArticleIDs), await account.delete(articleIDs: deletableArticleIDs) else { throw CancellationError() }
 	}
 
 	func update(records: [CKRecord], pendingReadStatusArticleIDs: Set<String>, pendingStarredStatusArticleIDs: Set<String>) async throws {
@@ -112,11 +105,12 @@ private extension CloudKitArticlesZoneDelegate {
 			guard let articleChanges = await self.account?.updateAsync(feedID: feedID, parsedItems: parsedItems, deleteOlder: false) else {
 				continue
 			}
+			if let error = articleChanges.error { throw error }
 			guard let deletes = articleChanges.deleted, !deletes.isEmpty else {
 				continue
 			}
 			let syncStatuses = Set(deletes.map { SyncStatus(articleID: $0.articleID, key: .deleted, flag: true) })
-			await self.syncDatabase.insertStatuses(syncStatuses)
+			guard await self.syncDatabase.insertStatuses(syncStatuses) else { throw CancellationError() }
 		}
 	}
 
