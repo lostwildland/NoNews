@@ -257,7 +257,7 @@ def observe(db, body):
     with transaction(db):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
-        if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
+        if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value and (not identity or not existing["identity_type"] or (existing["identity_type"], existing["identity_value"]) != (identity_type, identity_value)):
             db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
             db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "conflict", now))
         state = "unresolved"
@@ -309,7 +309,7 @@ def observe(db, body):
                         published, item_id, state, identity_type, identity_value, raw_identity_value, now, now))
             if identity:
                 db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
-                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
+                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else ("unresolved" if not media_type else "verified"), now))
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
