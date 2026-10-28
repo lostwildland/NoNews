@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
   "candidate": "920efefd61fb993a850241719a4d99e5691023b6",
-  "state": "Current920efef is pushed/clean. Group inspections and correction deltas are covered; final cross-group assessment and current full native/signed-bundle validation remain. Historical R11 native Settings Ready observed via CUA; not current-head artifact proof. T30 holds serialized Xcode resource.",
+  "state": "Source-review gate clear at920efef: paired R34 connected-interface assessments cover6/6seams and match70/70ledgerblobs. Current full appropriate native plan/signed relocated bundle/visibleReady remain before API integration. T30 holds serialized Xcode resource.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -657,5 +657,21 @@
     "evidence": "assets/t02-r11-processing-ready.jpg",
     "observed": "CUA Settings→Processing Ready and Stop",
     "boundary": "Historical artifact only; current bundle pending"
+  },
+  "connected_reviews": {
+    "standards": {
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "six connected seams complete;70/70ledgerblobs match; supplements prior group/correction inspections",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-connected-review-r34.md",
+      "runtime": "not run by reviewer"
+    },
+    "spec": {
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "six connected seams complete;70/70ledgerblobs match; supplements prior group/correction inspections",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-connected-review-r34.md",
+      "runtime": "not run by reviewer"
+    }
   }
 }
