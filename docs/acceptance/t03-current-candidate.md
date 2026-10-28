@@ -2,6 +2,10 @@
 
 Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; current pushed checkpoint `1ddb5a632c87cab75713e17fd11b94a983cf9a85`, including the earlier coordinator correctionb279f1d. T03 is open and unaccepted. The original implementation owner retains the ticket; root owns product, review and small review corrections. No new worktree was created.
 
+## Execution recovery
+
+Authoritative thread read on 2026-10-28 found native-browsing ordinal10 interrupted with no active run. Four modified source/test files and the new `configuration_browse_fixture.py` remain preserved; they are not a completed or reviewed slice. The same owner resumed as R11 to finish bounded native browsing and responsiveness under the existing limited resource grant. Root supplied the strengthened HIG design/development/acceptance requirement from `4001e7d`; no privacy setting, provider, worktree or production data was changed.
+
 ## Current implemented source
 
 - Durable services, explicit prompt/model bindings, text history/copy/restore and migration commands retain their earlier review/evidence boundaries.

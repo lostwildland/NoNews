@@ -1249,7 +1249,7 @@
     }
   ],
   "current_branch_head": "65be895bf0bb8534eba3ef9e10973fa03a978185",
-  "native_resource": "Released by T30 handoff; no current heavy run granted. Final full/build/iOS runs deferred until source findings stabilize. T03 source/lightweight checks continue.",
+  "native_resource": "T30 released its source and native resource. T03 has timing-sensitive service/standalone-client/runtime-preparation grant only; no full Xcode/app/Keychain run granted. Final T30 full/build/iOS runs remain deferred until findings stabilize.",
   "review_reports": {
     "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
     "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
@@ -1270,7 +1270,7 @@
         "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
         "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift"
       ],
-      "state": "Ready for paired bounded correction review; remaining queue wrappers/provider/consumer/test/harness and original-base connected coverage stay separate."
+      "state": "R16 paired reviews were interrupted without a verdict (authoritative thread read: interrupted, no active run). Fresh paired R17 correction reviews are next; no prior coverage is upgraded. Remaining queue wrappers/provider/consumer/test/harness and original-base connected coverage stay separate."
     }
   }
 }

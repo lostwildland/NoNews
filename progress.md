@@ -1,5 +1,10 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Interrupted task recovery
+
+- Authoritative thread reads found T03 native-browsing ordinal10 and both T30 R16 page/delete reviews interrupted, with no active run. Preserved T03's four modified files and new fixture; resumed the same owner as R11 with the existing limited resource grant and root4001e7d HIG requirement. No new worktree, privacy repair or provider switch.
+- T30 remains clean at65be895. Verified all eight page/delete correction blobs against the105-path ledger; scoped diff remains79 additions/37 deletions and passes whitespace checks. R16 has no verdict; fresh paired R17 reviews are required. No current-source full suite or artifact acceptance is inferred from the historical791-pass run.
+
 ## 2026-10-28 — HIG development requirement
 
 - User explicitly requires Apple's Human Interface Guidelines (HIG) as a reference during feature development. Expanded the goal, product brief, parity spec and native UX contract to cover design, implementation, review and acceptance with applicable macOS/iOS section links and actual interaction/accessibility evidence. This documentation change adds no implementation or UI acceptance claim.

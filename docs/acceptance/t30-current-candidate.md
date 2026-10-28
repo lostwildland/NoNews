@@ -10,6 +10,8 @@ The historical full-plan result remains791 passes at5013c91. Its independently e
 
 ## Review frontier
 
+The R16 page/delete Standards and Spec runs were both found interrupted with no active run on authoritative thread readback. Neither produced a verdict; their launch is not review coverage. Fresh paired R17 reviews must inspect the same pinned eight-path correction and connected tests. Other review scopes below remain open.
+
 - Page application, token/checkpoint advancement, pending sync status and the new failed SQL delete path, including shared CloudKit callback admission.
 - Per-operation send/receive/notification context and controlled queue/selection failure.
 - Status command outcomes, partial account success and undo/redo; timeline failure/supersession; widget atomic publication and icon preservation.

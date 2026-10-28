@@ -79,7 +79,7 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Staged previewa8f3d2 and incremental Apply/evidence1ddb5a6implemented. Root exact-commit public >16MiBApply/readback/retry/restart/repeat/rollback testPASS1case8.661s; owner12focusedpasses/1optionalskip. Rootb279f1dR4acknowledgement input/generation/retry/historical-state correction has public behavioralred/green and final strictnarrowtypecheck; freshreviewpending. SameownerR10implementsboundednativebrowsing/responsiveness and has standaloneclient/runtime-preparation grant only. Fullbuild/app/Keychain/UI/runner acceptance remainsopen.",
+      "implementation_state": "Preview and Apply/evidence streaming are pushed at 1ddb5a6. The interrupted native-browsing turn preserved four modified files and one new fixture; the same original owner resumed as R11 after authoritative terminal-state readback. HIG development requirement supplied from root 4001e7d. Only timing-sensitive service/standalone-client/runtime-preparation checks granted. Bounded native browsing, responsiveness, fresh review and final native/Keychain/UI acceptance remain open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
