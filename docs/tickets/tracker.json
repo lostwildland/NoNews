@@ -46,9 +46,9 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "20d62dd5d262159ef197efde84bcf8278f627298",
-      "implementation_state": "Cooperative progress committed; owner62total/61pass/1optionalSkip and focused strengthened auth/EOF assertion, native-controller checks. Coordinator prepared/source/compile/diff readback passes. Fresh correction/packaging/cross-group review and signed bundle/UI pending; T30 has native resource.",
-      "review_evidence": "docs/acceptance/t02-jobs-review-r29.md"
+      "last_reported_head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "implementation_state": "Source review gate clear: R32/R33/R34 paired assessments and70/70blobs. Original owner now validating current full source/controller/appropriate native CI plan and signed relocated bundle before API integration. Historical R11 Ready observed; current runtime pending.",
+      "review_evidence": "docs/acceptance/t02-connected-review-r34.md"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
@@ -419,10 +419,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "R6 account scopes report Standards2P2/Spec2P2 with incomplete connected seams. Coordinator small trigger/caller-context patches are uncommitted and syntax-only; original owner must complete local download admission/drain plus deterministic runtime tests. Prior769 passes historical.",
+      "implementation_state": "Checkpoint5b2c1a pushed. R7sourcea92a072:158focused/774full passes; coordinator read774/0fail/0skip/0SQLite diagnostics and verified historical normal artifact. Later R8 overlap/parse fixes syntax-only. R9 storage cancellation APIs/callers being corrected source-only; native resource assigned T02. Fresh reviews/fullT30 remain open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
-      "review_evidence": "docs/acceptance/t30-account-review-r6.md"
+      "last_reported_head": "5b2c1a918aaf5f9ed57b15cd92446ee8e70cd9a5",
+      "review_evidence": "docs/acceptance/t30-storage-review-r9.md"
     }
   },
   "spec": {

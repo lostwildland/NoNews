@@ -1,7 +1,7 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "7accb68382f80c0d4b48c922c8b81899f0364b57",
-  "state": "R11 source6f849ae/evidence7accb68:771passes independently read; R7 core review3source-derivedP2s; coordinator small pending-save/maintenance fixes uncommitted, original owner R12 regressions/native validation running.",
+  "candidate": "5b2c1a918aaf5f9ed57b15cd92446ee8e70cd9a5",
+  "state": "Checkpoint5b2c1a pushed. R7sourcea92a072 has independently read774passes/0diagnostics and verified historical normalartifact. LaterR8overlap/parse source is syntax-only; R9 cancellation API/caller correction is assigned source-only. T02 owns native resource.",
   "groups": {
     "account": 16,
     "storage": 14,
@@ -19,9 +19,9 @@
       "path": "Modules/Account/Sources/Account/Account.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "9697bc8dd940ac8db402a81a1e73a7227f35e2f3",
-      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
-      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      "blob": "24566536d5911c197bb93c75bd85462cff4cea27",
+      "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+      "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
     },
     {
       "path": "Modules/Account/Sources/Account/AccountDelegate.swift",
@@ -68,8 +68,8 @@
       "previous_path": null,
       "group": "storage",
       "blob": "9fd42d8e1d63c5f1f97b2995c8475086761a5c66",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
@@ -115,9 +115,9 @@
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "cec6adec2bf78880e93a0336e493abf27972a838",
-      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
-      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+      "blob": "a82e171af7b3a5afaef4093be2aaaf1b9d6d1b20",
+      "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+      "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
     },
     {
       "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
@@ -139,9 +139,9 @@
       "path": "Modules/Account/Sources/Account/OPMLFile.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "d132500bd6528202567e2cd24e151fb798236db3",
-      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
-      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      "blob": "1b21691031dcedf18403b1f7034b429f93ac4e7c",
+      "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+      "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
     },
     {
       "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
@@ -163,9 +163,9 @@
       "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
       "previous_path": null,
       "group": "fixtures",
-      "blob": "b32709e334ee5ea1958c77e46714b489ea278228",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "blob": "7845e0a3e1ac4f4120efc1fd39cee2fd5df5e95d",
+      "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+      "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
     },
     {
       "path": "Modules/Account/Tests/AccountTests/AccountOPMLLoadTests.swift",
@@ -260,104 +260,104 @@
       "previous_path": null,
       "group": "storage",
       "blob": "3e6d7960a3d69656e55721d3fadbe87f40046074",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "74674c0f5eefd1c93f119e3d72aeb375a55337ac",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/AuthorsSchemaMigration.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "1972f90f12b3ffee94d2bc7d89b5c902a060bc3a",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "db34db2fa7f8db207734b00b54577b5c503137ad",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "8ad956e3a60c9e4891f9d562bec9ce9a34e9305b",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/Images/Sources/Images/ImageMetadataDatabase.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "2c0b8cf06d744db7f2f1fa8c6e2838f1ec9e7205",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "93dd7777deb6f0442816ff419c1a0803227d10b1",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseWork.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "abf1dd6255cfb43e63b8cafd9c5da195ea25e804",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSDatabase/Sources/RSDatabaseObjC/FMDatabase.m",
       "previous_path": null,
       "group": "storage",
       "blob": "4a7b18f93997a2537bc2f1842a43afa037c8c502",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseCloseTests.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "9f503cd92a002061612b20621561c6c1b0073e9b",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseQueueShutdownTests.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "9024aa6a9404c920b5e4e51db79004ada01a468d",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/RSWeb/Sources/RSWeb/Downloader.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "a4139cca3c3484759eaefb8caefabe011510e57f",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
       "previous_path": null,
       "group": "storage",
       "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+      "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
@@ -443,9 +443,9 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "45f18f788637abef49db5dfcf569fd04c36b0c1b",
-      "standards": "pending bounded scope review",
-      "spec": "pending bounded scope review"
+      "blob": "53a925c67c08624b050505322036983546f39104",
+      "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+      "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
     }
   ],
   "account_subgroups": {
@@ -470,5 +470,15 @@
       "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift"
     ]
   },
-  "working_tree_note": "T30 owner owns R12 pending-save/maintenance tests and the coordinator LocalAccountRefresher correction for R8 overlap schedules; pinned7accb68 remains review source until the next completed handoff. Storage14 paired R9 reviews are read-only at the pin."
+  "working_tree_note": "Read pinned commits during original-owner R9 source/caller changes; no storage or laterR8 green/build acceptance yet.",
+  "runtime_evidence": {
+    "source": "a92a072b885cf96b02d2b844f9fe5427ad8522cb",
+    "full_plan_passed": 774,
+    "failed": 0,
+    "skipped": 0,
+    "disk_io_matches": 0,
+    "vnode_unlink_matches": 0,
+    "verification": "coordinator xcresult/log readback plus isolated normal artifact identity/deep signature",
+    "current_checkpoint_boundary": "R8 additions in5b2c1a remain syntax-only"
+  }
 }
