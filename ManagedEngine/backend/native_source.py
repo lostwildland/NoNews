@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import uuid
+from datetime import datetime, timezone
 from urllib.parse import urlsplit, urlunsplit
 
 from .core import transaction, utcnow
@@ -17,12 +18,19 @@ def _service_available(db, service_id):
     try:
         from . import configuration
         value = configuration._record(db, "service", service_id)
-    except Exception:
+    except ConfigurationError:
         row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + service_id,)).fetchone()
         if row is None:
             return False
         value = json.loads(row[0])
-    return value.get("type") == "magpie" or not (value.get("credentialState") == "incomplete" or value.get("error") or value.get("stale") or ("checkedAt" in value and not value.get("checkedAt")))
+        checked = value.get("checkedAt")
+        if not checked:
+            return len(service_id) != 32
+        try:
+            value["stale"] = bool(value.get("error")) or (datetime.now(timezone.utc) - datetime.fromisoformat(checked)).total_seconds() > 300
+        except ValueError:
+            return False
+    return not (value.get("credentialState") == "incomplete" or value.get("error") or value.get("stale") or not value.get("checkedAt"))
 
 
 SCHEMA = """
@@ -388,6 +396,10 @@ def claim_job(db, body):
         observation_state = db.execute("SELECT o.identity_state FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=?", (row["native_context_id"], namespace)).fetchone()
         if observation_state is None or observation_state[0] != "verified":
             raise ValueError("Conflicting or unresolved observation cannot be claimed")
+        current = db.execute("SELECT c.item_id,c.policy_revision,c.service_id,c.media_type,c.processing_mode,c.curator_prompt_id,c.editor_prompt_id,o.account_id,o.feed_id FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=?", (row["native_context_id"],)).fetchone()
+        policy = db.execute("SELECT revision,service_id,media_type,processing_mode,curator_prompt_id,editor_prompt_id FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, current[7], current[8])).fetchone() if current else None
+        if current is None or policy is None or policy[0] != current[1] or tuple(policy[1:]) != (current[2], current[3], current[4], current[5], current[6]) or not _service_available(db, policy[1]):
+            raise ValueError("Native job policy is stale")
         current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row["item_id"],)).fetchone()[0]
         if current_generation != row["decision_generation"]:
             raise ValueError("Native job decision is stale")
