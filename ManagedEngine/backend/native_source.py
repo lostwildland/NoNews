@@ -51,7 +51,12 @@ CREATE TABLE IF NOT EXISTS native_processing_contexts(
   curator_prompt_id TEXT,
   editor_prompt_id TEXT,
   service_id TEXT,
+  media_type TEXT,
+  processing_mode TEXT NOT NULL DEFAULT 'disabled',
   threshold REAL,
+  scoring_strategy TEXT,
+  body_strategy TEXT,
+  policy_revision INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE(item_id, observation_id)
@@ -66,6 +71,7 @@ CREATE TABLE IF NOT EXISTS native_feed_policies(
   processing_mode TEXT NOT NULL DEFAULT 'disabled' CHECK(processing_mode IN ('disabled','normal','important')),
   curator_prompt_id TEXT,
   editor_prompt_id TEXT,
+  service_id TEXT,
   threshold REAL,
   scoring_strategy TEXT,
   body_strategy TEXT,
@@ -79,6 +85,20 @@ CREATE TABLE IF NOT EXISTS native_feed_policies(
 
 def ensure_schema(db) -> None:
     db.executescript(SCHEMA)
+    columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts)")}
+    additions = {
+        "media_type": "TEXT",
+        "processing_mode": "TEXT NOT NULL DEFAULT 'disabled'",
+        "scoring_strategy": "TEXT",
+        "body_strategy": "TEXT",
+        "policy_revision": "INTEGER NOT NULL DEFAULT 0",
+    }
+    for name, declaration in additions.items():
+        if name not in columns:
+            db.execute(f"ALTER TABLE native_processing_contexts ADD COLUMN {name} {declaration}")
+    policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
+    if "service_id" not in policy_columns:
+        db.execute("ALTER TABLE native_feed_policies ADD COLUMN service_id TEXT")
 
 
 def _text(value, field, *, required=False, maximum=4096):
@@ -113,6 +133,19 @@ def _verified_identity(body):
             port = None
         netloc = host if port is None else f"{host}:{port}"
         value = urlunsplit((parts.scheme.casefold(), netloc, parts.path or "/", parts.query, ""))
+    elif identity_type == "doi":
+        if not re.fullmatch(r"10\.\d{4,9}/\S+", value, re.IGNORECASE):
+            raise ValueError("Unsupported DOI")
+        value = value.casefold()
+    elif identity_type == "arxiv":
+        if not re.fullmatch(r"(?:arxiv:)?\d{4}\.\d{4,5}(?:v\d+)?", value, re.IGNORECASE):
+            raise ValueError("Unsupported arXiv identity")
+        value = value.casefold().removeprefix("arxiv:")
+    elif identity_type == "video":
+        if not re.fullmatch(r"[A-Za-z0-9_-]{6,64}", value):
+            raise ValueError("Unsupported video identity")
+    else:
+        raise ValueError("Unsupported content identity type")
     return identity_type, value
 
 
@@ -207,11 +240,13 @@ def observe(db, body):
                 db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, state if state in {"verified", "conflict"} else "verified", now))
         if item_id:
-            policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,threshold FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
+            policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
             context_id = uuid.uuid4().hex
-            db.execute("INSERT OR IGNORE INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,threshold,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
-                       (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None, now, now))
+            db.execute("INSERT OR IGNORE INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                       (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
+                        policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
+                        policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
     return observation(db, observation_id)
 
 
@@ -251,7 +286,7 @@ def feeds(db, method, body):
     feed_ids = [_text(value, "feed ID", required=True, maximum=256) for value in feed_ids]
     if not feed_ids or len(set(feed_ids)) != len(feed_ids):
         raise ValueError("Invalid feed selection")
-    changes = {key: body.get(key) for key in ("title", "mediaType", "processingMode", "curatorPromptID", "editorPromptID", "threshold", "scoringStrategy", "bodyStrategy") if key in body}
+    changes = {key: body.get(key) for key in ("title", "mediaType", "processingMode", "curatorPromptID", "editorPromptID", "serviceID", "threshold", "scoringStrategy", "bodyStrategy") if key in body}
     if "mediaType" in changes and changes["mediaType"] not in (None, *MEDIA_TYPES):
         raise ValueError("Unsupported media type")
     if "processingMode" in changes and changes["processingMode"] not in MODES:
@@ -265,13 +300,13 @@ def feeds(db, method, body):
             prior = db.execute("SELECT * FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()
             observation_count = db.execute("SELECT COUNT(*) FROM native_source_observations WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()[0]
             affected.append({"feedID": feed_id, "sourceName": (prior["title"] if prior and prior["title"] else feed_id), "observationCount": observation_count})
-            values = dict(prior) if prior else {"title": "", "media_type": None, "processing_mode": "disabled", "curator_prompt_id": None, "editor_prompt_id": None, "threshold": None, "scoring_strategy": None, "body_strategy": None, "revision": 0}
+            values = dict(prior) if prior else {"title": "", "media_type": None, "processing_mode": "disabled", "curator_prompt_id": None, "editor_prompt_id": None, "service_id": None, "threshold": None, "scoring_strategy": None, "body_strategy": None, "revision": 0}
             values.update({"title": changes.get("title", values["title"]), "media_type": changes.get("mediaType", values["media_type"]),
                            "processing_mode": changes.get("processingMode", values["processing_mode"]), "curator_prompt_id": changes.get("curatorPromptID", values["curator_prompt_id"]),
-                           "editor_prompt_id": changes.get("editorPromptID", values["editor_prompt_id"]), "threshold": changes.get("threshold", values["threshold"]),
+                           "editor_prompt_id": changes.get("editorPromptID", values["editor_prompt_id"]), "service_id": changes.get("serviceID", values["service_id"]), "threshold": changes.get("threshold", values["threshold"]),
                            "scoring_strategy": changes.get("scoringStrategy", values["scoring_strategy"]), "body_strategy": changes.get("bodyStrategy", values["body_strategy"])})
             if prior and body.get("revision") is not None and body["revision"] != prior["revision"]:
                 raise ValueError("Feed policy changed during save")
-            db.execute("INSERT INTO native_feed_policies VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",
-                       (namespace, account_id, feed_id, values["title"], values["media_type"], values["processing_mode"], values["curator_prompt_id"], values["editor_prompt_id"], values["threshold"], values["scoring_strategy"], values["body_strategy"], (prior["revision"] + 1 if prior else 1), now, now))
+            db.execute("INSERT INTO native_feed_policies(namespace,account_id,feed_id,title,media_type,processing_mode,curator_prompt_id,editor_prompt_id,service_id,threshold,scoring_strategy,body_strategy,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,service_id=excluded.service_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",
+                       (namespace, account_id, feed_id, values["title"], values["media_type"], values["processing_mode"], values["curator_prompt_id"], values["editor_prompt_id"], values["service_id"], values["threshold"], values["scoring_strategy"], values["body_strategy"], (prior["revision"] + 1 if prior else 1), now, now))
     return {"feeds": [_policy_row(db.execute("SELECT * FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()) for feed_id in feed_ids], "affectedSources": affected, "historicalRerun": "explicit-preview-required"}

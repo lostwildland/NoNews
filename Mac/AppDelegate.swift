@@ -397,10 +397,17 @@ let appName = "NetNewsWire"
 
 	@objc func accountDidDownloadArticles(_ note: Notification) {
 		guard ProcessingEngine.shared.state == .ready else { return }
-		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? [Article]) ?? [])
-			+ ((note.userInfo?[Account.UserInfoKey.updatedArticles] as? [Article]) ?? [])
+		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? Set<Article>) ?? [])
+			.union((note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>) ?? [])
 		guard !articles.isEmpty else { return }
-		let namespace = "mac-" + (Bundle.main.bundleIdentifier ?? "nonews")
+		let namespaceDefaultsKey = "NoNews.NativeSource.InstallationNamespace"
+		let namespace: String = if let saved = UserDefaults.standard.string(forKey: namespaceDefaultsKey), !saved.isEmpty {
+			saved
+		} else {
+			let generated = "mac-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+			UserDefaults.standard.set(generated, forKey: namespaceDefaultsKey)
+			generated
+		}
 		for article in articles {
 			var body: [String: Any] = [
 				"namespace": namespace,

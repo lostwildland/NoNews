@@ -62,8 +62,16 @@ class NativeSourceTest(unittest.TestCase):
         })
         self.assertEqual(row['contexts'][0]['curator_prompt_id'], 'curator')
         self.assertEqual(row['contexts'][0]['threshold'], 7.0)
+        self.assertEqual(row['contexts'][0]['policy_revision'], 1)
+        self.assertEqual(row['contexts'][0]['processing_mode'], 'disabled')
 
-    def test_conflicting_identity_update_is_retained_as_conflict(self):
+    def test_unsupported_identity_type_is_refused(self):
+        with self.assertRaises(ValueError):
+            native_source.observe(self.db, {
+                'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+                'title': 'Story', 'mediaType': 'news', 'identityType': 'made-up', 'identityValue': 'anything',
+            })
+
         original = native_source.observe(self.db, {
             'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
             'title': 'First', 'mediaType': 'news', 'identityType': 'url',
@@ -103,10 +111,11 @@ class NativeSourceTest(unittest.TestCase):
             db.commit()
             db.close()
             with InformationDB(path) as migrated:
-                self.assertEqual(schema.version(migrated.db), 42)
+                self.assertEqual(schema.version(migrated.db), 43)
                 self.assertIsNotNone(migrated.db.execute("SELECT 1 FROM sqlite_master WHERE name='native_source_observations'").fetchone())
                 self.assertEqual(migrated.db.execute("SELECT title FROM feeds WHERE id='f'").fetchone()[0], 'Feed')
 
+    def test_schema_pass_creates_native_tables_at_new_version(self):
         db = sqlite3.connect(':memory:')
         db.row_factory = sqlite3.Row
         schema.ensure(db)

@@ -29,7 +29,8 @@ from contextlib import closing
 # 40: Reject image cleanup progress and object deletion generations.
 # 41: daily deletion keeps no image backup paths.
 # 42: native source observations, processing contexts and feed policies.
-SCHEMA_VERSION = 42
+# 43: complete native policy context snapshots and identity evidence validation.
+SCHEMA_VERSION = 43
 _VERSION_KEY = "schema_version"
 
 
@@ -62,7 +63,7 @@ def require_supported_database(db: sqlite3.Connection) -> None:
     current = version(db)
     if current > SCHEMA_VERSION:
         raise UnsupportedSchemaError('schema_newer')
-    if current != SCHEMA_VERSION - 1 and current != SCHEMA_VERSION and db.execute(
+    if current not in {SCHEMA_VERSION - 2, SCHEMA_VERSION - 1, SCHEMA_VERSION} and db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1").fetchone():
         raise UnsupportedSchemaError('schema_migration_required')
 
