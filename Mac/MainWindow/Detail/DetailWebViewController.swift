@@ -393,10 +393,11 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
 		}
 
+		let nativeContextLabel = (nativeSourceBinding?["context_id"] as? String).map { " Native context: \($0.prefix(8))" } ?? ""
 		let nativeBanner = nativeSourceBinding.map { binding in
 			let state = binding["identity_state"] as? String ?? "unresolved"
 			let label = ["verified": "Verified", "conflict": "Conflicting identity", "unresolved": "Unresolved"][state] ?? "Unresolved"
-			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)</aside>"
+			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)\(nativeContextLabel)</aside>"
 		} ?? ""
 		let substitutions = [
 			"title": rendering.title,

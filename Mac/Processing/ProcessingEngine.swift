@@ -310,6 +310,11 @@ final class ProcessingEngine {
 			completion(value["observation"] as? [String: Any])
 		}
 	}
+	func nativeContextResults(contextID: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") ?? ""
+		request(method: "GET", path: "/api/native/context/results", body: ["namespace": namespace, "contextID": contextID, "originContextID": contextID], completion: completion)
+	}
+
 	func feedPolicies(namespace: String, accountID: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		request(method: "GET", path: "/api/settings/feeds", body: ["namespace": namespace, "accountID": accountID], completion: completion)
 	}
