@@ -503,24 +503,20 @@ import Secrets
 		guard let account else {
 			return
 		}
-		let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-		let syncStatuses = Set(articleIDs.map { articleID in
-			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
-		})
-
-		do {
-			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-		} catch {
-			_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-			throw error
-		}
-		if !syncStatuses.isEmpty {
-			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
-		}
-		if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
-			// Flush in the background so marking doesn't block the caller
-			// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
-			account.startBackground { [self] in try? await sendArticleStatus() }
+		try await syncDatabase.withStatusMutation { [self, account] in
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+			let syncStatuses = Set(changedArticleIDs.map { articleID in
+				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
+			})
+			do {
+				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
+			} catch let queueError {
+				do { _ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag) }
+				catch { try? await syncDatabase.insertStatusesOrThrow(syncStatuses); throw error }
+				throw queueError
+			}
+			if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+			if let count = try? await syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
 		}
 	}
 
