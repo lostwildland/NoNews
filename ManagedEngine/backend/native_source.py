@@ -288,13 +288,15 @@ def observe(db, body):
 
 def replay(db, body):
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
-    row = db.execute("SELECT item_id,policy_revision FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+    row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=?", (context_id,)).fetchone()
     if row is None:
         raise ValueError("Context not found")
     now = utcnow()
+    replay_context_id = uuid.uuid4().hex
+    db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) SELECT ?,item_id,observation_id,?,?,?,?,?,?,?,?,?,?,?,? FROM native_processing_contexts WHERE id=?", (replay_context_id, row[0], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now, context_id))
     job_id = "native-replay-" + uuid.uuid4().hex
-    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": row[1], "preview": True}), "user", 0))
-    return {"jobID": job_id, "contextID": context_id, "historicalRerun": "queued"}
+    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0))
+    return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
 
 def context_results(db, method, body):
@@ -354,12 +356,9 @@ def observation_by_binding(db, body):
     return {"observation": observation(db, row[0])}
 
 def list_observations(db, body):
-    namespace = _namespace(body.get("namespace")) if body.get("namespace") else None
-    sql = "SELECT * FROM native_source_observations"
-    args = []
-    if namespace:
-        sql += " WHERE namespace=?"
-        args.append(namespace)
+    namespace = _namespace(body.get("namespace"))
+    sql = "SELECT * FROM native_source_observations WHERE namespace=?"
+    args = [namespace]
     sql += " ORDER BY updated_at DESC,id DESC LIMIT ?"
     limit = body.get("limit", 100)
     if not isinstance(limit, int) or not 1 <= limit <= 500:

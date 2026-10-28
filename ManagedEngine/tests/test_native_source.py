@@ -32,7 +32,7 @@ class NativeSourceTest(unittest.TestCase):
         })
         self.assertNotEqual(first['id'], second['id'])
         self.assertEqual(first['item_id'], second['item_id'])
-        self.assertEqual(len(native_source.list_observations(self.db, {})['observations']), 2)
+        self.assertEqual(len(native_source.list_observations(self.db, {'namespace': 'install-a'})['observations']), 2)
 
     def test_unresolved_observation_is_readable_without_processing_identity(self):
         row = native_source.observe(self.db, {

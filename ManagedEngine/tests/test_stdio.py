@@ -39,7 +39,7 @@ class ManagedServiceTest(unittest.TestCase):
                     'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
                     'title': 'Story',
                 }},
-                {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/native/observations', 'body': {}},
+                {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/native/observations', 'body': {'namespace': 'install-a'}},
                 {'id': 3, 'token': token, 'method': 'PUT', 'path': '/api/settings/feeds', 'body': {
                     'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'title': 'Named feed',
                 }},
