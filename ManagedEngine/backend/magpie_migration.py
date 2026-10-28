@@ -294,7 +294,20 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
             'running': db.execute("SELECT count(*) FROM processing_jobs WHERE status='running'").fetchone()[0],
             'paused': settings._read(db, 'magpie_claims_paused') == '1',
             'evidence': EvidenceRows(db) if staged else list(EvidenceRows(db)),
-            'lastApply': json.loads(settings._read(db, 'nonews.migration-last-apply') or 'null')}
+            'lastApply': _last_apply(db)}
+
+
+def _last_apply(db):
+    raw = settings._read(db, 'nonews.migration-last-apply')
+    if not raw:
+        return None
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError) as error:
+        raise configuration.ConfigurationError('Invalid migration metadata') from error
+    if value is not None and not isinstance(value, dict):
+        raise configuration.ConfigurationError('Invalid migration metadata')
+    return value
 
 
 def report_page(db, body):
@@ -310,25 +323,37 @@ def report_page(db, body):
         section, index, part = body.get('section'), body.get('index'), body.get('part')
         try:
             info = json.loads(meta[0])
-        except (ValueError, TypeError):
+            counts = info.get('counts') if isinstance(info, dict) else None
+            if not isinstance(counts, dict) or any(type(counts.get(name)) is not int or counts[name] < 0
+                                                   for name in ('models', 'pending', 'evidence')):
+                raise ValueError('invalid counts')
+        except (KeyError, TypeError, ValueError):
             raise configuration.ConfigurationError('Invalid migration cursor')
-        if not isinstance(info, dict) or section not in ('models', 'pending', 'evidence') or type(index) is not int or type(part) is not int or index < 0 or part < 0 or index >= info['counts'][section]:
+        if section not in ('models', 'pending', 'evidence') or type(index) is not int or type(part) is not int or index < 0 or part < 0 or index >= counts[section]:
             raise configuration.ConfigurationError('Invalid migration cursor')
         key = prefix + f'b.{section}.{index}.'
         count = db.execute('SELECT value FROM app_settings WHERE key=?', (key + 'count',)).fetchone()
-        if count is None or part >= int(count[0]):
+        try:
+            chunk_count = int(count[0]) if count is not None else -1
+        except (TypeError, ValueError):
+            chunk_count = -1
+        if chunk_count < 1 or part >= chunk_count:
             raise configuration.ConfigurationError('Invalid migration cursor')
         row = db.execute('SELECT value FROM app_settings WHERE key=?', (key + str(part),)).fetchone()
         if row is None:
             raise configuration.ConfigurationError('Migration snapshot incomplete')
         return {'snapshotId': identity, 'section': section, 'index': index, 'part': part,
-                'chunk': row[0], 'nextPart': part + 1 if part + 1 < int(count[0]) else None}
-    if type(offset) is not int or offset < 0 or offset >= int(meta[0]):
+                'chunk': row[0], 'nextPart': part + 1 if part + 1 < chunk_count else None}
+    try:
+        report_count = int(meta[0])
+    except (TypeError, ValueError):
+        raise configuration.ConfigurationError('Invalid migration cursor')
+    if report_count < 1 or type(offset) is not int or offset < 0 or offset >= report_count:
         raise configuration.ConfigurationError('Invalid migration cursor')
     row = db.execute('SELECT value FROM app_settings WHERE key=?', (prefix + str(offset),)).fetchone()
     if row is None:
         raise configuration.ConfigurationError('Migration snapshot incomplete')
-    return {'snapshotId': identity, 'chunk': row[0], 'next': {'snapshotId': identity, 'offset': offset + 1} if offset + 1 < int(meta[0]) else None}
+    return {'snapshotId': identity, 'chunk': row[0], 'next': {'snapshotId': identity, 'offset': offset + 1} if offset + 1 < report_count else None}
 
 
 def release_report(db, body):
