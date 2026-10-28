@@ -113,9 +113,7 @@ import Secrets
 		}
 
 		return try await account.logActivity(kind: .sendArticleStatuses) { () -> Int in
-			guard let syncStatuses = try? await syncDatabase.selectForProcessing() else {
-				return 0
-			}
+			let syncStatuses = try await syncDatabase.selectForProcessing()
 
 			let createUnreadStatuses = syncStatuses.filter {
 				$0.key == SyncStatus.Key.read && $0.flag == false
@@ -510,7 +508,7 @@ import Secrets
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		await syncDatabase.insertStatuses(syncStatuses)
+		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}

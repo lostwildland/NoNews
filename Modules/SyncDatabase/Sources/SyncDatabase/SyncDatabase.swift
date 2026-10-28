@@ -92,12 +92,8 @@ public actor SyncDatabase {
 	}
 
 	@discardableResult public func insertStatuses(_ statuses: Set<SyncStatus>) -> Bool {
-		guard acceptsWork else { return false }
 		do {
-			#if DEBUG
-			lastErrorForTesting = nil
-			#endif
-			try SyncStatusTable.insertStatuses(statuses, database: database)
+			try insertStatusesOrThrow(statuses)
 			return true
 		} catch {
 			#if DEBUG
@@ -106,6 +102,14 @@ public actor SyncDatabase {
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
 			return false
 		}
+	}
+
+	public func insertStatusesOrThrow(_ statuses: Set<SyncStatus>) throws {
+		guard acceptsWork else { throw CancellationError() }
+		#if DEBUG
+		lastErrorForTesting = nil
+		#endif
+		try SyncStatusTable.insertStatuses(statuses, database: database)
 	}
 
 	public func selectForProcessing(limit: Int? = nil) throws -> Set<SyncStatus> {
@@ -205,14 +209,18 @@ public actor SyncDatabase {
 	}
 
 	@discardableResult public func deleteSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) -> Bool {
-		guard acceptsWork else { return false }
 		do {
-			try SyncStatusTable.deleteSelectedForProcessing(articleIDs, key: key, database: database)
+			try deleteSelectedForProcessingOrThrow(articleIDs, key: key)
 			return true
 		} catch {
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
 			return false
 		}
+	}
+
+	public func deleteSelectedForProcessingOrThrow(_ articleIDs: Set<String>, key: SyncStatus.Key? = nil) throws {
+		guard acceptsWork else { throw CancellationError() }
+		try SyncStatusTable.deleteSelectedForProcessing(articleIDs, key: key, database: database)
 	}
 }
 

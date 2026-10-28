@@ -282,7 +282,7 @@ import os
 		for storyHashGroup in storyHashGroups {
 			do {
 				try await apiCall(Set(storyHashGroup))
-				await syncDatabase.deleteSelectedForProcessing(Set(storyHashGroup), key: key)
+				guard await syncDatabase.deleteSelectedForProcessing(Set(storyHashGroup), key: key) else { throw CancellationError() }
 				sentCount += storyHashGroup.count
 			} catch {
 				savedError = error

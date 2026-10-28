@@ -234,7 +234,7 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 		Self.logger.debug("ReaderAPIAccountDelegate: sendArticleStatus")
 
 		return try await account.logActivity(kind: .sendArticleStatuses) { () -> Int in
-			let syncStatuses = (try? await self.syncDatabase.selectForProcessing()) ?? Set<SyncStatus>()
+			let syncStatuses = try await self.syncDatabase.selectForProcessing()
 
 			let createUnreadStatuses = syncStatuses.filter { $0.key == SyncStatus.Key.read && $0.flag == false }
 			let deleteUnreadStatuses = syncStatuses.filter { $0.key == SyncStatus.Key.read && $0.flag == true }
@@ -678,7 +678,7 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		await syncDatabase.insertStatuses(syncStatuses)
+		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}
@@ -1007,7 +1007,7 @@ private extension ReaderAPIAccountDelegate {
 
 			do {
 				try await account.logRefreshPage(kind: .sendArticleStatuses, message: { _ in "\(articleIDGroup.count) \(label)" }, { try await apiCall(articleIDGroup) })
-				await syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup), key: key)
+				guard await syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup), key: key) else { throw CancellationError() }
 				sentCount += articleIDGroup.count
 			} catch is CancellationError {
 				throw CancellationError()

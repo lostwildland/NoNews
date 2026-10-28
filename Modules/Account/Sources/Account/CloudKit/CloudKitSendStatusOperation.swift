@@ -118,6 +118,12 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 	/// Returns the batch's send counts, or nil if processing should stop
 	/// (account/zone gone, or no usable articles for the batch).
 	func processStatuses(_ syncStatuses: [SyncStatus]) async throws -> SendResult? {
+		try await syncDatabase.withStatusMutation { [self] in
+			try await processStatusesLocked(syncStatuses)
+		}
+	}
+
+	private func processStatusesLocked(_ syncStatuses: [SyncStatus]) async throws -> SendResult? {
 		guard let account, let articlesZone else {
 			return nil
 		}
@@ -136,9 +142,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 		// We somehow have new status records but the articles didn't come back
 		// in the fetch. Clean up those sync records and stop processing.
 		if statusUpdates.isEmpty {
-			guard await syncDatabase.deleteSelectedForProcessing(Set(articleIDs)) else {
-				throw CancellationError()
-			}
+			try await syncDatabase.deleteSelectedForProcessingOrThrow(Set(articleIDs))
 			return nil
 		}
 
@@ -151,9 +155,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 					try await articlesZone.modifyArticles(statusUpdates)
 				}
 			)
-			guard await syncDatabase.deleteSelectedForProcessing(Set(statusUpdates.map({ $0.articleID }))) else {
-				throw CancellationError()
-			}
+			try await syncDatabase.deleteSelectedForProcessingOrThrow(Set(statusUpdates.map({ $0.articleID })))
 			return (statusUpdates.count, withContent)
 		} catch {
 			await syncDatabase.resetSelectedForProcessing(Set(syncStatuses.map({ $0.articleID })))

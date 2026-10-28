@@ -620,9 +620,7 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 			})
 
-			guard await syncDatabase.insertStatuses(syncStatuses) else {
-				throw CancellationError()
-			}
+			try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 			if !syncStatuses.isEmpty {
 				lastNoChangeSyncDate = nil
 				NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
@@ -1134,9 +1132,7 @@ private extension CloudKitAccountDelegate {
 			SyncStatus(articleID: article.articleID, key: statusKey, flag: flag)
 		})
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
-		guard await syncDatabase.insertStatuses(syncStatuses) else {
-			throw CancellationError()
-		}
+		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
 	}
 

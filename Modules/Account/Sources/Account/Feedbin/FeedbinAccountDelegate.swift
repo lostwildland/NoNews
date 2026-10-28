@@ -115,9 +115,7 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 
 		do {
 			return try await account.logActivity(kind: .sendArticleStatuses) { () -> Int in
-				guard let syncStatuses = try? await syncDatabase.selectForProcessing() else {
-					return 0
-				}
+				let syncStatuses = try await syncDatabase.selectForProcessing()
 
 				var sentCount = 0
 				var savedError: Error?
@@ -463,7 +461,7 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
 
-		await syncDatabase.insertStatuses(syncStatuses)
+		try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 		if !syncStatuses.isEmpty {
 			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 		}
@@ -816,7 +814,7 @@ private extension FeedbinAccountDelegate {
 		for articleIDGroup in articleIDGroups {
 			do {
 				try await apiCall(articleIDGroup)
-				await self.syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup.map { String($0) }), key: key)
+				guard await self.syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup.map { String($0) }), key: key) else { throw CancellationError() }
 				sentCount += articleIDGroup.count
 			} catch is CancellationError {
 				throw CancellationError()

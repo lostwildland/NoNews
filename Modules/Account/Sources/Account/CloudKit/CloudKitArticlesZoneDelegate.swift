@@ -112,7 +112,7 @@ private extension CloudKitArticlesZoneDelegate {
 				continue
 			}
 			let syncStatuses = Set(deletes.map { SyncStatus(articleID: $0.articleID, key: .deleted, flag: true) })
-			guard await self.syncDatabase.insertStatuses(syncStatuses) else { throw CancellationError() }
+			try await self.syncDatabase.insertStatusesOrThrow(syncStatuses)
 		}
 	}
 
