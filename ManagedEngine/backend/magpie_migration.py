@@ -303,7 +303,7 @@ def _last_apply(db):
         return None
     try:
         value = json.loads(raw)
-    except (TypeError, ValueError) as error:
+    except (TypeError, ValueError, RecursionError) as error:
         raise configuration.ConfigurationError('Invalid migration metadata') from error
     if value is not None and not isinstance(value, dict):
         raise configuration.ConfigurationError('Invalid migration metadata')
@@ -327,7 +327,7 @@ def report_page(db, body):
             if not isinstance(counts, dict) or any(type(counts.get(name)) is not int or counts[name] < 0
                                                    for name in ('models', 'pending', 'evidence')):
                 raise ValueError('invalid counts')
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, RecursionError):
             raise configuration.ConfigurationError('Invalid migration cursor')
         if section not in ('models', 'pending', 'evidence') or type(index) is not int or type(part) is not int or index < 0 or part < 0 or index >= counts[section]:
             raise configuration.ConfigurationError('Invalid migration cursor')
