@@ -33,12 +33,14 @@ def ensure_schema(db) -> None:
         # Select increments the item's generation, so a late result from this
         # job is refused instead of writing withdrawn content back.
         db.execute("ALTER TABLE processing_jobs ADD COLUMN decision_generation INTEGER")
+    if "native_context_id" not in columns:
+        db.execute("ALTER TABLE processing_jobs ADD COLUMN native_context_id TEXT")
+
     if "origin" not in columns:
         # Who asked for this run. ``automatic`` is the only value that a feed's
         # ``disabled`` setting stops: an explicit user command keeps its existing
         # permission semantics instead of quietly gaining a new refusal.
         db.execute("ALTER TABLE processing_jobs ADD COLUMN origin TEXT")
-    db.execute("CREATE INDEX IF NOT EXISTS processing_jobs_batch ON processing_jobs(batch_id,status)")
     # Every page load and the schedule_selected pass ask "is this item queued?";
     # without this SQLite builds a transient index per query.
     db.execute("CREATE INDEX IF NOT EXISTS processing_jobs_item ON processing_jobs(item_id,status)")

@@ -287,14 +287,15 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
-                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), "automatic", 0))
+                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), "automatic", 0, context_id))
     return observation(db, observation_id)
 
 
 
 def replay(db, body):
+    namespace = _namespace(body.get("namespace"))
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
-    row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=?", (context_id,)).fetchone()
+    row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=? AND o.namespace=?", (context_id, namespace)).fetchone()
     if row is None:
         raise ValueError("Context not found")
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
@@ -302,14 +303,15 @@ def replay(db, body):
     now = utcnow()
     db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
     job_id = "native-replay-" + uuid.uuid4().hex
-    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0))
+    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0, replay_context_id))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
 
 def context_results(db, method, body):
+    namespace = _namespace(body.get("namespace"))
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
-    if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts WHERE id=? AND item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, context_id)).fetchone() is None:
+    if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=? AND c.item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, namespace, context_id)).fetchone() is None:
         raise ValueError("Context provenance mismatch")
     if method == "POST":
         result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
@@ -342,8 +344,10 @@ def context_results(db, method, body):
             db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
     return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
 
-def observation(db, identity):
-    row = db.execute("SELECT * FROM native_source_observations WHERE id=?", (identity,)).fetchone()
+def observation(db, identity, namespace=None):
+    if namespace is not None:
+        namespace = _namespace(namespace)
+    row = db.execute("SELECT * FROM native_source_observations WHERE id=?" + (" AND namespace=?" if namespace else ""), (identity, namespace) if namespace else (identity,)).fetchone()
     if row is None:
         raise ValueError("Observation not found")
     result = dict(row)
