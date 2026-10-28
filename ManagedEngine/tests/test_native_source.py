@@ -1,7 +1,10 @@
 import sqlite3
+import tempfile
 import unittest
+from pathlib import Path
 
 from ManagedEngine.backend import core, native_source, schema
+from ManagedEngine.backend.core import InformationDB
 
 
 class NativeSourceTest(unittest.TestCase):
@@ -39,6 +42,27 @@ class NativeSourceTest(unittest.TestCase):
         self.assertIsNone(row['item_id'])
         self.assertEqual(row['contexts'], [])
 
+    def test_verified_evidence_survives_identityless_delivery(self):
+        body = {
+            'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+            'title': 'Story', 'mediaType': 'news', 'identityType': 'url',
+            'identityValue': 'https://example.com/story',
+        }
+        original = native_source.observe(self.db, body)
+        repeated = native_source.observe(self.db, {key: value for key, value in body.items() if key not in {'mediaType', 'identityType', 'identityValue'}})
+        self.assertEqual(repeated['identity_state'], 'verified')
+        self.assertEqual(repeated['item_id'], original['item_id'])
+        self.assertEqual(len(repeated['identityEvidence']), 1)
+
+    def test_policy_is_pinned_into_new_processing_context(self):
+        native_source.feeds(self.db, 'PUT', {'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'title': 'Named feed', 'curatorPromptID': 'curator', 'threshold': 7})
+        row = native_source.observe(self.db, {
+            'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+            'title': 'Story', 'mediaType': 'news', 'identityType': 'url', 'identityValue': 'https://example.com/story',
+        })
+        self.assertEqual(row['contexts'][0]['curator_prompt_id'], 'curator')
+        self.assertEqual(row['contexts'][0]['threshold'], 7.0)
+
     def test_conflicting_identity_update_is_retained_as_conflict(self):
         original = native_source.observe(self.db, {
             'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
@@ -61,7 +85,7 @@ class NativeSourceTest(unittest.TestCase):
         self.assertEqual({item['feed_id'] for item in result['feeds']}, {'a', 'b'})
         self.assertEqual({item['processing_mode'] for item in result['feeds']}, {'important'})
         self.assertEqual({item['revision'] for item in result['feeds']}, {1})
-        self.assertEqual(result['affectedSources'], [{'feedID': 'a', 'observationCount': 0}, {'feedID': 'b', 'observationCount': 0}])
+        self.assertEqual(result['affectedSources'], [{'feedID': 'a', 'sourceName': 'a', 'observationCount': 0}, {'feedID': 'b', 'sourceName': 'b', 'observationCount': 0}])
         self.assertEqual(result['historicalRerun'], 'explicit-preview-required')
         with self.assertRaises(ValueError):
             native_source.feeds(self.db, 'PUT', {
@@ -69,7 +93,20 @@ class NativeSourceTest(unittest.TestCase):
                 'mediaType': 'paper', 'revision': 0,
             })
 
-    def test_schema_pass_creates_native_tables_at_new_version(self):
+    def test_schema_pass_migrates_populated_version_41_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'information.sqlite'
+            db = sqlite3.connect(path)
+            db.executescript(core.SCHEMA)
+            schema.stamp(db, 41)
+            db.execute("INSERT INTO feeds(id,freshrss_feed_id,title,first_seen_at,last_seen_at) VALUES ('f','f','Feed','now','now')")
+            db.commit()
+            db.close()
+            with InformationDB(path) as migrated:
+                self.assertEqual(schema.version(migrated.db), 42)
+                self.assertIsNotNone(migrated.db.execute("SELECT 1 FROM sqlite_master WHERE name='native_source_observations'").fetchone())
+                self.assertEqual(migrated.db.execute("SELECT title FROM feeds WHERE id='f'").fetchone()[0], 'Feed')
+
         db = sqlite3.connect(':memory:')
         db.row_factory = sqlite3.Row
         schema.ensure(db)

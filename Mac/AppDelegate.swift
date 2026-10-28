@@ -219,6 +219,7 @@ let appName = "NetNewsWire"
 		}
 
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
 		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
 			MainActor.assumeIsolated {
 				self.userDefaultsDidChange()
@@ -392,6 +393,34 @@ let appName = "NetNewsWire"
 
 	@objc func handleUnreadCountDisplaySettingDidChange(_ notification: Notification) {
 		updateDockBadge()
+	}
+
+	@objc func accountDidDownloadArticles(_ note: Notification) {
+		guard ProcessingEngine.shared.state == .ready else { return }
+		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? [Article]) ?? [])
+			+ ((note.userInfo?[Account.UserInfoKey.updatedArticles] as? [Article]) ?? [])
+		guard !articles.isEmpty else { return }
+		let namespace = "mac-" + (Bundle.main.bundleIdentifier ?? "nonews")
+		for article in articles {
+			var body: [String: Any] = [
+				"namespace": namespace,
+				"accountID": article.accountID,
+				"feedID": article.feedID,
+				"articleID": article.articleID,
+				"uniqueID": article.uniqueID,
+				"title": article.title ?? "",
+				"originalURL": article.rawLink ?? "",
+				"feedURL": article.feedID
+			]
+			if let date = article.datePublished {
+				body["publishedAt"] = ISO8601DateFormatter().string(from: date)
+			}
+			ProcessingEngine.shared.observeNativeArticle(body) { result in
+				if case .failure(let error) = result {
+					Self.logger.error("Native article bridge failed: \(String(describing: error), privacy: .public)")
+				}
+			}
+		}
 	}
 
 	@objc func feedSettingDidChange(_ note: Notification) {

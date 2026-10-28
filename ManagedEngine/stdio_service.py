@@ -18,7 +18,9 @@ ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/
            ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
            ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
            ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release'),
-           ('POST', '/api/config/migration/operation'), ('POST', '/api/config/migration/ack')}
+           ('POST', '/api/config/migration/operation'), ('POST', '/api/config/migration/ack'),
+           ('GET', '/api/native/observations'), ('POST', '/api/native/observations'),
+           ('GET', '/api/native/observation'), ('GET', '/api/settings/feeds'), ('PUT', '/api/settings/feeds')}
 
 
 def read_message():

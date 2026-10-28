@@ -29,7 +29,34 @@ class ManagedServiceTest(unittest.TestCase):
             self.assertEqual(responses[4], {'error': 'invalid message'})
             self.assertEqual(responses[5]['result']['schemaVersion'], 42)
 
-    def test_boundary_sized_escaped_request_preserves_service(self):
+    def test_native_routes_are_reachable_through_authenticated_stdio(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'a' * 32
+        with tempfile.TemporaryDirectory() as root:
+            requests = [
+                {'token': token},
+                {'id': 1, 'token': token, 'method': 'POST', 'path': '/api/native/observations', 'body': {
+                    'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+                    'title': 'Story',
+                }},
+                {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/native/observations', 'body': {}},
+                {'id': 3, 'token': token, 'method': 'PUT', 'path': '/api/settings/feeds', 'body': {
+                    'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'title': 'Named feed',
+                }},
+                {'id': 4, 'token': token, 'method': 'GET', 'path': '/api/settings/feeds', 'body': {
+                    'namespace': 'install-a', 'accountID': 'one',
+                }},
+            ]
+            process = subprocess.run([sys.executable, str(script), root], input=''.join(json.dumps(x) + '\n' for x in requests),
+                                     text=True, capture_output=True, timeout=30,
+                                     env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            self.assertEqual(process.returncode, 0, process.stderr)
+            replies = [json.loads(line) for line in process.stdout.splitlines()]
+            self.assertEqual(replies[1]['result']['identity_state'], 'unresolved')
+            self.assertEqual(len(replies[2]['result']['observations']), 1)
+            self.assertEqual(replies[3]['result']['feeds'][0]['title'], 'Named feed')
+            self.assertEqual(replies[4]['result']['feeds'][0]['title'], 'Named feed')
+
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         token = 'a' * 32
         with tempfile.TemporaryDirectory() as root:

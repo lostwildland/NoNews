@@ -62,7 +62,7 @@ def require_supported_database(db: sqlite3.Connection) -> None:
     current = version(db)
     if current > SCHEMA_VERSION:
         raise UnsupportedSchemaError('schema_newer')
-    if current != SCHEMA_VERSION and db.execute(
+    if current != SCHEMA_VERSION - 1 and current != SCHEMA_VERSION and db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1").fetchone():
         raise UnsupportedSchemaError('schema_migration_required')
 
