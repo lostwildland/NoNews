@@ -328,6 +328,16 @@ def replay(db, body):
         raise ValueError("Context not found")
     if row[8] not in {"normal", "important"} or row[12] is None:
         raise ValueError("Current source policy is unavailable or disabled for replay")
+    service_available = True
+    if isinstance(row[6], str) and len(row[6]) == 32:
+        from . import configuration
+        service_value = configuration._record(db, "service", row[6])
+        service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
+    if not service_available:
+        raise ValueError("Current service binding is unavailable for replay")
+    allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
+    if any(strategy not in allowed.get(row[7], set()) for strategy in {row[10], row[11]} if strategy):
+        raise ValueError("Current material strategy is incompatible with replay")
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
     decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row[0],)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
     original_media = db.execute("SELECT media_type FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
