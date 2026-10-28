@@ -75,6 +75,8 @@ final class FeedSettingsDatabase: Sendable {
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "FeedSettingsDatabase")
 
 	#if DEBUG
+	let readSubmittedForTesting = Mutex<(@Sendable () -> Void)?>(nil)
+	func enqueueForTesting(_ work: @escaping @Sendable () -> Void) -> Bool { submit(work) }
 	func withDatabaseForTesting<T>(_ body: (FMDatabase) -> T) -> T {
 		serialDispatchQueue.sync { body(database) }
 	}
@@ -121,18 +123,25 @@ final class FeedSettingsDatabase: Sendable {
 		}
 	}
 
+	private func readSync<T>(_ fallback: T, _ read: @escaping @Sendable () -> T) -> T {
+		nonisolated(unsafe) var result = fallback
+		let completed = DispatchSemaphore(value: 0)
+		let accepted = submit {
+			result = read()
+			completed.signal()
+		}
+		#if DEBUG
+		if accepted { readSubmittedForTesting.withLock { $0 }?() }
+		#endif
+		if accepted { completed.wait() }
+		return result
+	}
+
 	var isEmpty: Bool {
-		return closing.withLock { closing in
-			guard !closing.sealed && (!closing.closing || (accountID != nil && DatabaseWork.current?.isActive == true && DatabaseWork.current?.accountID == accountID)) else { return true }
-			return serialDispatchQueue.sync {
-			guard let resultSet = self.database.executeQuery("SELECT 1 FROM feedSettings LIMIT 1;", withArgumentsIn: []) else {
-				return true
-			}
-			defer {
-				resultSet.close()
-			}
+		readSync(true) {
+			guard let resultSet = self.database.executeQuery("SELECT 1 FROM feedSettings LIMIT 1;", withArgumentsIn: []) else { return true }
+			defer { resultSet.close() }
 			return !resultSet.next()
-			}
 		}
 	}
 
@@ -161,16 +170,9 @@ final class FeedSettingsDatabase: Sendable {
 	// MARK: - Fetch Rows
 
 	func allRows() -> [String: Row] {
-		return closing.withLock { closing in
-			guard !closing.sealed && (!closing.closing || (accountID != nil && DatabaseWork.current?.isActive == true && DatabaseWork.current?.accountID == accountID)) else { return [:] }
-			return serialDispatchQueue.sync {
-			guard let resultSet = self.database.executeQuery("SELECT * FROM feedSettings;", withArgumentsIn: []) else {
-				return [:]
-			}
-			defer {
-				resultSet.close()
-			}
-
+		readSync([:]) {
+			guard let resultSet = self.database.executeQuery("SELECT * FROM feedSettings;", withArgumentsIn: []) else { return [:] }
+			defer { resultSet.close() }
 			var rows = [String: Row]()
 			while resultSet.next() {
 				if let feedURL = resultSet.swiftString(forColumn: "feedURL") {
@@ -178,7 +180,6 @@ final class FeedSettingsDatabase: Sendable {
 				}
 			}
 			return rows
-			}
 		}
 	}
 

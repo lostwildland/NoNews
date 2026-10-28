@@ -74,6 +74,11 @@ public struct ArticleCounts: Sendable {
 	}
 	private var acceptsWork: Bool { !sealed && (!closing || DatabaseWork.current?.isActive == true && DatabaseWork.current?.accountID == accountID) }
 	#if DEBUG
+	public func executeSQLForTesting(_ sql: String) -> Bool {
+		nonisolated(unsafe) var succeeded = false
+		let accepted = queue.runInDatabaseSync { database in succeeded = database.executeStatements(sql) }
+		return accepted && succeeded
+	}
 	public func setArticlesTableUnavailableForTesting(_ unavailable: Bool) -> Bool {
 		nonisolated(unsafe) var succeeded = false
 		let sql = unavailable ? "ALTER TABLE articles RENAME TO fixture_saved_articles" : "ALTER TABLE fixture_saved_articles RENAME TO articles"

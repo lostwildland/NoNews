@@ -41,6 +41,28 @@ private struct CloudKitZoneCaptures<Success>: @unchecked Sendable {
 	let completion: (Result<Success, Error>) -> Void
 }
 
+private final class FetchPageState: @unchecked Sendable {
+	private let lock = NSLock()
+	private var records = [CKRecord]()
+	private var deleted = [CloudKitRecordKey]()
+	private var zoneResult: Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>?
+	private var recordError: Error?
+
+	func add(_ result: Result<CKRecord, Error>) {
+		lock.withLock {
+			switch result {
+			case .success(let record): records.append(record)
+			case .failure(let error): if recordError == nil { recordError = error }
+			}
+		}
+	}
+	func delete(_ id: CKRecord.ID, _ type: CKRecord.RecordType) { lock.withLock { deleted.append((type, id)) } }
+	func finishZone(_ result: Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>) { lock.withLock { zoneResult = result } }
+	func snapshot() -> ([CKRecord], [CloudKitRecordKey], Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>?, Error?) {
+		lock.withLock { (records, deleted, zoneResult, recordError) }
+	}
+}
+
 public protocol CloudKitZoneDelegate: AnyObject {
 	func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws
 }
@@ -62,6 +84,9 @@ public typealias CloudKitZoneFetchPageHandler = @MainActor @Sendable (String, In
 
 	/// Called after each page of fetchChangesInZone completes.
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler? { get set }
+	#if DEBUG
+	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation) -> Void)? { get set }
+	#endif
 
 	/// Reset the change token used to determine what point in time we are doing changes fetches
 	func resetChangeToken()
@@ -752,48 +777,18 @@ public extension CloudKitZone {
 
 		Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public)")
 		let work = DatabaseWork.current
-		var savedChangeToken = changeToken
-		var moreComing = false
-
-		var changedRecords = [CKRecord]()
-		var deletedRecordKeys = [CloudKitRecordKey]()
-
+		let page = FetchPageState()
 		let zoneConfig = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
 		zoneConfig.previousServerChangeToken = changeToken
 		let op = CKFetchRecordZoneChangesOperation(recordZoneIDs: [zoneID], configurationsByRecordZoneID: [zoneID: zoneConfig])
 		op.fetchAllChanges = false
 		op.qualityOfService = Self.qualityOfService
-
-        op.recordWasChangedBlock = { _, result in
-			Task { @MainActor in
-				Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) recordWasChangedBlock")
-				if let record = try? result.get() {
-					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) record created \(record.creationDate ?? Date.distantPast) updated \(record.modificationDate ?? Date.distantPast)")
-					changedRecords.append(record)
-				}
-			}
-        }
-
-        op.recordWithIDWasDeletedBlock = { recordID, recordType in
-			Task { @MainActor in
-				Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) recordWithIDWasDeletedBlock \(recordID)")
-				let recordKey = CloudKitRecordKey(recordType: recordType, recordID: recordID)
-				deletedRecordKeys.append(recordKey)
-			}
-        }
-
-		op.recordZoneFetchResultBlock = { _, result in
-			Task { @MainActor in
-				Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) recordZoneFetchResultBlock")
-				if case .success(let (serverChangeToken, _, serverMoreComing)) = result {
-					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) serverChangeToken \(serverChangeToken) moreComing \(serverMoreComing)")
-					savedChangeToken = serverChangeToken
-					moreComing = serverMoreComing
-				}
-			}
-		}
+		op.recordWasChangedBlock = { _, result in page.add(result) }
+		op.recordWithIDWasDeletedBlock = { id, type in page.delete(id, type) }
+		op.recordZoneFetchResultBlock = { _, result in page.finishZone(result) }
 
         op.fetchRecordZoneChangesResultBlock = { [weak self] result in
+			let (changedRecords, deletedRecordKeys, zoneResult, recordError) = page.snapshot()
 			Task { @MainActor [weak self] in
 				let zoneIDName = self?.zoneID.zoneName ?? "[self deallocated]"
 				Self.logger.debug("CloudKitZone: fetchChangesInZone \(zoneIDName, privacy: .public) fetchRecordZoneChangesResultBlock")
@@ -802,8 +797,16 @@ public extension CloudKitZone {
 					return
 				}
 
-				switch result {
+				if let recordError { completion(.failure(recordError)); return }
+				let zoneError: Error?
+				if case .failure(let error)? = zoneResult { zoneError = error } else { zoneError = nil }
+				let zonePage = try? zoneResult?.get()
+				let savedChangeToken = zonePage?.serverChangeToken
+				let moreComing = zonePage?.moreComing ?? false
+
+				switch zoneError.map({ Result<Void, Error>.failure($0) }) ?? result {
 				case .success:
+					guard zonePage != nil else { completion(.failure(CloudKitZoneError.unknown)); return }
 					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 					do {
 						try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
@@ -823,6 +826,7 @@ public extension CloudKitZone {
 					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) failure \(error.localizedDescription)")
 					switch CloudKitZoneResult.resolve(error) {
 					case .success:
+						guard zonePage != nil else { completion(.failure(zoneError ?? CloudKitZoneError.unknown)); return }
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 						do {
 							try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
@@ -861,12 +865,15 @@ public extension CloudKitZone {
 						DatabaseWork.$current.withValue(work) { self.fetchChangesInZone(completion: completion) }
 					default:
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) failure default")
-						completion(.failure(CloudKitError(error)))
+						completion(.failure(zoneError ?? CloudKitError(error)))
 					}
 				}
 			}
 		}
 
+		#if DEBUG
+		if let fetchOperationForTesting { fetchOperationForTesting(op); return }
+		#endif
 		database?.add(op)
     }
 

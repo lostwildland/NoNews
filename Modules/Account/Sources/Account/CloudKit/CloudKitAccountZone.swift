@@ -28,6 +28,9 @@ enum CloudKitAccountZoneError: LocalizedError {
     weak var database: CKDatabase?
 	var delegate: CloudKitZoneDelegate?
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler?
+	#if DEBUG
+	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation) -> Void)?
+	#endif
 
 	struct CloudKitFeed {
 		static let recordType = "AccountWebFeed"

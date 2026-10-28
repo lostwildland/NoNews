@@ -14,6 +14,17 @@ import CloudKitSync
 import ActivityLog
 
 final class CloudKitReceiveStatusOperation: MainThreadOperation, @unchecked Sendable {
+	@MainActor static func enqueue(articlesZone: CloudKitArticlesZone, accountID: String, accountDisplayName: String, queue: MainThreadOperationQueue) async throws {
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+			let op = CloudKitReceiveStatusOperation(articlesZone: articlesZone, accountID: accountID, accountDisplayName: accountDisplayName)
+			op.completionBlock = { operation in
+				if let error = op.failure { continuation.resume(throwing: error) }
+				else if operation.isCanceled { continuation.resume(throwing: CancellationError()) }
+				else { continuation.resume(returning: ()) }
+			}
+			queue.add(op)
+		}
+	}
 	private weak var articlesZone: CloudKitArticlesZone?
 	private let accountID: String
 	private let accountDisplayName: String

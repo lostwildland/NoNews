@@ -236,20 +236,7 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 			return
 		}
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
-		return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-			let op = CloudKitReceiveStatusOperation(articlesZone: articlesZone, accountID: account.accountID, accountDisplayName: account.nameForDisplay)
-			op.completionBlock = { mainThreadOperation in
-				Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
-				if let error = op.failure {
-					continuation.resume(throwing: error)
-				} else if mainThreadOperation.isCanceled {
-					continuation.resume(throwing: CancellationError())
-				} else {
-					continuation.resume(returning: ())
-				}
-			}
-			mainThreadOperationQueue.add(op)
-		}
+		try await CloudKitReceiveStatusOperation.enqueue(articlesZone: articlesZone, accountID: account.accountID, accountDisplayName: account.nameForDisplay, queue: mainThreadOperationQueue)
 	}
 
 	func importOPML(opmlFile: URL) async throws {

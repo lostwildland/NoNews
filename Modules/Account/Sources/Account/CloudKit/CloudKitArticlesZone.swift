@@ -75,6 +75,9 @@ final class CloudKitArticlesZone: CloudKitZone {
 	weak var database: CKDatabase?
 	var delegate: CloudKitZoneDelegate?
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler?
+	#if DEBUG
+	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation) -> Void)?
+	#endif
 
 	private var scanCache: ScanCache?
 
@@ -111,6 +114,7 @@ final class CloudKitArticlesZone: CloudKitZone {
 	let syncArticleContentForUnreadArticles: @Sendable () -> Bool
 
 	#if DEBUG
+	var refreshArticlesForTesting: (@MainActor () async throws -> (changed: Int, deleted: Int))?
 	init(testingSyncArticleContent: @escaping @Sendable () -> Bool) {
 		zoneID = CKRecordZone.ID(zoneName: "Fixture", ownerName: CKCurrentUserDefaultName)
 		syncArticleContentForUnreadArticles = testingSyncArticleContent
@@ -128,6 +132,9 @@ final class CloudKitArticlesZone: CloudKitZone {
 	/// changed/deleted record counts across every page of the fetch.
 	@discardableResult
 	@MainActor func refreshArticles() async throws -> (changed: Int, deleted: Int) {
+		#if DEBUG
+		if let refreshArticlesForTesting { return try await refreshArticlesForTesting() }
+		#endif
 		let articlesDelegate = self.delegate as? CloudKitArticlesZoneDelegate
 		articlesDelegate?.resetAccumulation()
 		do {

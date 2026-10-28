@@ -38,6 +38,11 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 	override func stopLoading() {}
 }
 
+private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
+	let calls = Mutex(0)
+	func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws { calls.withLock { $0 += 1 } }
+}
+
 @Suite(.isolatedWebserviceResponses, .serialized) @MainActor struct AccountFixtureLifetimeTests {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
@@ -623,6 +628,42 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		try await manager.deleteAccount(account)
 	}
 
+	@Test func cloudKitReceiveOperationReportsRefreshFailureAndEmptySuccess() async throws {
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let queue = MainThreadOperationQueue()
+		for outcome in 0...2 {
+			zone.refreshArticlesForTesting = {
+				if outcome == 0 { throw FixtureError.expected }
+				if outcome == 1 { throw CancellationError() }
+				return (0, 0)
+			}
+			if outcome == 0 {
+				await #expect(throws: FixtureError.self) { try await CloudKitReceiveStatusOperation.enqueue(articlesZone: zone, accountID: "fixture", accountDisplayName: "Fixture", queue: queue) }
+			} else if outcome == 1 {
+				await #expect(throws: CancellationError.self) { try await CloudKitReceiveStatusOperation.enqueue(articlesZone: zone, accountID: "fixture", accountDisplayName: "Fixture", queue: queue) }
+			} else {
+				try await CloudKitReceiveStatusOperation.enqueue(articlesZone: zone, accountID: "fixture", accountDisplayName: "Fixture", queue: queue)
+			}
+		}
+	}
+
+	@Test func cloudKitFetchCallbacksRejectIndividualAndZoneErrors() async throws {
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let observer = FetchPageObserver()
+		zone.delegate = observer
+		defer { zone.fetchOperationForTesting = nil }
+		for individual in [true, false] {
+			zone.fetchOperationForTesting = { op in
+				let id = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
+				if individual { op.recordWasChangedBlock?(id, .failure(FixtureError.expected)) }
+				else { op.recordZoneFetchResultBlock?(zone.zoneID, .failure(FixtureError.expected)) }
+				op.fetchRecordZoneChangesResultBlock?(.success(()))
+			}
+			await #expect(throws: FixtureError.self) { try await zone.fetchChangesInZone() }
+			#expect(observer.calls.withLock { $0 } == 0)
+		}
+	}
+
 	@Test func cloudKitFailedArticleDeletePreservesPendingStatusAndPage() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)
@@ -640,6 +681,30 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		#expect(!committed)
 		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("fixture"))
 		#expect(account.database.setArticlesTableUnavailableForTesting(false))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitFailedDeleteCommitPreservesArticleStatusAndPage() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["fixture"]))
+		#expect(account.database.executeSQLForTesting("PRAGMA foreign_keys=ON; INSERT INTO articles (articleID, feedID, uniqueID) VALUES ('fixture','feed','unique'); CREATE TABLE fixture_child (articleID TEXT REFERENCES articles(articleID) DEFERRABLE INITIALLY DEFERRED); INSERT INTO fixture_child VALUES ('fixture');"))
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "fixture", key: .read, flag: true, selected: true)]))
+		let recordID = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
+		var committed = false
+		do {
+			try await zone.applyFetchedPage(changed: [], deleted: [(CloudKitArticlesZone.CloudKitArticleStatus.recordType, recordID)], work: nil) { committed = true }
+			Issue.record("Failed commit acknowledged a CloudKit page")
+		} catch { }
+		#expect(!committed)
+		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("fixture"))
+		#expect(try await account.database.fetchArticlesAsync(articleIDs: ["fixture"]).count == 1)
+		#expect(account.database.executeSQLForTesting("DELETE FROM fixture_child; DROP TABLE fixture_child;"))
+		#expect(await account.database.deleteAsync(articleIDs: ["fixture"]))
 		#expect(await sync.close())
 		try await manager.deleteAccount(account)
 	}

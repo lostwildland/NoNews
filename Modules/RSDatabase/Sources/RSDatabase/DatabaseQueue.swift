@@ -94,6 +94,27 @@ public final class DatabaseQueue: Sendable {
 		return accepted
 	}
 
+	/// Reports success only after the transaction commits; failed work is rolled back.
+	@discardableResult public func runInTransaction(completion: @escaping @Sendable (Bool) -> Void, _ databaseBlock: @escaping @Sendable (FMDatabase) -> Bool) -> Bool {
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async {
+				let succeeded = autoreleasepool {
+					guard self.database.beginTransaction() else { return false }
+					guard databaseBlock(self.database), self.database.commit() else {
+						self.database.rollback()
+						return false
+					}
+					return true
+				}
+				completion(succeeded)
+			}
+			return true
+		}
+		if !accepted { completion(false) }
+		return accepted
+	}
+
 	/// Run all the lines that start with "create".
 	/// Use this to create tables, indexes, etc.
 	@discardableResult public func runCreateStatements(_ statements: String) -> Bool {

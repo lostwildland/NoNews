@@ -5,6 +5,28 @@ import Articles
 @testable import ArticlesDatabase
 
 @MainActor @Suite struct AdmissionCancellationTests {
+	@Test func deferredConstraintRejectsCommitAndConnectionRemainsUsable() async {
+		let queue = DatabaseQueue(databasePath: ":memory:")
+		let table = ArticlesTable(name: "articles", accountID: "commit-fixture", queue: queue, retentionStyle: .feedBased)
+		queue.runInDatabaseSync { database in
+			#expect(database.executeStatements("PRAGMA foreign_keys=ON; CREATE TABLE articles (articleID TEXT PRIMARY KEY); CREATE TABLE child (articleID TEXT REFERENCES articles(articleID) DEFERRABLE INITIALLY DEFERRED); INSERT INTO articles VALUES ('stored'); INSERT INTO child VALUES ('stored');"))
+		}
+		let succeeded = await withCheckedContinuation { continuation in
+			table.delete(articleIDs: ["stored"]) { continuation.resume(returning: $0) }
+		}
+		#expect(!succeeded)
+		queue.runInDatabaseSync { database in
+			let result = database.executeQuery("SELECT count(*) FROM articles WHERE articleID='stored'", withArgumentsIn: [])
+			#expect(result?.next() == true && result?.int(forColumnIndex: 0) == 1)
+			result?.close()
+			#expect(database.executeStatements("DELETE FROM child;"))
+		}
+		let retry = await withCheckedContinuation { continuation in
+			table.delete(articleIDs: ["stored"]) { continuation.resume(returning: $0) }
+		}
+		#expect(retry)
+		#expect(await queue.close())
+	}
 	@Test func failedArticleDeleteIsNotReportedAsSuccess() async {
 		let queue = DatabaseQueue(databasePath: ":memory:")
 		let table = ArticlesTable(name: "articles", accountID: "delete-fixture", queue: queue, retentionStyle: .feedBased)
