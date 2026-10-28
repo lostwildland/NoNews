@@ -8,6 +8,7 @@ import secrets
 import tempfile
 import time
 import threading
+import json
 from . import causes, settings, schema, configuration, magpie_migration
 from .core import InformationDB, utcnow
 from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
@@ -40,7 +41,7 @@ class Application:
 
     def handle(self, method: str, path: str, query: dict, body: dict, *, response_budget=None, _queued=False):
         if method == 'POST' and path.startswith('/api/config/migration/') and (body.get('cooperative') is True or 'operationId' in body):
-            return self._migration_operation(path.rsplit('/', 1)[-1], body)
+            return self._migration_operation(path.rsplit('/', 1)[-1], body, response_budget=response_budget)
         cursor = query.get('cursor') if path == '/api/jobs' else None
         if cursor and cursor.startswith('s:'):
             match = re.fullmatch(r's:([0-9a-f]{32}):([0-9]{1,12})', cursor)
@@ -53,7 +54,7 @@ class Application:
             with self.migration_lock:
                 busy = any(not item['done'] for item in self.migration_operations.values())
                 if busy:
-                    pending = self._start_migration('mutation', {'method': method, 'path': path, 'query': query, 'body': body})
+                    pending = self._start_migration('mutation', {'method': method, 'path': path, 'query': query, 'body': body, 'response_budget': response_budget})
                     return {'_pendingMutation': pending['operationId']}
         read_only = method == 'GET' or (path == '/api/config/migration/preview' and 'snapshotId' in body)
         with InformationDB(self.database, read_only=read_only) as db:
@@ -177,6 +178,8 @@ class Application:
         for operation in operations:
             operation['thread'].join()
         for operation in operations:
+            if operation.get('cleanup'):
+                operation['cleanup'].join()
             self._discard_unread_migration(operation)
 
     def _discard_unread_migration(self, operation):
@@ -205,6 +208,8 @@ class Application:
             if operation['action'] != 'mutation':
                 operation['cancel'].set()
         operation['thread'].join()
+        if operation.get('cleanup'):
+            operation['cleanup'].join()
         self._discard_unread_migration(operation)
         with self.migration_lock:
             self.migration_operations.pop(identity, None)
@@ -213,7 +218,7 @@ class Application:
         if self.migration_closed:
             raise magpie_migration.SnapshotExpired('Migration service stopped')
         for identity, existing in tuple(self.migration_operations.items()):
-            if existing['done'] and existing['read']:
+            if existing['done'] and existing['read'] and (not existing.get('cleanup') or not existing['cleanup'].is_alive()):
                 existing['timer'].cancel()
                 del self.migration_operations[identity]
         if len(self.migration_operations) >= 32:
@@ -235,7 +240,7 @@ class Application:
         operation['timer'].start()
         return {'state': 'running', 'operationId': operation['id']}
 
-    def _migration_operation(self, action, body):
+    def _migration_operation(self, action, body, *, response_budget=None):
         if action not in {'preview', 'pause', 'apply', 'release', 'operation'}:
             raise configuration.ConfigurationError('Invalid migration operation')
         with self.migration_lock:
@@ -253,12 +258,22 @@ class Application:
             if body.get('cancel') is True and operation['action'] not in {'apply', 'mutation'}:
                 operation['cancel'].set()
                 if operation['done'] and operation['action'] == 'preview':
+                    if not operation['read']:
+                        if not operation.get('cleanup'):
+                            operation['cleanup'] = threading.Thread(target=self._discard_unread_migration, args=(operation,), daemon=True)
+                            operation['cleanup'].start()
                     raise magpie_migration.SnapshotExpired('Migration operation cancelled')
             if not operation['done']:
                 return {'state': 'running', 'operationId': operation['id']}
+            if operation['cancel'].is_set() and operation['action'] == 'preview':
+                raise magpie_migration.SnapshotExpired('Migration operation cancelled')
             operation['read'] = True
             if operation['error']:
                 raise operation['error']
+            if operation.get('render') and response_budget is not None:
+                encoded = json.dumps({'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}, separators=(',', ':'), ensure_ascii=True)
+                if len(encoded) > response_budget:
+                    raise configuration.RenderCapacityError('Rendered response exceeds transport capacity')
             return {'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}
 
     def _run_migration(self, operation, body, previous):
@@ -270,7 +285,8 @@ class Application:
                 if operation['cancel'].is_set():
                     raise magpie_migration.SnapshotExpired('Migration operation cancelled')
                 if operation['action'] == 'mutation':
-                    result = self.handle(body['method'], body['path'], body['query'], body['body'], _queued=True)
+                    operation['render'] = body['path'] == '/api/config/render'
+                    result = self.handle(body['method'], body['path'], body['query'], body['body'], response_budget=body.get('response_budget'), _queued=True)
                 else:
                     with InformationDB(self.database) as db:
                         db.db.set_progress_handler(lambda: int(operation['cancel'].is_set()), 1000)

@@ -97,6 +97,8 @@ class MigrationTest(unittest.TestCase):
             service = call('PUT', '/api/config/services', {'name': 'Gateway', 'type': 'magpie',
                 'endpoint': f'http://127.0.0.1:{server.server_port}'})['result']
             call('POST', '/api/config/refresh', {'id': service['id']})
+            template = call('PUT', '/api/config/prompts', {'name': 'Render', 'role': 'curator', 'text': '{{content}}' * 7,
+                'serviceId': service['id'], 'target': 'old/model'})['result']
             database = Path(root) / 'information.sqlite'
             suffix = 'x' * 8_000
             with closing(sqlite3.connect(database)) as db, db:
@@ -106,15 +108,46 @@ class MigrationTest(unittest.TestCase):
                     json.dumps([{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}]), 'now'))
             started = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
             self.assertEqual(started['state'], 'running')
+            queued_render = call('POST', '/api/config/render', {'id': template['id'], 'media': 'news',
+                'values': {'content': 'x' * 187_230}})['result']
+            self.assertIn('_pendingMutation', queued_render)
+            queued_overflow = call('POST', '/api/config/render', {'id': template['id'], 'media': 'news',
+                'values': {'content': '😀' * 15_605}})['result']
+            self.assertIn('_pendingMutation', queued_overflow)
             queued = call('PUT', '/api/settings/processing', {'processors': 2})['result']
             self.assertIn('_pendingMutation', queued)
             progress = finish('preview', started)
+            rendered = finish('operation', {'operationId': queued_render['_pendingMutation']})
+            self.assertEqual(rendered['text'], 'x' * (187_230 * 7))
+            self.assertEqual(finish('operation', {'operationId': queued_overflow['_pendingMutation']})['code'], 'render_too_large')
             self.assertEqual(progress['counts']['models'], 2200)
             repeated = call('POST', '/api/config/migration/preview', {'operationId': started['operationId']})['result']
             self.assertEqual(repeated['result']['snapshotId'], progress['snapshotId'])
             changed = finish('operation', {'operationId': queued['_pendingMutation']})
             self.assertEqual(changed['processors'], 2)
             self.assertEqual(call('GET', '/api/settings/processing', {})['result']['processors'], 2)
+            unpublished = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
+            with closing(sqlite3.connect(database)) as db:
+                before_cancel = {row[0] for row in db.execute("SELECT key FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%.count'")}
+            deadline = time.monotonic() + 10
+            while True:
+                with closing(sqlite3.connect(database)) as db:
+                    roots = {row[0] for row in db.execute("SELECT key FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%.count'")}
+                if roots - before_cancel:
+                    break
+                self.assertLess(time.monotonic(), deadline)
+                time.sleep(.01)
+            cancellation = call('POST', '/api/config/migration/preview', {'operationId': unpublished['operationId'], 'cancel': True})
+            if 'code' not in cancellation:
+                cancellation = finish('preview', unpublished)
+            self.assertEqual(cancellation['code'], 'snapshot_expired')
+            for _ in range(1000):
+                with closing(sqlite3.connect(database)) as db:
+                    roots = {row[0] for row in db.execute("SELECT key FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%.count'")}
+                if roots == before_cancel:
+                    break
+                time.sleep(.01)
+            self.assertEqual(roots, before_cancel)
             stale = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True, 'cooperative': True})['result']
             cancelled = call('POST', '/api/config/migration/preview', {'operationId': stale['operationId'], 'cancel': True})
             if cancelled.get('result', {}).get('state') == 'complete':

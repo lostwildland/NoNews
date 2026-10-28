@@ -138,6 +138,9 @@ def main():
                     if path == '/api/config/render':
                         envelope = json.dumps({**correlation, 'result': {'text': ''}}, separators=(',', ':'), ensure_ascii=True)
                         result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1)
+                    elif path == '/api/config/migration/operation':
+                        envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) + 1)
                     else:
                         result = app.handle(method, path, query, body)
                     send({**correlation, 'result': result})
