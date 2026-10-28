@@ -21,11 +21,11 @@ import Foundation
 
 	func cancelAllRequests() {
 		precondition(Thread.isMainThread)
-		for pendingRequest in pendingRequests {
-			pendingRequest.isCanceled = true
-		}
-		currentRequest?.isCanceled = true
-		pendingRequests = [FetchRequestOperation]()
+		let pending = pendingRequests
+		let current = currentRequest
+		pendingRequests = []
+		for request in pending { request.cancel() }
+		current?.cancel()
 	}
 
 	func add(_ fetchRequestOperation: FetchRequestOperation) {

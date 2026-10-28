@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A73300000000000000000001 /* Account in Frameworks */ = {isa = PBXBuildFile; productRef = A73300000000000000000002 /* Account */; };
 		17192ADA2567B3D500AAEACA /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 17192AD92567B3D500AAEACA /* Sparkle */; };
 		176814002564BB2D00D98635 /* NetNewsWire iOS Widget Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 176813F32564BB2C00D98635 /* NetNewsWire iOS Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		179C39EA26F76B0500D4E741 /* Zip in Frameworks */ = {isa = PBXBuildFile; productRef = 179C39E926F76B0500D4E741 /* Zip */; };
@@ -554,6 +555,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A73300000000000000000001 /* Account in Frameworks */,
 				848E84D22DB7495C0023F3BA /* RSCore in Frameworks */,
 				4679674625E599C100844E8D /* Articles in Frameworks */,
 				8424B3212DB73D4C0053AA11 /* RSParser in Frameworks */,
@@ -849,6 +851,7 @@
 			);
 			name = NetNewsWireTests;
 			packageProductDependencies = (
+				A73300000000000000000002 /* Account */,
 				4679674525E599C100844E8D /* Articles */,
 				848E84D12DB7495C0023F3BA /* RSCore */,
 				8424B3202DB73D4C0053AA11 /* RSParser */,
@@ -1491,6 +1494,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A73300000000000000000002 /* Account */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Account;
+		};
 		17192AD92567B3D500AAEACA /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 17192AD82567B3D500AAEACA /* XCRemoteSwiftPackageReference "Sparkle" */;

@@ -17,7 +17,7 @@ import ErrorLog
 // Main thread only.
 // Runs an asynchronous fetch.
 
-typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperation) -> Void
+typealias FetchRequestOperationResultBlock = (Result<Set<Article>, Error>, FetchRequestOperation) -> Void
 
 // TODO: unify these two versions of FetchRequestOperation,
 // which diverged when we changed — just on iOS — how we keep track
@@ -32,6 +32,16 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 	let resultBlock: FetchRequestOperationResultBlock
 	var isCanceled = false
 	var isFinished = false
+	private var deliveredResult = false
+	func cancel() {
+		isCanceled = true
+		deliver(.failure(CancellationError()))
+	}
+	private func deliver(_ result: Result<Set<Article>, Error>) {
+		guard !deliveredResult else { return }
+		deliveredResult = true
+		resultBlock(result, self)
+	}
 	private let fetchers: [ArticleFetcher]
 
 	init(id: Int, readFilterEnabledTable: [SidebarItemIdentifier: Bool], fetchers: [ArticleFetcher], resultBlock: @escaping FetchRequestOperationResultBlock) {
@@ -63,7 +73,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 
 			if fetchers.isEmpty {
 				isFinished = true
-				resultBlock(Set<Article>(), self)
+				deliver(.success(Set<Article>()))
 				callCompletionIfNeeded()
 				return
 			}
@@ -87,7 +97,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				fetchersReturned += 1
 				if fetchersReturned == numberOfFetchers {
 					self.isFinished = true
-					self.resultBlock(fetchedArticles, self)
+					self.deliver(.success(fetchedArticles))
 					callCompletionIfNeeded()
 				}
 			}
@@ -106,6 +116,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				}
 			} catch {
 				self.isFinished = true
+				self.deliver(.failure(error))
 				callCompletionIfNeeded()
 				return
 			}
@@ -126,6 +137,16 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 	let resultBlock: FetchRequestOperationResultBlock
 	var isCanceled = false
 	var isFinished = false
+	private var deliveredResult = false
+	func cancel() {
+		isCanceled = true
+		deliver(.failure(CancellationError()))
+	}
+	private func deliver(_ result: Result<Set<Article>, Error>) {
+		guard !deliveredResult else { return }
+		deliveredResult = true
+		resultBlock(result, self)
+	}
 	private let fetchers: [ArticleFetcher]
 
 	init(id: Int, hidingReadArticlesState: HidingReadArticlesState, fetchers: [ArticleFetcher], resultBlock: @escaping FetchRequestOperationResultBlock) {
@@ -157,7 +178,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 
 			if fetchers.isEmpty {
 				isFinished = true
-				resultBlock(Set<Article>(), self)
+				deliver(.success(Set<Article>()))
 				callCompletionIfNeeded()
 				return
 			}
@@ -181,7 +202,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				fetchersReturned += 1
 				if fetchersReturned == numberOfFetchers {
 					self.isFinished = true
-					self.resultBlock(fetchedArticles, self)
+					self.deliver(.success(fetchedArticles))
 					callCompletionIfNeeded()
 				}
 			}
@@ -205,6 +226,7 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				}
 			} catch {
 				self.isFinished = true
+				self.deliver(.failure(error))
 				callCompletionIfNeeded()
 				return
 			}

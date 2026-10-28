@@ -855,7 +855,8 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 			return
 		}
 
-		fetchUnsortedArticlesAsync(for: representedObjects) { [weak self] (unsortedArticles) in
+		fetchUnsortedArticlesAsync(for: representedObjects) { [weak self] result in
+			guard case .success(let unsortedArticles) = result else { return }
 			// Merge articles by articleID. For any unique articleID in current articles, add to unsortedArticles.
 			guard let strongSelf = self else {
 				return
@@ -1301,8 +1302,8 @@ private extension TimelineViewController {
 			exceptionArticleFetcher = nil
 		}
 
-		fetchUnsortedArticlesAsync(for: representedObjects) { [weak self] (articles) in
-			self?.replaceArticles(with: articles)
+		fetchUnsortedArticlesAsync(for: representedObjects) { [weak self] result in
+			if case .success(let articles) = result { self?.replaceArticles(with: articles) }
 			completion?()
 		}
 	}
@@ -1336,18 +1337,19 @@ private extension TimelineViewController {
 		return fetchedArticles
 	}
 
-	func fetchUnsortedArticlesAsync(for representedObjects: [Any], completion: @escaping ArticleSetBlock) {
+	func fetchUnsortedArticlesAsync(for representedObjects: [Any], completion: @escaping (Result<Set<Article>, Error>) -> Void) {
 		// The callback will *not* be called if the fetch is no longer relevant — that is,
 		// if it’s been superseded by a newer fetch, or the timeline was emptied, etc., it won’t get called.
 		precondition(Thread.isMainThread)
 		cancelPendingAsyncFetches()
 		let fetchers = representedObjects.compactMap { $0 as? ArticleFetcher }
-		let fetchOperation = FetchRequestOperation(id: fetchSerialNumber, readFilterEnabledTable: readFilterEnabledTable, fetchers: fetchers) { [weak self] (articles, operation) in
+		let fetchOperation = FetchRequestOperation(id: fetchSerialNumber, readFilterEnabledTable: readFilterEnabledTable, fetchers: fetchers) { [weak self] (result, operation) in
 			precondition(Thread.isMainThread)
 			guard !operation.isCanceled, let strongSelf = self, operation.id == strongSelf.fetchSerialNumber else {
+				completion(.failure(CancellationError()))
 				return
 			}
-			completion(articles)
+			completion(result)
 		}
 		fetchRequestQueue.add(fetchOperation)
 	}

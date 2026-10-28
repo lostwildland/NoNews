@@ -994,8 +994,8 @@ struct SidebarItemNode: Hashable, Sendable {
 	}
 
 	func refreshTimeline(resetScroll: Bool) {
-		fetchAndReplaceArticlesAsync(animated: true, emptyFirst: false) {
-			self.mainTimelineViewController?.reinitializeArticles(resetScroll: resetScroll)
+		fetchAndReplaceArticlesAsync(animated: true, emptyFirst: false) { result in
+			if case .success = result { self.mainTimelineViewController?.reinitializeArticles(resetScroll: resetScroll) }
 		}
 	}
 
@@ -1129,7 +1129,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 			self.activityManager.selecting(sidebarItem: sidebarItem)
 			self.rootSplitViewController.showColumn(.supplementary)
-			setTimelineFeed(sidebarItem, animated: false) {
+			setTimelineFeed(sidebarItem, animated: false) { result in
+				guard case .success = result else { completion?(); return }
 				if self.isReadFeedsFiltered {
 					self.rebuildBackingStores()
 				}
@@ -1139,7 +1140,8 @@ struct SidebarItemNode: Hashable, Sendable {
 
 		} else {
 
-			setTimelineFeed(nil, animated: false) {
+			setTimelineFeed(nil, animated: false) { result in
+				guard case .success = result else { completion?(); return }
 				if self.isReadFeedsFiltered {
 					self.rebuildBackingStores()
 				}
@@ -2120,12 +2122,16 @@ private extension SceneCoordinator {
 		return indexPathFor(node)
 	}
 
-	func setTimelineFeed(_ sidebarItem: SidebarItem?, animated: Bool, completion: (() -> Void)? = nil) {
+	func setTimelineFeed(_ sidebarItem: SidebarItem?, animated: Bool, completion: ((Result<Void, Error>) -> Void)? = nil) {
+		let previousFeed = timelineFeed
 		timelineFeed = sidebarItem
-
-		fetchAndReplaceArticlesAsync(animated: animated) {
-			self.mainTimelineViewController?.reinitializeArticles(resetScroll: true)
-			completion?()
+		fetchAndReplaceArticlesAsync(animated: animated) { [weak self] result in
+			if case .success = result {
+				self?.mainTimelineViewController?.reinitializeArticles(resetScroll: true)
+			} else if (self?.timelineFeed as AnyObject?) === (sidebarItem as AnyObject?) {
+				self?.timelineFeed = previousFeed
+			}
+			completion?(result)
 		}
 	}
 
@@ -2488,7 +2494,8 @@ private extension SceneCoordinator {
 			return
 		}
 
-		fetchUnsortedArticlesAsync(for: [timelineFeed]) { [weak self] (unsortedArticles) in
+		fetchUnsortedArticlesAsync(for: [timelineFeed]) { [weak self] result in
+			guard case .success(let unsortedArticles) = result else { completion?(); return }
 			// Merge articles by articleID. For any unique articleID in current articles, add to unsortedArticles.
 			guard let strongSelf = self else {
 				return
@@ -2515,18 +2522,17 @@ private extension SceneCoordinator {
 		fetchRequestQueue.cancelAllRequests()
 	}
 
-	func fetchAndReplaceArticlesAsync(animated: Bool, emptyFirst: Bool = true, completion: @escaping () -> Void) {
+	func fetchAndReplaceArticlesAsync(animated: Bool, emptyFirst: Bool = true, completion: @escaping (Result<Void, Error>) -> Void) {
 		// To be called when we need to do an entire fetch, but an async delay is okay.
 		// Example: we have the Today feed selected, and the calendar day just changed.
 		cancelPendingAsyncFetches()
-		if emptyFirst {
-			emptyTheTimeline()
-		} else if let article = currentArticle, let account = article.account {
+		if !emptyFirst, let article = currentArticle, let account = article.account {
 			// Keeping the timeline in place keeps the open article, even when the read filter excludes it.
 			exceptionArticleFetcher = SingleArticleFetcher(account: account, articleID: article.articleID)
 		}
 		guard let timelineFeed = timelineFeed else {
-			completion()
+			emptyTheTimeline()
+			completion(.success(()))
 			return
 		}
 
@@ -2537,26 +2543,27 @@ private extension SceneCoordinator {
 			exceptionArticleFetcher = nil
 		}
 
-		fetchUnsortedArticlesAsync(for: fetchers) { [weak self] (articles) in
-			self?.replaceArticles(with: articles, animated: animated)
-			completion()
+		fetchUnsortedArticlesAsync(for: fetchers) { [weak self] result in
+			if case .success(let articles) = result { self?.replaceArticles(with: articles, animated: animated) }
+			completion(result.map { _ in () })
 		}
 
 	}
 
-	func fetchUnsortedArticlesAsync(for representedObjects: [Any], completion: @escaping ArticleSetBlock) {
+	func fetchUnsortedArticlesAsync(for representedObjects: [Any], completion: @escaping (Result<Set<Article>, Error>) -> Void) {
 		// The callback will *not* be called if the fetch is no longer relevant — that is,
 		// if it’s been superseded by a newer fetch, or the timeline was emptied, etc., it won’t get called.
 		precondition(Thread.isMainThread)
 		cancelPendingAsyncFetches()
 
 		let fetchers = representedObjects.compactMap { $0 as? ArticleFetcher }
-		let fetchOperation = FetchRequestOperation(id: fetchSerialNumber, hidingReadArticlesState: hidingReadArticlesState, fetchers: fetchers) { [weak self] (articles, operation) in
+		let fetchOperation = FetchRequestOperation(id: fetchSerialNumber, hidingReadArticlesState: hidingReadArticlesState, fetchers: fetchers) { [weak self] (result, operation) in
 			precondition(Thread.isMainThread)
 			guard !operation.isCanceled, let strongSelf = self, operation.id == strongSelf.fetchSerialNumber else {
+				completion(.failure(CancellationError()))
 				return
 			}
-			completion(articles)
+			completion(result)
 		}
 
 		fetchRequestQueue.add(fetchOperation)
