@@ -493,10 +493,22 @@ import Secrets
 			if body["type"] as? String == "openai-compatible", !secret.isEmpty {
 				do {
 					try CredentialsManager.storeCredentials(Credentials(type: .oauthAccessToken, username: "credential", secret: secret), server: "nonews-ai-\(id)")
-					self.updateCredentialState(id: id, state: "verified", from: body)
-					if current && self.credential.stringValue == secret { self.credential.stringValue = "" }
+					self.updateCredentialState(id: id, state: "verified", from: body) { result in
+						guard current else { return }
+						switch result {
+						case .success(let updated):
+							self.currentService = updated
+							if self.credential.stringValue == secret { self.credential.stringValue = "" }
+							self.feedback.stringValue = "Service saved and credential verified. Refresh its directory before choosing a target."
+						case .failure:
+							self.currentService = value
+							self.feedback.stringValue = "Service saved, but credential state could not be persisted. The connection is incomplete."
+						}
+						self.loadLists()
+					}
+					return
 				} catch {
-					self.updateCredentialState(id: id, state: "incomplete", from: body)
+					self.updateCredentialState(id: id, state: "incomplete", from: body) { _ in }
 					if current { self.feedback.stringValue = "Service saved, but the credential could not be stored. The connection is incomplete." }
 					self.loadLists()
 					return
@@ -510,7 +522,7 @@ import Secrets
 						return
 					}
 				} catch {
-					self.updateCredentialState(id: id, state: "incomplete", from: body)
+					self.updateCredentialState(id: id, state: "incomplete", from: body) { _ in }
 					if current { self.currentService = value; self.feedback.stringValue = "Service saved, but its credential could not be read. The connection is incomplete." }
 					self.loadLists()
 					return
@@ -521,11 +533,11 @@ import Secrets
 		}
 	}
 
-	private func updateCredentialState(id: String, state: String, from body: [String: Any]) {
+	private func updateCredentialState(id: String, state: String, from body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		var update = body
 		update["id"] = id
 		update["credentialState"] = state
-		request("PUT", "/api/config/services", update) { _ in }
+		request("PUT", "/api/config/services", update, completion: completion)
 	}
 
 	@objc private func refreshService() {
