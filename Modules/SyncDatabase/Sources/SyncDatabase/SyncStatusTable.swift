@@ -94,9 +94,9 @@ struct SyncStatusTable {
 
 	static func resetAllSelectedForProcessing(database: FMDatabase) throws {
 		let updateSQL = "update \(name) set selected = false"
-		guard database.executeUpdateInTransaction(updateSQL) else {
-			throw database.syncDatabaseError(operation: "Returning all in-flight statuses to the queue")
-		}
+		try database.executeUpdateInTransactionResult(updateSQL).mapError { error in
+			SyncDatabaseError.sqliteError(operation: "Returning all in-flight statuses to the queue", code: error.code, message: error.localizedDescription)
+		}.get()
 	}
 
 	// An articleID can have both a read row and a starred row queued. Callers that send
@@ -115,9 +115,9 @@ struct SyncStatusTable {
 			updateSQL += " and key = ?"
 			parameters.append(key.rawValue as AnyObject)
 		}
-		guard database.executeUpdateInTransaction(updateSQL, withArgumentsIn: parameters) else {
-			throw database.syncDatabaseError(operation: operation)
-		}
+		try database.executeUpdateInTransactionResult(updateSQL, withArgumentsIn: parameters).mapError { error in
+			SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+		}.get()
 	}
 
 	static func deleteSelectedForProcessing(_ articleIDs: Set<String>, key: SyncStatus.Key?, database: FMDatabase) throws {
@@ -133,9 +133,9 @@ struct SyncStatusTable {
 			deleteSQL += " and key = ?"
 			parameters.append(key.rawValue as AnyObject)
 		}
-		guard database.executeUpdateInTransaction(deleteSQL, withArgumentsIn: parameters) else {
-			throw database.syncDatabaseError(operation: operation)
-		}
+		try database.executeUpdateInTransactionResult(deleteSQL, withArgumentsIn: parameters).mapError { error in
+			SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+		}.get()
 	}
 
 	static func insertStatuses(_ statuses: Set<SyncStatus>, database: FMDatabase) throws {

@@ -24,20 +24,30 @@ public extension FMDatabase {
 		return database
 	}
 
-	/// Returns false if the update failed and the transaction was rolled back.
+	/// Returns false if BEGIN, the update or COMMIT failed.
 	@discardableResult
 	func executeUpdateInTransaction(_ sql: String, withArgumentsIn parameters: [Any]? = nil) -> Bool {
-		beginTransaction()
-		guard executeUpdate(sql, withArgumentsIn: parameters) else {
-			// Capture the error before rollback() overwrites the last-error state.
-			let code = lastErrorCode()
-			let message = lastErrorMessage() ?? "unknown"
+		switch executeUpdateInTransactionResult(sql, withArgumentsIn: parameters) {
+		case .success:
+			return true
+		case .failure(let error):
 			let path = databasePath() ?? "unknown"
-			rollback()
-			Self.logger.error("Update failed on \(path, privacy: .public) — SQLite \(code, privacy: .public): \(message, privacy: .public)")
+			Self.logger.error("Update failed on \(path, privacy: .public) — SQLite \(error.code, privacy: .public): \(error.localizedDescription, privacy: .public)")
 			return false
 		}
-		return commit()
+	}
+
+	/// Preserves the original SQLite failure before rolling back this transaction.
+	func executeUpdateInTransactionResult(_ sql: String, withArgumentsIn parameters: [Any]? = nil) -> Result<Void, NSError> {
+		guard beginTransaction() else {
+			return .failure((lastError() ?? NSError(domain: "FMDatabase", code: Int(lastErrorCode()))) as NSError)
+		}
+		guard executeUpdate(sql, withArgumentsIn: parameters) && commit() else {
+			let error = (lastError() ?? NSError(domain: "FMDatabase", code: Int(lastErrorCode()))) as NSError
+			rollback()
+			return .failure(error)
+		}
+		return .success(())
 	}
 
 	private static let logger = Logger(subsystem: logSubsystem, category: "FMDatabase")
@@ -75,16 +85,15 @@ public extension FMDatabase {
 		}
 	}
 
-	/// Returns false if any row failed to insert. Every row is attempted either way.
+	/// Stops at the first failed insert, preserving its SQLite error for the caller.
 	@discardableResult
 	func insertRows(_ dictionaries: [DatabaseDictionary], insertType: RSDatabaseInsertType, tableName: String) -> Bool {
-		var didInsertAllRows = true
 		for dictionary in dictionaries {
 			if !insertRow(dictionary, insertType: insertType, tableName: tableName) {
-				didInsertAllRows = false
+				return false
 			}
 		}
-		return didInsertAllRows
+		return true
 	}
 
 	@discardableResult
