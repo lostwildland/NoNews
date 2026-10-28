@@ -7,6 +7,8 @@
 
 ## 2026-10-28 — T03 durable correction and T30 provider propagation
 
+- Root measured the R9 scalar concern through exact2ee43f0 Application.handle normal/browse preview:8MiB row refusal occurred after about41MiB Python allocation peak for a2MiB control-character scalar (12MiB serialized legacy input). Status remained available and no snapshot rows published. Fixture setup excluded; no RSS/crash claim. Original owner must guard staging as well as snapshot serialization; no worker files edited by root.
+
 - T03 R10 Standards completed61hunks/23paths and requests changes:2P1/2P2 plus3Spec-onlyP2; one recoveryP1 overlaps Spec. Added the unsized text view, nested/fixed layout, Magpie credential, copy-selection and missing-Keychain state findings to the same owner's current correction. Rechecked official HIG scrolling/settings guidance; actual native interaction remains unverified.
 
 - Root independently reproduced the2ee43f0 stale-credential request consequence through authenticated stdio: saveA, saveB/readback, lateA verified-state PUT restoresA metadata. No Keychain/provider/AppKit execution; temporary source/profile removed and process exit0. The owner received this deterministic backend regression.

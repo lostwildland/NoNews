@@ -1,5 +1,9 @@
 # Execution findings
 
+2026-10-28 — Complete-path scalar-capacity measurement:
+- Exact2ee43f0 Application.handle normal/browse preview both refuse an over-cap scalar, but only after43,004,394/43,001,702bytes Python allocation peaks. Fixture is2,097,152NUL characters in a legacy target,12,582,963serialized input bytes; setup excluded from tracing. No snapshot rows published and subsequent status/schema41 remains available. No RSS/crash/general deadline inference.
+- Connected staging uses json.dumps before snapshot serialization; guarding only the latter does not bound the earlier allocation. Original owner received this complete-path regression requirement. Worker dirty files untouched; temporary source/profile closed and removed.
+
 2026-10-28 — Complete paired T03 R10 source review:
 - Both axes inspected61/61hunks and23/23paths at2ee43f0 and request changes. Standards2P1/2P2 plus3Spec-onlyP2 includes the overlapping recoveryP1, unsized text views, nested same-axis scrolling, fixed-width overflow, Magpie credential visibility, copy selection and missing-Keychain persisted state. No app/runtime proof was collected by reviewers.
 - Rechecked official Apple HIG Scroll views/Settings Markdown: avoid same-axis nested scrolling and size settings panes for contents with stable navigation. Repository AppKit/XIB guidance remains applicable. Original owner received the concrete layout/selection/state requirements; no new worktree or concurrent worker edit.

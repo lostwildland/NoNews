@@ -373,6 +373,31 @@
       ],
       "observation": "Official guidance discourages same-axis nested scrolling and describes settings panes sized for their contents with stable navigation. Repository AppKit/XIB guidance also applies.",
       "limit": "Source design reference only; no native layout, keyboard or VoiceOver inspection."
+    },
+    "public_scalar_capacity_probe": {
+      "source": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+      "boundary": "Application.handle normal and browse preview",
+      "fixture": {
+        "scalar_characters": 2097152,
+        "scalar": "NUL target in one synthetic legacy old/model config",
+        "serialized_config_bytes": 12582963,
+        "row_capacity_bytes": 8388608
+      },
+      "normal": {
+        "refusal": "snapshot_capacity",
+        "python_allocation_peak_bytes": 43004394,
+        "elapsed_seconds": 0.243
+      },
+      "browse": {
+        "refusal": "snapshot_capacity",
+        "python_allocation_peak_bytes": 43001702,
+        "elapsed_seconds": 0.288
+      },
+      "continued_status_schema": 41,
+      "published_snapshot_rows": 0,
+      "fixture_setup_in_trace": false,
+      "limits": "Python allocations only, not RSS/crash/general deadline proof; source staged serializer runs before snapshot row guards. No live provider/app/private data.",
+      "report": "docs/acceptance/t03-current-source-review-r10.md#coordinator-public-scalar-capacity-probe"
     }
   },
   "previous_candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
