@@ -132,7 +132,7 @@ def ensure_schema(db) -> None:
     if "raw_identity_value" not in {row[1] for row in db.execute("PRAGMA table_info(native_observation_identities)")}:
         db.execute("ALTER TABLE native_observation_identities ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
-    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='item_feed_contracts'").fetchone() and db.execute("SELECT 1 FROM item_feed_contracts LIMIT 1").fetchone() and db.execute("SELECT 1 FROM native_processing_contexts LIMIT 1").fetchone() is None:
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='item_feed_contracts'").fetchone() and db.execute("SELECT 1 FROM item_feed_contracts LIMIT 1").fetchone():
         raise ConfigurationError("native_context_migration_required")
 
     if "service_id" not in policy_columns:
@@ -256,6 +256,7 @@ def observe(db, body):
     now = utcnow()
     with transaction(db):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
+        was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
         if identity and existing and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
             db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
         state = "unresolved"
@@ -306,7 +307,7 @@ def observe(db, body):
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
-            if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
+            if (not was_unresolved) and (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", 0, context_id))
     return observation(db, observation_id)
 
