@@ -1334,6 +1334,8 @@ public enum FetchType {
 	@objc func displayNameDidChange(_ note: Notification) {
 		if let folder = note.object as? Folder, folder.account === self {
 			structureDidChange()
+		} else if let feed = note.object as? Feed, feed.account === self {
+			structureDidChange()
 		}
 	}
 

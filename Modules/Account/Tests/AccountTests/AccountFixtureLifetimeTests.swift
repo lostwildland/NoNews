@@ -686,9 +686,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		let xml = """
 		<?xml version="1.0"?><rss version="2.0"><channel><title>Fixture</title><link>https://fixture.invalid/</link><description>Fixture</description><item><title>Callback article</title><guid>callback-article</guid><link>https://fixture.invalid/item</link></item></channel></rss>
 		"""
-		TestingURLProtocol.$currentTestID.withValue(nil) {
-			TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
-		}
+		TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
 		let importURL = URL(fileURLWithPath: path + "/import.opml")
 		try "<opml version=\"2.0\"><body><outline text=\"Imported\" xmlUrl=\"https://fixture.invalid/imported.xml\"/></body></opml>".write(to: importURL, atomically: true, encoding: .utf8)
 		var results = [Result<Void, Error>]()
@@ -764,9 +762,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		let xml = """
 		<?xml version="1.0"?><rss version="2.0"><channel><title>Fixture</title><link>https://fixture.invalid/</link><description>Fixture</description><item><title>Admitted article</title><guid>fixture-article</guid><link>https://fixture.invalid/article</link></item></channel></rss>
 		"""
-		TestingURLProtocol.$currentTestID.withValue(nil) {
-			TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
-		}
+		TestingURLProtocol.setResponse(.init(data: Data(xml.utf8)), forURLContaining: url)
 		let (downloaded, downloadedSignal) = AsyncStream<Void>.makeStream()
 		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
 		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
