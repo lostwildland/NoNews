@@ -293,7 +293,7 @@ def replay(db, body):
         raise ValueError("Context not found")
     now = utcnow()
     replay_context_id = uuid.uuid4().hex
-    db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) SELECT ?,item_id,observation_id,?,?,?,?,?,?,?,?,?,?,?,? FROM native_processing_contexts WHERE id=?", (replay_context_id, row[0], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now, context_id))
+    db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) SELECT ?,item_id,observation_id,?,?,?,?,?,?,?,?,?,?,? FROM native_processing_contexts WHERE id=?", (replay_context_id, row[0], row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now, context_id))
     job_id = "native-replay-" + uuid.uuid4().hex
     db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
