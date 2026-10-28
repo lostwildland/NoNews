@@ -1034,10 +1034,13 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		guard alert.runModal() == .alertFirstButtonReturn else { return }
 		rememberPendingCredentialDeletion(id)
 		request("DELETE", "/api/config/services", ["id": id], onFailureWithError: { [weak self] error in
-			if error as? ProcessingEngine.EngineError == .mutationRejected || error as? ProcessingEngine.EngineError == .mutationNotSaved {
+			let definitiveFailure = error as? ProcessingEngine.EngineError
+			if definitiveFailure == .mutationRejected || definitiveFailure == .mutationNotSaved || definitiveFailure == .invalidConfiguration {
 				self?.clearPendingCredentialDeletion(id)
-				if error as? ProcessingEngine.EngineError == .mutationNotSaved {
+				if definitiveFailure == .mutationNotSaved {
 					self?.feedback.stringValue = "The service was not removed. Its Keychain credential remains unchanged."
+				} else if definitiveFailure == .invalidConfiguration {
+					self?.feedback.stringValue = "The service remains because it is still in use. Its Keychain credential remains unchanged."
 				}
 			} else {
 				self?.feedback.stringValue = "The service removal is being confirmed. Its Keychain credential will remain queued until removal is verified."
