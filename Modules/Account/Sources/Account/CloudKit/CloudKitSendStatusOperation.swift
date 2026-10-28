@@ -136,7 +136,9 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 		// We somehow have new status records but the articles didn't come back
 		// in the fetch. Clean up those sync records and stop processing.
 		if statusUpdates.isEmpty {
-			await syncDatabase.deleteSelectedForProcessing(Set(articleIDs))
+			guard await syncDatabase.deleteSelectedForProcessing(Set(articleIDs)) else {
+				throw CancellationError()
+			}
 			return nil
 		}
 
@@ -149,7 +151,9 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 					try await articlesZone.modifyArticles(statusUpdates)
 				}
 			)
-			await syncDatabase.deleteSelectedForProcessing(Set(statusUpdates.map({ $0.articleID })))
+			guard await syncDatabase.deleteSelectedForProcessing(Set(statusUpdates.map({ $0.articleID }))) else {
+				throw CancellationError()
+			}
 			return (statusUpdates.count, withContent)
 		} catch {
 			await syncDatabase.resetSelectedForProcessing(Set(syncStatuses.map({ $0.articleID })))

@@ -19,56 +19,68 @@ struct SyncStatusTable {
 	// delete a queued status that was never sent.
 	static func selectForProcessing(limit: Int?, database: FMDatabase) throws -> Set<SyncStatus> {
 		let operation = "Reading statuses to send"
-		database.beginTransaction()
+		guard database.beginTransaction() else {
+			let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
+			throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+		}
 
-		let selectSQL = {
-			var sql = "select * from \(name)"
-			if let limit {
-				sql = "\(sql) limit \(limit)"
+		do {
+			let selectSQL = {
+				var sql = "select * from \(name)"
+				if let limit {
+					sql = "\(sql) limit \(limit)"
+				}
+				return sql
+			}()
+
+			guard let resultSet = database.executeQuery(selectSQL, withArgumentsIn: nil) else {
+				throw database.syncDatabaseError(operation: operation)
 			}
-			return sql
-		}()
+			defer { resultSet.close() }
 
-		guard let resultSet = database.executeQuery(selectSQL, withArgumentsIn: nil) else {
-			let error = database.syncDatabaseError(operation: operation)
+			var queryError: NSError?
+			var statuses = Set<SyncStatus>()
+			while resultSet.nextWithError(&queryError) {
+				if let status = statusWithRow(resultSet) {
+					statuses.insert(status)
+				}
+			}
+			if let queryError {
+				throw SyncDatabaseError.sqliteError(operation: operation, code: queryError.code, message: queryError.localizedDescription)
+			}
+
+			guard !statuses.isEmpty else {
+				guard database.commit() else {
+					let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
+					throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+				}
+				return statuses
+			}
+
+			// An articleID can have both a read row and a starred row, so match on the pair —
+			// grouping by key means each statement touches only that key’s articleIDs.
+			let statusesByKey = Dictionary(grouping: statuses, by: \.key)
+			for (key, statusesForKey) in statusesByKey {
+				let articleIDs = statusesForKey.map { $0.articleID }
+				let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))
+				var parameters = articleIDs.map { $0 as AnyObject }
+				parameters.append(key.rawValue as AnyObject)
+				let updateSQL = "update \(name) set selected = true where articleID in \(placeholders) and key = ?"
+				guard database.executeUpdate(updateSQL, withArgumentsIn: parameters) else {
+					throw database.syncDatabaseError(operation: "Marking \(articleIDs.count) \(key.rawValue) statuses as in flight")
+				}
+			}
+
+			guard database.commit() else {
+				let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
+				throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+			}
+
+			return Set(statuses.map { SyncStatus(articleID: $0.articleID, key: $0.key, flag: $0.flag, selected: true) })
+		} catch {
 			database.rollback()
 			throw error
 		}
-
-		// Rows are fetched during iteration, not by the query above. A failure partway
-		// through stops early and returns the rows read so far, which is indistinguishable
-		// from a complete result.
-		let statuses = resultSet.mapToSet(statusWithRow)
-		guard !database.hadError() else {
-			let error = database.syncDatabaseError(operation: operation)
-			database.rollback()
-			throw error
-		}
-
-		guard !statuses.isEmpty else {
-			database.commit()
-			return statuses
-		}
-
-		// An articleID can have both a read row and a starred row, so match on the pair —
-		// grouping by key means each statement touches only that key’s articleIDs.
-		let statusesByKey = Dictionary(grouping: statuses, by: \.key)
-		for (key, statusesForKey) in statusesByKey {
-			let articleIDs = statusesForKey.map { $0.articleID }
-			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))
-			var parameters = articleIDs.map { $0 as AnyObject }
-			parameters.append(key.rawValue as AnyObject)
-			let updateSQL = "update \(name) set selected = true where articleID in \(placeholders) and key = ?"
-			guard database.executeUpdate(updateSQL, withArgumentsIn: parameters) else {
-				let error = database.syncDatabaseError(operation: "Marking \(articleIDs.count) \(key.rawValue) statuses as in flight")
-				database.rollback()
-				throw error
-			}
-		}
-
-		database.commit()
-
-		return Set(statuses.map { SyncStatus(articleID: $0.articleID, key: $0.key, flag: $0.flag, selected: true) })
 	}
 
 	static func selectPendingCount(database: FMDatabase) throws -> Int {
@@ -185,9 +197,16 @@ private extension SyncStatusTable {
 			throw database.syncDatabaseError(operation: operation)
 		}
 
-		let articleIDs = resultSet.mapToSet { $0.swiftString(forColumnIndex: 0) }
-		guard !database.hadError() else {
-			throw database.syncDatabaseError(operation: operation)
+		defer { resultSet.close() }
+		var queryError: NSError?
+		var articleIDs = Set<String>()
+		while resultSet.nextWithError(&queryError) {
+			if let articleID = resultSet.swiftString(forColumnIndex: 0) {
+				articleIDs.insert(articleID)
+			}
+		}
+		if let queryError {
+			throw SyncDatabaseError.sqliteError(operation: operation, code: queryError.code, message: queryError.localizedDescription)
 		}
 
 		return articleIDs

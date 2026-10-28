@@ -614,20 +614,24 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		}
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
 
-		let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-		let syncStatuses = Set(changedArticleIDs.map { articleID in
-			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
-		})
+		try await syncDatabase.withStatusMutation { [self, account] in
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+			let syncStatuses = Set(changedArticleIDs.map { articleID in
+				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
+			})
 
-		await syncDatabase.insertStatuses(syncStatuses)
-		if !syncStatuses.isEmpty {
-			lastNoChangeSyncDate = nil
-			NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
-		}
-		if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
-			// Flush in the background so marking doesn't block the caller
-			// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
-			account.startBackground { [self] in try? await sendArticleStatus() }
+			guard await syncDatabase.insertStatuses(syncStatuses) else {
+				throw CancellationError()
+			}
+			if !syncStatuses.isEmpty {
+				lastNoChangeSyncDate = nil
+				NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
+			}
+			if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
+				// Flush in the background so marking doesn't block the caller
+				// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
+				account.startBackground { [self] in try? await sendArticleStatus() }
+			}
 		}
 
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
@@ -1075,7 +1079,7 @@ private extension CloudKitAccountDelegate {
 			do {
 				let articles = try await account.fetchArticlesAsync(.feed(feed))
 
-				await storeArticleChanges(new: articles, updated: Set<Article>(), deleted: Set<Article>())
+				try await storeArticleChanges(new: articles, updated: Set<Article>(), deleted: Set<Article>())
 				syncProgress.completeTask()
 
 				_ = try await sendArticleStatus(account: account, showProgress: true)
@@ -1098,29 +1102,31 @@ private extension CloudKitAccountDelegate {
 		}
 	}
 
-	func storeArticleChanges(new: Set<Article>?, updated: Set<Article>?, deleted: Set<Article>?) async {
+	func storeArticleChanges(new: Set<Article>?, updated: Set<Article>?, deleted: Set<Article>?) async throws {
 		// New records with a read status aren't really new, they just didn't have the read article stored
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
-		await withTaskGroup(of: Void.self) { group in
-			if let new = new {
-				let filteredNew = new.filter { $0.status.read == false }
-				group.addTask {
-					await self.insertSyncStatuses(articles: filteredNew, statusKey: .new, flag: true)
+		try await syncDatabase.withStatusMutation { [self] in
+			try await withThrowingTaskGroup(of: Void.self) { group in
+				if let new = new {
+					let filteredNew = new.filter { $0.status.read == false }
+					group.addTask {
+						try await self.insertSyncStatuses(articles: filteredNew, statusKey: .new, flag: true)
+					}
 				}
-			}
 
-			group.addTask {
-				await self.insertSyncStatuses(articles: updated, statusKey: .new, flag: false)
-			}
+				group.addTask {
+					try await self.insertSyncStatuses(articles: updated, statusKey: .new, flag: false)
+				}
 
-			group.addTask {
-				await self.insertSyncStatuses(articles: deleted, statusKey: .deleted, flag: true)
+				group.addTask {
+					try await self.insertSyncStatuses(articles: deleted, statusKey: .deleted, flag: true)
+				}
 			}
 		}
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
 	}
 
-	func insertSyncStatuses(articles: Set<Article>?, statusKey: SyncStatus.Key, flag: Bool) async {
+	func insertSyncStatuses(articles: Set<Article>?, statusKey: SyncStatus.Key, flag: Bool) async throws {
 		guard let articles = articles, !articles.isEmpty else {
 			return
 		}
@@ -1128,7 +1134,9 @@ private extension CloudKitAccountDelegate {
 			SyncStatus(articleID: article.articleID, key: statusKey, flag: flag)
 		})
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
-		await syncDatabase.insertStatuses(syncStatuses)
+		guard await syncDatabase.insertStatuses(syncStatuses) else {
+			throw CancellationError()
+		}
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
 	}
 
@@ -1234,9 +1242,13 @@ extension CloudKitAccountDelegate: LocalAccountRefresherDelegate {
 	func localAccountRefresher(_ refresher: LocalAccountRefresher, articleChanges: ArticleChanges) {
 		guard let account else { return }
 		account.startBackground { [self] in
-			await storeArticleChanges(new: articleChanges.new,
-									  updated: articleChanges.updated,
-									  deleted: articleChanges.deleted)
+			do {
+				try await storeArticleChanges(new: articleChanges.new,
+										  updated: articleChanges.updated,
+										  deleted: articleChanges.deleted)
+			} catch {
+				account.postSyncError(error, operation: "Queueing article changes")
+			}
 		}
 	}
 }

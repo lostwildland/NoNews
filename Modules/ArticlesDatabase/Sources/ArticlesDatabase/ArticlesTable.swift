@@ -798,7 +798,13 @@ nonisolated private extension ArticlesTable {
 		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchStringParameters) else {
 			throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
 		}
-		let searchRowIDs = resultSet.mapToSet { $0.longLongInt(forColumnIndex: 0) }
+		defer { resultSet.close() }
+		var queryError: NSError?
+		var searchRowIDs = Set<Int64>()
+		while resultSet.nextWithError(&queryError) {
+			searchRowIDs.insert(resultSet.longLongInt(forColumnIndex: 0))
+		}
+		if let queryError { throw queryError }
 		if searchRowIDs.isEmpty {
 			return Set<Article>()
 		}

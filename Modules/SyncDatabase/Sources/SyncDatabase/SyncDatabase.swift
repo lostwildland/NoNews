@@ -13,6 +13,30 @@ import RSCore
 import RSDatabase
 import RSDatabaseObjC
 
+private actor StatusMutationGate {
+	private var held = false
+	private var waiters = [CheckedContinuation<Void, Never>]()
+
+	func acquire() async {
+		if !held {
+			held = true
+			return
+		}
+		await withCheckedContinuation { continuation in
+			waiters.append(continuation)
+		}
+	}
+
+	func release() {
+		if let continuation = waiters.first {
+			waiters.removeFirst()
+			continuation.resume()
+		} else {
+			held = false
+		}
+	}
+}
+
 public actor SyncDatabase {
 	private struct Admission {
 		var closing = false
@@ -38,6 +62,7 @@ public actor SyncDatabase {
 		}
 	}
 	private let database: FMDatabase
+	private let statusMutationGate = StatusMutationGate()
 	public nonisolated let databasePath: String
 
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "SyncDatabase")
@@ -69,7 +94,9 @@ public actor SyncDatabase {
 	@discardableResult public func insertStatuses(_ statuses: Set<SyncStatus>) -> Bool {
 		guard acceptsWork else { return false }
 		do {
+			#if DEBUG
 			lastErrorForTesting = nil
+			#endif
 			try SyncStatusTable.insertStatuses(statuses, database: database)
 			return true
 		} catch {
@@ -99,6 +126,14 @@ public actor SyncDatabase {
 	public func selectPendingStarredStatusArticleIDs() throws -> Set<String> {
 		guard acceptsWork else { throw CancellationError() }
 		return try SyncStatusTable.selectPendingStarredStatusArticleIDs(database: database)
+	}
+
+	/// Serializes a status mutation with CloudKit page application and other
+	/// status writers so pending rows cannot change between the check and commit.
+	public func withStatusMutation<T: Sendable>(_ operation: @escaping @MainActor @Sendable () async throws -> T) async rethrows -> T {
+		await statusMutationGate.acquire()
+		defer { Task { await statusMutationGate.release() } }
+		return try await operation()
 	}
 
 	@discardableResult nonisolated public func resetAllSelectedForProcessing() -> Bool {

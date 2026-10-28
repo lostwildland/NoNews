@@ -26,6 +26,16 @@ import SyncDatabase
 		#expect(await database.close())
 	}
 
+	@Test func selectionCommitFailureRollsBackSelectionAndKeepsQueueUsable() async throws {
+		let fixture = SyncDatabase(databasePath: ":memory:")
+		#expect(await fixture.insertStatuses([SyncStatus(articleID: "pending", key: .read, flag: true)]))
+		#expect(await fixture.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_select AFTER UPDATE OF selected ON syncStatus BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		await #expect(throws: SyncDatabaseError.self) { _ = try await fixture.selectForProcessing() }
+		#expect(await fixture.executeSQLForTesting("DROP TRIGGER fixture_select; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		#expect(try await fixture.selectForProcessing().contains { $0.articleID == "pending" && $0.selected })
+		#expect(await fixture.close())
+	}
+
 	private let database = SyncDatabase(databasePath: ":memory:")
 
 	@Test func cachedStatusQueriesReportStepFailure() async throws {

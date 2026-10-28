@@ -49,18 +49,20 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 	}
 
 	@MainActor func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws {
-		guard let account, account.acceptsFixtureWork, !account.isDeleted else { throw CancellationError() }
-		let pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
-		let pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
-		lastChangedCount = changed.count
-		lastDeletedCount = deleted.count
-		accumulatedChangedCount += changed.count
-		accumulatedDeletedCount += deleted.count
+		try await syncDatabase.withStatusMutation { [self] in
+			guard let account, account.acceptsFixtureWork, !account.isDeleted else { throw CancellationError() }
+			let pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
+			let pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
+			lastChangedCount = changed.count
+			lastDeletedCount = deleted.count
+			accumulatedChangedCount += changed.count
+			accumulatedDeletedCount += deleted.count
 
-		try await delete(recordKeys: deleted, pendingStatusArticleIDs: pendingReadStatusArticleIDs.union(pendingStarredStatusArticleIDs))
-		try await update(records: changed,
-					 pendingReadStatusArticleIDs: pendingReadStatusArticleIDs,
-					 pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
+			try await delete(recordKeys: deleted, pendingStatusArticleIDs: pendingReadStatusArticleIDs.union(pendingStarredStatusArticleIDs))
+			try await update(records: changed,
+						 pendingReadStatusArticleIDs: pendingReadStatusArticleIDs,
+						 pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
+		}
 	}
 }
 
