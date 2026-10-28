@@ -171,17 +171,26 @@ final class ProcessingEngine {
 
 	func request(method: String, path: String, query: [String: Any] = [:], body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		guard state == .ready || state == .starting, process?.isRunning == true, pending.count < 32,
-			  [("POST", "/api/settings/processing/probe"), ("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			  [("POST", "/api/settings/processing/probe"), ("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing"),
+			   ("GET", "/api/config/services"), ("PUT", "/api/config/services"), ("GET", "/api/config/prompts"), ("PUT", "/api/config/prompts"),
+			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
+			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
+			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
 		nextID += 1
 		let id = nextID
+		let message: [String: Any] = ["id": id, "token": token, "method": method, "path": path, "query": query, "body": body]
+		guard let bytes = try? JSONSerialization.data(withJSONObject: message), bytes.count < limit else {
+			completion(.failure(EngineError.invalidRequest))
+			return
+		}
 		pending[id] = completion
 		timers[id] = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
 			Task { @MainActor in self?.requestTimedOut(id) }
 		}
-		write(["id": id, "token": token, "method": method, "path": path, "query": query, "body": body])
+		write(message)
 	}
 
 	private var isFailed: Bool {
@@ -315,5 +324,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest }
 }

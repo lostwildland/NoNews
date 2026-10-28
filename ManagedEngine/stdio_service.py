@@ -9,7 +9,12 @@ import sys
 # 200,000 UTF-8 bytes can expand to 1,200,000 bytes when JSON-escaped.
 MAX_MESSAGE = 1_310_720
 ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
-           ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe')}
+           ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe'),
+           ('GET', '/api/config/services'), ('PUT', '/api/config/services'),
+           ('GET', '/api/config/prompts'), ('PUT', '/api/config/prompts'),
+           ('GET', '/api/config/history'), ('POST', '/api/config/copy'), ('POST', '/api/config/restore'),
+           ('POST', '/api/config/refresh'), ('DELETE', '/api/config/services'), ('DELETE', '/api/config/prompts'),
+           ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references')}
 
 
 def read_message():
@@ -103,6 +108,8 @@ def main():
                 except ValueError as error:
                     if getattr(error, 'code', None) == 'job_record_too_large':
                         send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
+                    elif getattr(error, 'code', None) == 'invalid_configuration':
+                        send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration'})
                     else:
                         send({**correlation, 'error': 'invalid query'})
                 except Exception:

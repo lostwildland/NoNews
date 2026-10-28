@@ -1,7 +1,7 @@
 """Declared public source files permitted in the managed processing payload."""
 
 BACKEND_SOURCES = (
-    '__init__.py', 'causes.py', 'content_store.py', 'core.py', 'delivery.py',
+    '__init__.py', 'causes.py', 'configuration.py', 'content_store.py', 'core.py', 'delivery.py',
     'feed_settings.py', 'folders.py', 'job_stream.py', 'jobs.py',
     'legacy_content_migration.py', 'literature.py', 'literature_mapping.py',
     'media_jobs.py', 'media_raw_activation.py', 'media_store.py', 'news_media.py',

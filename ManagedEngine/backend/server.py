@@ -8,7 +8,7 @@ import secrets
 import tempfile
 import time
 import threading
-from . import causes, settings, schema
+from . import causes, settings, schema, configuration
 from .core import InformationDB, utcnow
 from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
 
@@ -43,6 +43,20 @@ class Application:
         if path == '/api/jobs' and method == 'GET':
             return self._jobs(query)
         with InformationDB(self.database) as db:
+            if path == '/api/config/services':
+                return configuration.service(db.db, method, body)
+            if path == '/api/config/prompts':
+                return configuration.prompt(db.db, method, body)
+            if path == '/api/config/history':
+                return configuration.history(db.db, body)
+            if path == '/api/config/copy':
+                return configuration.copy_prompt(db.db, body)
+            if path == '/api/config/restore':
+                return configuration.restore(db.db, body)
+            if path == '/api/config/refresh':
+                return configuration.refresh(db.db, body)
+            if path == '/api/config/references':
+                return configuration.references(db.db, method, body)
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
             if path == '/api/settings/processing/probe' and method == 'POST':
