@@ -1,6 +1,6 @@
 # T03 current configuration candidate
 
-Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; the latest pushed source checkpoint is `cea6222`, following final source `3a31ee2` and the reviewed `6e9dac9` outcome slice. The [review ledger](t03-review-coverage.json) still describes the earlier21-path candidate and is stale until refreshed. T03 is open and unaccepted; fresh paired correction review is running. No new worktree was created.
+Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; the latest pushed source checkpoint is `2ee43f0`, following final source `3a31ee2` and the reviewed `6e9dac9` outcome slice. The [review ledger](t03-review-coverage.json) still describes the earlier21-path candidate and is stale until refreshed. T03 is open and unaccepted; fresh paired correction review is running. No new worktree was created.
 
 ## Execution recovery
 

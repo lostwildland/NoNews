@@ -1,7 +1,7 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "cea6222",
-  "state": "Correctioncea6222 retains typed mutation rejection outcomes and incremental report limits and preserves legacy service recovery. The listed21-path blobs still describe6e9dac9; fresh paired correction review is pending and ledger refresh remains required.",
+  "candidate": "2ee43f0",
+  "state": "Correction2ee43f0 adds explicit user acknowledgement for bounded unknown mutation recovery and preserves legacy service recovery. The listed21-path blobs still describe6e9dac9; fresh paired correction review is pending and ledger refresh remains required.",
   "groups": {
     "native": 2,
     "backend": 4,

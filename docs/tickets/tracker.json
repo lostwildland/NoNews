@@ -572,9 +572,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Correction60e1f5c compensates local status changes when outbox insertion fails, preserves original dequeue errors and holds CloudKit claim/send/delete under one gate. Latest macOS plan passed with zero failures/skips; fresh R23 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
+      "implementation_state": "Correction835cda3 serializes provider compensation and preserves outbox intent when rollback fails; Latest macOS plan passed with zero failures/skips; fresh R23 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "60e1f5c",
+      "last_reported_head": "835cda3",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
