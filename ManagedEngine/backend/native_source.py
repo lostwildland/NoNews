@@ -257,8 +257,8 @@ def observe(db, body):
     with transaction(db):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
-        if identity and existing and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
-            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
+        if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
+            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "conflict", now))
         state = "unresolved"
         item_id = existing["item_id"] if existing else None
         if identity:
@@ -308,7 +308,12 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
-            if policy and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
+            service_available = True
+            if policy and isinstance(policy[2], str) and len(policy[2]) == 32:
+                from . import configuration
+                service_value = configuration._record(db, "service", policy[2])
+                service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
+            if service_available and policy and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
@@ -365,8 +370,10 @@ def complete_job(db, body):
         row = db.execute("SELECT j.decision_generation,j.native_context_id,j.intent_json FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND o.namespace=?", (job_id, namespace)).fetchone()
         if row is None:
             raise ValueError("Native job is unavailable")
-        item_id = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
-        current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0]
+        context_item = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+        if context_item is None:
+            raise ValueError("Native context does not exist")
+        current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (context_item[0],)).fetchone()[0]
         if row[1] != context_id or row[0] != claimed_generation or current_generation != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
             raise ValueError("Native completion was revoked or mismatched")
         run = db.execute("SELECT r.item_id,r.prompt_version_id FROM curator_runs r JOIN native_processing_contexts c ON c.id=? WHERE r.id=? AND r.status='succeeded' AND EXISTS (SELECT 1 FROM prompt_versions v WHERE v.id=r.prompt_version_id AND v.kit_id=c.curator_prompt_id AND v.role='curator')", (context_id, result["run_id"])).fetchone()
