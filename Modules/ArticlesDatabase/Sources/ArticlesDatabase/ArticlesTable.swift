@@ -32,7 +32,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// TODO: update articleCutoffDate as time passes and based on user preferences.
 	let articleCutoffDate = Date().bySubtracting(days: 90)
 
-	private typealias ArticlesFetchMethod = @Sendable (FMDatabase) -> Set<Article>
+	private typealias ArticlesFetchMethod = @Sendable (FMDatabase) throws -> Set<Article>
 	private typealias ArticlesCountFetchMethod = @Sendable (FMDatabase) -> Int
 
 	init(name: String, accountID: String, queue: DatabaseQueue, retentionStyle: ArticlesDatabase.RetentionStyle) {
@@ -65,59 +65,59 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Fetching Articles for Feed
 
 	func fetchArticles(_ feedID: String) throws -> Set<Article> {
-		try fetchArticles { self.fetchArticlesForFeedID(feedID, $0) }
+		try fetchArticles { try self.fetchArticlesForFeedID(feedID, $0) }
 	}
 
 	func fetchArticlesAsync(_ feedID: String, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchArticlesForFeedID(feedID, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchArticlesForFeedID(feedID, $0) }, completion)
 	}
 
 	func fetchArticles(_ feedIDs: Set<String>) throws -> Set<Article> {
-		try fetchArticles { self.fetchArticles(feedIDs, $0) }
+		try fetchArticles { try self.fetchArticles(feedIDs, $0) }
 	}
 
 	func fetchArticlesAsync(_ feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchArticles(feedIDs, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchArticles(feedIDs, $0) }, completion)
 	}
 
 	// MARK: - Fetching Articles by articleID
 
 	func fetchArticles(articleIDs: Set<String>) throws -> Set<Article> {
-		try fetchArticles { self.fetchArticles(articleIDs: articleIDs, $0) }
+		try fetchArticles { try self.fetchArticles(articleIDs: articleIDs, $0) }
 	}
 
 	func fetchArticlesAsync(articleIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
-		return fetchArticlesAsync({ self.fetchArticles(articleIDs: articleIDs, $0) }, completion)
+		return fetchArticlesAsync({ try self.fetchArticles(articleIDs: articleIDs, $0) }, completion)
 	}
 
 	// MARK: - Fetching Unread Articles
 
 	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?) throws -> Set<Article> {
-		try fetchArticles { self.fetchUnreadArticles(feedIDs, limit, $0) }
+		try fetchArticles { try self.fetchUnreadArticles(feedIDs, limit, $0) }
 	}
 
 	func fetchUnreadArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchUnreadArticles(feedIDs, limit, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchUnreadArticles(feedIDs, limit, $0) }, completion)
 	}
 
 	// MARK: - Fetching Today Articles
 
 	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?) throws -> Set<Article> {
-		try fetchArticles { self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }
+		try fetchArticles { try self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }
 	}
 
 	func fetchArticlesSinceAsync(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }, completion)
 	}
 
 	// MARK: - Fetching Starred Articles
 
 	func fetchStarredArticles(_ feedIDs: Set<String>, _ limit: Int?) throws -> Set<Article> {
-		try fetchArticles { self.fetchStarredArticles(feedIDs, limit, $0) }
+		try fetchArticles { try self.fetchStarredArticles(feedIDs, limit, $0) }
 	}
 
 	func fetchStarredArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchStarredArticles(feedIDs, limit, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchStarredArticles(feedIDs, limit, $0) }, completion)
 	}
 
 	func fetchStarredArticlesCount(_ feedIDs: Set<String>) throws -> Int {
@@ -149,13 +149,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	// MARK: - Fetching Search Articles
 
 	func fetchArticlesMatching(_ searchString: String) throws -> Set<Article> {
-		nonisolated(unsafe) var articles: Set<Article> = Set<Article>()
-
-		guard queue.runInDatabaseSync({ database in
-			articles = self.fetchArticlesMatching(searchString, database)
-		}) else { throw CancellationError() }
-
-		return articles
+		try fetchArticles { try self.fetchArticlesMatching(searchString, $0) }
 	}
 
 	func fetchArticlesMatching(_ searchString: String, _ feedIDs: Set<String>) throws -> Set<Article> {
@@ -171,11 +165,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticlesMatchingAsync(_ searchString: String, _ feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchArticlesMatching(searchString, feedIDs, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchArticlesMatching(searchString, feedIDs, $0) }, completion)
 	}
 
 	func fetchArticlesMatchingWithArticleIDsAsync(_ searchString: String, _ articleIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
-		fetchArticlesAsync({ self.fetchArticlesMatchingWithArticleIDs(searchString, articleIDs, $0) }, completion)
+		fetchArticlesAsync({ try self.fetchArticlesMatchingWithArticleIDs(searchString, articleIDs, $0) }, completion)
 	}
 
 	// MARK: - Fetching Articles for Indexer
@@ -697,9 +691,11 @@ nonisolated private extension ArticlesTable {
 	private func fetchArticles(_ fetchMethod: @escaping ArticlesFetchMethod) throws -> Set<Article> {
 		nonisolated(unsafe) var articles = Set<Article>()
 
+		nonisolated(unsafe) var error: Error?
 		guard queue.runInDatabaseSync({ database in
-			articles = fetchMethod(database)
+			do { articles = try fetchMethod(database) } catch let caughtError { error = caughtError }
 		}) else { throw CancellationError() }
+		if let error { throw error }
 		return articles
 	}
 
@@ -714,10 +710,10 @@ nonisolated private extension ArticlesTable {
 
 	private func fetchArticlesAsync(_ fetchMethod: @escaping ArticlesFetchMethod, _ completion: @escaping ArticleSetResultBlock) {
 		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
-			let articles = fetchMethod(database)
-			DispatchQueue.main.async {
-				completion(.success(articles))
-			}
+			let result: Result<Set<Article>, Error>
+			do { result = .success(try fetchMethod(database)) }
+			catch { result = .failure(error) }
+			DispatchQueue.main.async { completion(result) }
 		}
 	}
 
@@ -733,10 +729,10 @@ nonisolated private extension ArticlesTable {
 		return unreadCountDictionary
 	}
 
-	func articlesWithResultSet(_ resultSet: FMResultSet, _ database: FMDatabase) -> Set<Article> {
+	func articlesWithResultSet(_ resultSet: FMResultSet, _ database: FMDatabase) throws -> Set<Article> {
 		var articles = Set<Article>()
-
-		while resultSet.next() {
+		var queryError: NSError?
+		while resultSet.nextWithError(&queryError) {
 
 			guard let articleID = resultSet.swiftString(forColumn: DatabaseKey.articleID) else {
 				assertionFailure("Expected articleID.")
@@ -763,6 +759,7 @@ nonisolated private extension ArticlesTable {
 		}
 
 		resultSet.close()
+		if let queryError { throw queryError }
 		return articles
 	}
 
@@ -776,9 +773,9 @@ nonisolated private extension ArticlesTable {
 		return (whereClause, parameters)
 	}
 
-	func fetchArticlesWithWhereClause(_ database: FMDatabase, whereClause: String, parameters: [AnyObject]) -> Set<Article> {
+	func fetchArticlesWithWhereClause(_ database: FMDatabase, whereClause: String, parameters: [AnyObject]) throws -> Set<Article> {
 		let sql = "select * from articles natural join statuses where \(whereClause);"
-		return articlesWithSQL(sql, parameters, database)
+		return try articlesWithSQL(sql, parameters, database)
 	}
 
 	func fetchArticleCountsWithWhereClause(_ database: FMDatabase, whereClause: String, parameters: [AnyObject]) -> Int {
@@ -794,12 +791,12 @@ nonisolated private extension ArticlesTable {
 		return articlesCount
 	}
 
-	func fetchArticlesMatching(_ searchString: String, _ database: FMDatabase) -> Set<Article> {
+	func fetchArticlesMatching(_ searchString: String, _ database: FMDatabase) throws -> Set<Article> {
 		let sql = "select rowid from search where search match ?;"
 		let sqlSearchString = sqliteSearchString(with: searchString)
 		let searchStringParameters = [sqlSearchString]
 		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchStringParameters) else {
-			return Set<Article>()
+			throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
 		}
 		let searchRowIDs = resultSet.mapToSet { $0.longLongInt(forColumnIndex: 0) }
 		if searchRowIDs.isEmpty {
@@ -809,7 +806,7 @@ nonisolated private extension ArticlesTable {
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(searchRowIDs.count))
 		let whereClause = "searchRowID in \(placeholders)"
 		let parameters: [AnyObject] = Array(searchRowIDs) as [AnyObject]
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
 	func sqliteSearchString(with searchString: String) -> String {
@@ -827,15 +824,15 @@ nonisolated private extension ArticlesTable {
 		return s
 	}
 
-	func articlesWithSQL(_ sql: String, _ parameters: [AnyObject], _ database: FMDatabase) -> Set<Article> {
+	func articlesWithSQL(_ sql: String, _ parameters: [AnyObject], _ database: FMDatabase) throws -> Set<Article> {
 		let signpostState = Self.signposter.beginInterval("Fetch articles")
 		let startTime = Date()
 
 		guard let resultSet = database.executeQuery(sql, withArgumentsIn: parameters) else {
 			Self.signposter.endInterval("Fetch articles", signpostState, "no result set")
-			return Set<Article>()
+			throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
 		}
-		let articles = articlesWithResultSet(resultSet, database)
+		let articles = try articlesWithResultSet(resultSet, database)
 
 		let elapsed = Date().timeIntervalSince(startTime)
 		Self.signposter.endInterval("Fetch articles", signpostState, "\(articles.count) articles")
@@ -844,7 +841,7 @@ nonisolated private extension ArticlesTable {
 		return articles
 	}
 
-	func fetchArticles(_ feedIDs: Set<String>, _ database: FMDatabase) -> Set<Article> {
+	func fetchArticles(_ feedIDs: Set<String>, _ database: FMDatabase) throws -> Set<Article> {
 		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and read=0
 		if feedIDs.isEmpty {
 			return Set<Article>()
@@ -852,10 +849,10 @@ nonisolated private extension ArticlesTable {
 		let parameters = feedIDs.map { $0 as AnyObject }
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 		let whereClause = "feedID in \(placeholders)"
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
-	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
+	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) throws -> Set<Article> {
 		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and read=0
 		if feedIDs.isEmpty {
 			return Set<Article>()
@@ -866,24 +863,24 @@ nonisolated private extension ArticlesTable {
 		if let limit = limit {
 			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
 		}
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
-	func fetchArticlesForFeedID(_ feedID: String, _ database: FMDatabase) -> Set<Article> {
-		return fetchArticlesWithWhereClause(database, whereClause: "articles.feedID = ?", parameters: [feedID as AnyObject])
+	func fetchArticlesForFeedID(_ feedID: String, _ database: FMDatabase) throws -> Set<Article> {
+		return try fetchArticlesWithWhereClause(database, whereClause: "articles.feedID = ?", parameters: [feedID as AnyObject])
 	}
 
-	func fetchArticles(articleIDs: Set<String>, _ database: FMDatabase) -> Set<Article> {
+	func fetchArticles(articleIDs: Set<String>, _ database: FMDatabase) throws -> Set<Article> {
 		if articleIDs.isEmpty {
 			return Set<Article>()
 		}
 		let parameters = articleIDs.map { $0 as AnyObject }
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))
 		let whereClause = "articleID in \(placeholders)"
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
-	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
+	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ database: FMDatabase) throws -> Set<Article> {
 		// select * from articles natural join statuses where ((feedID in ('http://ranchero.com/xml/rss.xml') and datePublished > ?) or (feedID in ('http://ranchero.com/xml/rss.xml') and datePublished is null and dateArrived > ?));
 		//
 		// datePublished may be nil, so we fall back to dateArrived.
@@ -895,10 +892,10 @@ nonisolated private extension ArticlesTable {
 		if let limit = limit {
 			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
 		}
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 	}
 
-	func fetchStarredArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) -> Set<Article> {
+	func fetchStarredArticles(_ feedIDs: Set<String>, _ limit: Int?, _ database: FMDatabase) throws -> Set<Article> {
 		// select * from articles natural join statuses where feedID in ('http://ranchero.com/xml/rss.xml') and starred=1;
 		if feedIDs.isEmpty {
 			return Set<Article>()
@@ -909,7 +906,7 @@ nonisolated private extension ArticlesTable {
 		if let limit = limit {
 			whereClause.append(" order by coalesce(datePublished, dateModified, dateArrived) desc limit \(limit)")
 		}
-		return fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
+		return try fetchArticlesWithWhereClause(database, whereClause: whereClause, parameters: parameters)
 		}
 
 	func fetchStarredArticlesCount(_ feedIDs: Set<String>, _ database: FMDatabase) -> Int {
@@ -961,14 +958,14 @@ nonisolated private extension ArticlesTable {
 		)
 	}
 
-	func fetchArticlesMatching(_ searchString: String, _ feedIDs: Set<String>, _ database: FMDatabase) -> Set<Article> {
-		let articles = fetchArticlesMatching(searchString, database)
+	func fetchArticlesMatching(_ searchString: String, _ feedIDs: Set<String>, _ database: FMDatabase) throws -> Set<Article> {
+		let articles = try fetchArticlesMatching(searchString, database)
 		// TODO: include the feedIDs in the SQL rather than filtering here.
 		return articles.filter { feedIDs.contains($0.feedID) }
 	}
 
-	func fetchArticlesMatchingWithArticleIDs(_ searchString: String, _ articleIDs: Set<String>, _ database: FMDatabase) -> Set<Article> {
-		let articles = fetchArticlesMatching(searchString, database)
+	func fetchArticlesMatchingWithArticleIDs(_ searchString: String, _ articleIDs: Set<String>, _ database: FMDatabase) throws -> Set<Article> {
+		let articles = try fetchArticlesMatching(searchString, database)
 		// TODO: include the articleIDs in the SQL rather than filtering here.
 		return articles.filter { articleIDs.contains($0.articleID) }
 	}

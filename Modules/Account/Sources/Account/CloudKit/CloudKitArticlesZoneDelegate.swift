@@ -57,7 +57,7 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 		accumulatedChangedCount += changed.count
 		accumulatedDeletedCount += deleted.count
 
-		try await delete(recordKeys: deleted, pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
+		try await delete(recordKeys: deleted, pendingStatusArticleIDs: pendingReadStatusArticleIDs.union(pendingStarredStatusArticleIDs))
 		try await update(records: changed,
 					 pendingReadStatusArticleIDs: pendingReadStatusArticleIDs,
 					 pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
@@ -66,10 +66,10 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 
 private extension CloudKitArticlesZoneDelegate {
 
-	func delete(recordKeys: [CloudKitRecordKey], pendingStarredStatusArticleIDs: Set<String>) async throws {
+	func delete(recordKeys: [CloudKitRecordKey], pendingStatusArticleIDs: Set<String>) async throws {
 		let receivedRecordIDs = recordKeys.filter({ $0.recordType == CloudKitArticlesZone.CloudKitArticleStatus.recordType }).map({ $0.recordID })
 		let receivedArticleIDs = Set(receivedRecordIDs.map({ stripPrefix($0.externalID) }))
-		let deletableArticleIDs = receivedArticleIDs.subtracting(pendingStarredStatusArticleIDs)
+		let deletableArticleIDs = receivedArticleIDs.subtracting(pendingStatusArticleIDs)
 
 		guard !deletableArticleIDs.isEmpty else {
 			return

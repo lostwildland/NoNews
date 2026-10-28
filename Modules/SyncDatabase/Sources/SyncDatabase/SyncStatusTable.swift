@@ -140,17 +140,22 @@ struct SyncStatusTable {
 
 	static func insertStatuses(_ statuses: Set<SyncStatus>, database: FMDatabase) throws {
 		let operation = "Queueing \(statuses.count) statuses to send"
-		database.beginTransaction()
+		guard database.beginTransaction() else {
+			let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
+			throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
+		}
 
 		let statusArray = statuses.map { $0.databaseDictionary() }
 		guard database.insertRows(statusArray, insertType: .orReplace, tableName: name) else {
-			let error = database.syncDatabaseError(operation: operation)
+			let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
 			database.rollback()
-			throw error
+			throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
 		}
 
 		guard database.commit() else {
-			throw database.syncDatabaseError(operation: operation)
+			let error = (database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))) as NSError
+			database.rollback()
+			throw SyncDatabaseError.sqliteError(operation: operation, code: error.code, message: error.localizedDescription)
 		}
 	}
 }

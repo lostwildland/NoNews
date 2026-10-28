@@ -52,6 +52,8 @@ public actor SyncDatabase {
 	}
 
 	#if DEBUG
+	public private(set) var lastErrorForTesting: SyncDatabaseError?
+	public func executeSQLForTesting(_ sql: String) -> Bool { database.executeStatements(sql) }
 	public func setStatusTableUnavailableForTesting(_ unavailable: Bool) -> Bool {
 		database.executeStatements(unavailable ? "ALTER TABLE syncStatus RENAME TO fixture_saved_syncStatus" : "ALTER TABLE fixture_saved_syncStatus RENAME TO syncStatus")
 	}
@@ -67,9 +69,13 @@ public actor SyncDatabase {
 	@discardableResult public func insertStatuses(_ statuses: Set<SyncStatus>) -> Bool {
 		guard acceptsWork else { return false }
 		do {
+			lastErrorForTesting = nil
 			try SyncStatusTable.insertStatuses(statuses, database: database)
 			return true
 		} catch {
+			#if DEBUG
+			lastErrorForTesting = error as? SyncDatabaseError
+			#endif
 			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
 			return false
 		}

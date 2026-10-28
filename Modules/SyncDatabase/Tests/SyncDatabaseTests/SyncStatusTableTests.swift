@@ -11,6 +11,21 @@ import SyncDatabase
 
 @Suite struct SyncStatusTableTests {
 
+	@Test func insertCommitFailureRollsBackAndKeepsExistingSelectedStatus() async throws {
+		let database = SyncDatabase(databasePath: ":memory:")
+		#expect(await database.insertStatuses([SyncStatus(articleID: "existing", key: .read, flag: true, selected: true)]))
+		#expect(await database.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_insert AFTER INSERT ON syncStatus BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		#expect(!(await database.insertStatuses([SyncStatus(articleID: "failed", key: .starred, flag: true)])))
+		let error = await database.lastErrorForTesting
+		if case .sqliteError(_, let code, _)? = error { #expect(code == 19) }
+		else { Issue.record("insertStatuses did not preserve its SQLite error") }
+		#expect(try await database.selectForProcessing().contains { $0.articleID == "existing" && $0.selected })
+		#expect(await database.executeSQLForTesting("DROP TRIGGER fixture_insert; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		#expect(await database.insertStatuses([SyncStatus(articleID: "succeeded", key: .starred, flag: true)]))
+		#expect(try await database.selectForProcessing().contains { $0.articleID == "succeeded" })
+		#expect(await database.close())
+	}
+
 	private let database = SyncDatabase(databasePath: ":memory:")
 
 	@Test func cachedStatusQueriesReportStepFailure() async throws {

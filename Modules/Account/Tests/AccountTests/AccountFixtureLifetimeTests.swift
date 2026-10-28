@@ -719,7 +719,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
 		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
 		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
-		#expect(await sync.insertStatuses([SyncStatus(articleID: "fixture", key: .read, flag: true, selected: true)]))
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "pending", key: .read, flag: true, selected: true)]))
 		#expect(account.database.setArticlesTableUnavailableForTesting(true))
 		let recordID = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
 		var committed = false
@@ -728,7 +728,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 			Issue.record("Failed article deletion committed a CloudKit page")
 		} catch { }
 		#expect(!committed)
-		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("fixture"))
+		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("pending"))
 		#expect(account.database.setArticlesTableUnavailableForTesting(false))
 		#expect(await sync.close())
 		try await manager.deleteAccount(account)
@@ -742,7 +742,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
 		try await account.database.createStatusesIfNeededAsync(articleIDs: ["fixture"])
 		#expect(account.database.executeSQLForTesting("PRAGMA foreign_keys=ON; INSERT INTO articles (articleID, feedID, uniqueID) VALUES ('fixture','feed','unique'); CREATE TABLE fixture_child (articleID TEXT REFERENCES articles(articleID) DEFERRABLE INITIALLY DEFERRED); INSERT INTO fixture_child VALUES ('fixture');"))
-		#expect(await sync.insertStatuses([SyncStatus(articleID: "fixture", key: .read, flag: true, selected: true)]))
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "pending", key: .read, flag: true, selected: true)]))
 		let recordID = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
 		var committed = false
 		do {
@@ -750,7 +750,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 			Issue.record("Failed commit acknowledged a CloudKit page")
 		} catch { }
 		#expect(!committed)
-		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("fixture"))
+		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("pending"))
 		#expect(try await account.database.fetchArticlesAsync(articleIDs: ["fixture"]).count == 1)
 		#expect(account.database.executeSQLForTesting("DELETE FROM fixture_child; DROP TABLE fixture_child;"))
 		#expect(await account.database.deleteAsync(articleIDs: ["fixture"]))
@@ -831,6 +831,89 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		}
 		#expect(cancelled.cancellation is CancellationError && cancelled.didFail)
 		secondWork.finish()
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitSenderRetainsSelectedStatusWhenArticleReadFails() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "missing", key: .read, flag: true, selected: true)]))
+		#expect(account.database.setArticlesTableUnavailableForTesting(true))
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let queue = MainThreadOperationQueue()
+		let operation = CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil)
+		await withCheckedContinuation { continuation in
+			operation.completionBlock = { _ in continuation.resume() }
+			queue.add(operation)
+		}
+		#expect(operation.didFail)
+		#expect(try await sync.selectForProcessing().contains { $0.articleID == "missing" && $0.key == .read })
+		#expect(account.database.setArticlesTableUnavailableForTesting(false))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func accountArticleLookupFailureIsNotSuccessfulEmpty() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		#expect(account.database.setArticlesTableUnavailableForTesting(true))
+		await #expect(throws: (any Error).self) { _ = try await account.fetchArticlesAsync(.articleIDs(["missing"])) }
+		#expect(account.database.setArticlesTableUnavailableForTesting(false))
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitSenderRetainsAllSelectedRowsWhenArticleIterationFails() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		let record = CKRecord(recordType: "Article", recordID: CKRecord.ID(recordName: "a:iter", zoneID: zone.zoneID))
+		record["webFeedURL"] = "iteration-feed" as CKRecordValue
+		record["uniqueID"] = "iteration-item" as CKRecordValue
+		let parsed = try #require(makeParsedItem(record))
+		#expect((await account.updateAsync(feedID: "iteration-feed", parsedItems: [parsed], deleteOlder: false)).error == nil)
+		let articleID = Article.calculatedArticleID(feedID: "iteration-feed", uniqueID: "iteration-item")
+		#expect(try await account.database.fetchArticlesAsync(articleIDs: [articleID]).count == 1)
+		#expect(await sync.insertStatuses([
+			SyncStatus(articleID: articleID, key: .new, flag: true, selected: true),
+			SyncStatus(articleID: articleID, key: .read, flag: true, selected: true),
+			SyncStatus(articleID: articleID, key: .starred, flag: true, selected: true)
+		]))
+		#expect(account.database.setArticlesTableUnavailableForTesting(true))
+		let queue = MainThreadOperationQueue()
+		let operation = CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil)
+		await withCheckedContinuation { continuation in
+			operation.completionBlock = { _ in continuation.resume() }
+			queue.add(operation)
+		}
+		#expect(operation.didFail)
+		let remaining = try await sync.selectForProcessing()
+		#expect(remaining.count == 3 && remaining.allSatisfy { $0.articleID == articleID })
+		#expect(account.database.setArticlesTableUnavailableForTesting(false))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitRemoteDeletionPreservesEachPendingStatusKind() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		#expect(await sync.insertStatuses([
+			SyncStatus(articleID: "remote-read", key: .read, flag: true, selected: true),
+			SyncStatus(articleID: "remote-star", key: .starred, flag: true, selected: true)
+		]))
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		let keys = ["remote-read", "remote-star", "remote-none"].map { (CloudKitArticlesZone.CloudKitArticleStatus.recordType, CKRecord.ID(recordName: "s:\($0)", zoneID: zone.zoneID)) }
+		var committed = false
+		try await zone.applyFetchedPage(changed: [], deleted: keys, work: nil) { committed = true }
+		#expect(committed)
+		let remaining = try await sync.selectForProcessing()
+		#expect(remaining.contains { $0.articleID == "remote-read" && $0.key == .read })
+		#expect(remaining.contains { $0.articleID == "remote-star" && $0.key == .starred })
+		#expect(!remaining.contains { $0.articleID == "remote-none" })
 		#expect(await sync.close())
 		try await manager.deleteAccount(account)
 	}
