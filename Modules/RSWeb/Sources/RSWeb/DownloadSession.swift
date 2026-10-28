@@ -42,6 +42,7 @@ struct HTTP4xxResponse {
 	private var taskToInfoDictionary = [URLSessionTask: DownloadInfo]()
 	private var urlsInSession = Set<URL>()
 	private let delegate: DownloadSessionDelegate
+	private let protocolClasses: [AnyClass]?
 	private var redirectCache = [URL: URL]()
 	private var queue = [URL]()
 
@@ -62,9 +63,10 @@ struct HTTP4xxResponse {
 
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "DownloadSession")
 
-	public init(delegate: DownloadSessionDelegate) {
+	public init(delegate: DownloadSessionDelegate, protocolClasses: [AnyClass]? = nil) {
 
 		self.delegate = delegate
+		self.protocolClasses = protocolClasses
 
 		super.init()
 
@@ -80,6 +82,7 @@ struct HTTP4xxResponse {
 
 	private func makeURLSession() -> URLSession {
 		let sessionConfiguration = URLSessionConfiguration.ephemeral
+		if let protocolClasses { sessionConfiguration.protocolClasses = protocolClasses }
 		sessionConfiguration.requestCachePolicy = .reloadIgnoringLocalCacheData
 		sessionConfiguration.timeoutIntervalForRequest = 15.0
 		sessionConfiguration.timeoutIntervalForResource = 60.0

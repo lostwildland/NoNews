@@ -485,8 +485,8 @@ public enum FetchType {
 
 	/// Start a refresh session without waiting or catching errors.
 	public func triggerRefreshAll() {
-		Task {
-			try? await refreshAll()
+		startBackground {
+			try? await self.refreshAll()
 		}
 	}
 
@@ -601,7 +601,6 @@ public enum FetchType {
 		#if DEBUG
 		onFixtureClosingForTesting?()
 		#endif
-		delegate.suspendNetwork()
 		let task = Task { @MainActor in
 			if activeOperations > 0 {
 				await withCheckedContinuation { operationsDrained = $0 }
@@ -610,6 +609,7 @@ public enum FetchType {
 				let tasks = Array(backgroundTasks.values)
 				for task in tasks { await task.value }
 			}
+			delegate.suspendNetwork()
 			guard opmlFile.flush() else {
 				closeTask = nil
 				return false
@@ -647,15 +647,19 @@ public enum FetchType {
 	}
 
 	func performOperation<T>(_ operation: @escaping @MainActor () async throws -> T, completion: @escaping (Result<T, Error>) -> Void) {
+		let callerWork = DatabaseWork.current
+		let finish: (Result<T, Error>) -> Void = { result in
+			DatabaseWork.$current.withValue(callerWork) { completion(result) }
+		}
 		guard startBackground({
 			do {
 				let result = try await self.withOperation { try await operation() }
-				completion(.success(result))
+				finish(.success(result))
 			} catch {
-				completion(.failure(error))
+				finish(.failure(error))
 			}
 		}) else {
-			completion(.failure(CancellationError()))
+			finish(.failure(CancellationError()))
 			return
 		}
 	}

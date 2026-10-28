@@ -33,8 +33,15 @@ import Secrets
 	var credentials: Credentials?
 	var accountSettings: AccountSettings?
 
+	#if DEBUG
+	var refreshProtocolClassesForTesting: [AnyClass]?
+	#endif
+
 	private lazy var refresher: LocalAccountRefresher = {
 		let refresher = LocalAccountRefresher()
+		#if DEBUG
+		refresher.protocolClassesForTesting = refreshProtocolClassesForTesting
+		#endif
 		refresher.delegate = self
 		NotificationCenter.default.addObserver(self, selector: #selector(progressInfoDidChange(_:)), name: .progressInfoDidChange, object: refresher)
 		return refresher
@@ -47,7 +54,12 @@ import Secrets
 		guard let account else {
 			return
 		}
-		guard progressInfo.isComplete, !Platform.isRunningUnitTests else {
+		#if DEBUG
+		let permitsUnitTestRefresh = refreshProtocolClassesForTesting != nil
+		#else
+		let permitsUnitTestRefresh = false
+		#endif
+		guard progressInfo.isComplete, (!Platform.isRunningUnitTests || permitsUnitTestRefresh) else {
 			return
 		}
 

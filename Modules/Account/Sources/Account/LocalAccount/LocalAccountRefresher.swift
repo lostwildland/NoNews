@@ -13,6 +13,7 @@ import RSParser
 import RSWeb
 import Articles
 import ArticlesDatabase
+import RSDatabase
 import ActivityLog
 import os
 
@@ -62,11 +63,19 @@ import os
 	private var outstandingParseTasks = 0
 	private var downloadSessionIsComplete = false
 
+	private var refreshWork: DatabaseWork?
+	#if DEBUG
+	var protocolClassesForTesting: [AnyClass]?
+	#endif
 	private var completion: (() -> Void)?
 	private var isSuspended = false
 
 	private lazy var downloadSession: DownloadSession = {
+		#if DEBUG
+		let session = DownloadSession(delegate: self, protocolClasses: protocolClassesForTesting)
+		#else
 		let session = DownloadSession(delegate: self)
+		#endif
 		NotificationCenter.default.addObserver(self, selector: #selector(progressInfoDidChange(_:)), name: .progressInfoDidChange, object: session)
 		return session
 	}()
@@ -86,6 +95,7 @@ import os
 	}
 
 	@MainActor private func refreshFeeds(_ feeds: Set<Feed>, completion: (() -> Void)? = nil) {
+		refreshWork = DatabaseWork.current
 		let specialCaseCutoffDate = Date().bySubtracting(hours: 25)
 		let redditURLToRefresh = Self.redditURLToRefresh(in: feeds)
 
@@ -186,6 +196,11 @@ import os
 @MainActor extension LocalAccountRefresher: DownloadSessionDelegate {
 
 	func downloadSession(_ downloadSession: DownloadSession, conditionalGetInfoFor url: URL) -> HTTPConditionalGetInfo? {
+		guard downloadSession === self.downloadSession, urlToFeedDictionary[url.absoluteString] != nil else { return nil }
+		return DatabaseWork.$current.withValue(refreshWork) { return conditionalGetInfo(downloadSession, url: url) }
+	}
+
+	private func conditionalGetInfo(_ downloadSession: DownloadSession, url: URL) -> HTTPConditionalGetInfo? {
 
 		guard let feed = urlToFeedDictionary[url.absoluteString] else {
 			assertionFailure("LocalAccountRefresher: expected feed for \(url)")
@@ -240,6 +255,11 @@ import os
 	}
 
 	func downloadSession(_ downloadSession: DownloadSession, downloadDidComplete url: URL, response: URLResponse?, data: Data, error: NSError?) {
+		guard downloadSession === self.downloadSession, urlToFeedDictionary[url.absoluteString] != nil else { return }
+		DatabaseWork.$current.withValue(refreshWork) { downloadCompleted(downloadSession, url: url, response: response, data: data, error: error) }
+	}
+
+	private func downloadCompleted(_ downloadSession: DownloadSession, url: URL, response: URLResponse?, data: Data, error: NSError?) {
 
 		guard let feed = urlToFeedDictionary[url.absoluteString] else {
 			return
@@ -364,6 +384,11 @@ import os
 	}
 
 	func downloadSession(_ downloadSession: DownloadSession, httpError statusCode: Int, url: URL) {
+		guard downloadSession === self.downloadSession, urlToFeedDictionary[url.absoluteString] != nil else { return }
+		DatabaseWork.$current.withValue(refreshWork) { httpError(downloadSession, statusCode: statusCode, url: url) }
+	}
+
+	private func httpError(_ downloadSession: DownloadSession, statusCode: Int, url: URL) {
 		guard let feed = urlToFeedDictionary[url.absoluteString] else {
 			return
 		}
@@ -415,6 +440,7 @@ import os
 
 		downloadSessionIsComplete = true
 		completeRefreshActivityIfReady()
+		refreshWork = nil
 
 		Task { @MainActor in
 			completion?()

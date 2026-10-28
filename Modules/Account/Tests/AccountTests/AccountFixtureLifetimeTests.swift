@@ -9,9 +9,121 @@ import Synchronization
 import RSCore
 @testable import Account
 
+private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
+	private final class Transfer: @unchecked Sendable {
+		let value: GatedRefreshURLProtocol
+		init(_ value: GatedRefreshURLProtocol) { self.value = value }
+	}
+	@MainActor static var onRequest: (() async -> Void)?
+	override class func canInit(with request: URLRequest) -> Bool { true }
+	override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+	override func startLoading() {
+		let transfer = Transfer(self)
+		Task { @MainActor in
+			let instance = transfer.value
+			await Self.onRequest?()
+			guard let url = instance.request.url else { return }
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["ETag": "fixture-etag"])!
+			let xml = """
+			<?xml version="1.0"?><rss version="2.0"><channel><title>Refreshed fixture</title><link>https://fixture.invalid/</link><description>Fixture</description><item><title>Refresh article</title><guid>refresh-article</guid><link>https://fixture.invalid/article</link></item></channel></rss>
+			"""
+			instance.client?.urlProtocol(instance, didReceive: response, cacheStoragePolicy: .notAllowed)
+			instance.client?.urlProtocol(instance, didLoad: Data(xml.utf8))
+			instance.client?.urlProtocolDidFinishLoading(instance)
+		}
+	}
+	override func stopLoading() {}
+}
+
 @Suite(.isolatedWebserviceResponses, .serialized) @MainActor struct AccountFixtureLifetimeTests {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
+
+	@Test func immediateRefreshDrainsOwnedDownloadAfterCloseBegins() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let delegate = try #require(account.delegate as? LocalAccountDelegate)
+		delegate.refreshProtocolClassesForTesting = [GatedRefreshURLProtocol.self]
+		let path = account.dataFolder
+		let feed = account.createFeed(with: "Before", url: "https://fixture.invalid/refresh.xml", feedID: "refresh", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(feed)
+		account.saveIfNeeded()
+		let (requested, requestSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		GatedRefreshURLProtocol.onRequest = {
+			requestSignal.yield(())
+			for await _ in release { break }
+		}
+		defer { GatedRefreshURLProtocol.onRequest = nil }
+		let releaseTask = Task { @MainActor in
+			for await _ in closing { break }
+			for await _ in requested { break }
+			releaseSignal.yield(())
+		}
+		account.triggerRefreshAll()
+		let closed = await account.closeForFixtureRemoval()
+		requestSignal.finish()
+		releaseSignal.finish()
+		await releaseTask.value
+		#expect(closed)
+		#expect(feed.lastResponseCode == 200)
+		#expect(feed.conditionalGetInfo?.etag == "fixture-etag")
+		#expect(feed.contentHash != nil)
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT title FROM articles WHERE title = 'Refresh article'") == "Refresh article")
+		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT conditionalGetInfoEtag FROM feedSettings WHERE feedID = 'refresh'") == "fixture-etag")
+		let opml = try String(contentsOfFile: path + "/Subscriptions.opml", encoding: .utf8)
+		#expect(opml.contains("Refreshed fixture"))
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func completionUsesCallerAdmissionInsteadOfProviderAdmission() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let folder = try #require(account.ensureFolder(with: "Original"))
+		let feed = account.createFeed(with: "Fixture", url: "https://fixture.invalid/completion", feedID: "completion", homePageURL: nil)
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		var externalCalls = 0
+		var inheritedCalls = 0
+		var rejectedCalls = 0
+		var leakedChange = false
+		account.addFeed(feed, to: folder) { result in
+			externalCalls += 1
+			if case .failure(let error) = result { Issue.record("Accepted callback failed: \(error)") }
+			folder.name = "Rejected"
+			leakedChange = folder.name == "Rejected"
+			account.removeFolder(folder) { result in
+				rejectedCalls += 1
+				if case .failure(let error) = result { #expect(error is CancellationError) } else { Issue.record("Unrelated callback work succeeded") }
+			}
+		}
+		account.startBackground {
+			for await _ in release { break }
+			await withCheckedContinuation { continuation in
+				account.addFeed(feed, to: folder) { result in
+					inheritedCalls += 1
+					if case .failure(let error) = result { Issue.record("Inherited callback failed: \(error)") }
+					folder.name = "Inherited"
+					continuation.resume()
+				}
+			}
+		}
+		let releaser = Task { @MainActor in
+			for await _ in closing { break }
+			releaseSignal.yield(())
+		}
+		#expect(await account.closeForFixtureRemoval())
+		await releaser.value
+		#expect(externalCalls == 1 && inheritedCalls == 1 && rejectedCalls == 1)
+		#expect(!leakedChange)
+		#expect(folder.name == "Inherited")
+		let opml = try String(contentsOfFile: account.dataFolder + "/Subscriptions.opml", encoding: .utf8)
+		#expect(opml.contains("Inherited") && !opml.contains("Rejected"))
+		try await manager.deleteAccount(account)
+	}
 
 	@Test func retainedFeedRejectsSettingsWhenAccountIsReleasedWithoutClose() async throws {
 		let manager = TestAccountManager()
