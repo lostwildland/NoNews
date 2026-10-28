@@ -303,9 +303,9 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		let row = nativeFeedRows[nativeFeedPicker.indexOfSelectedItem]
 		let mediaTitles = ["", "news", "paper", "newsletter", "podcast", "video"]
 		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem], "revision": row["revision"] ?? 0]
-		if nativeCuratorPicker.indexOfSelectedItem >= 0, nativeCuratorPicker.indexOfSelectedItem < nativeCuratorRows.count { body["curatorPromptID"] = nativeCuratorRows[nativeCuratorPicker.indexOfSelectedItem]["id"] ?? "" }
-		if nativeEditorPicker.indexOfSelectedItem >= 0, nativeEditorPicker.indexOfSelectedItem < nativeEditorRows.count { body["editorPromptID"] = nativeEditorRows[nativeEditorPicker.indexOfSelectedItem]["id"] ?? "" }
-		if nativeServicePicker.indexOfSelectedItem >= 0, nativeServicePicker.indexOfSelectedItem < nativeServiceRows.count { body["serviceID"] = nativeServiceRows[nativeServicePicker.indexOfSelectedItem]["id"] ?? "" }
+		body["curatorPromptID"] = nativeCuratorPicker.indexOfSelectedItem >= 0 && nativeCuratorPicker.indexOfSelectedItem < nativeCuratorRows.count ? nativeCuratorRows[nativeCuratorPicker.indexOfSelectedItem]["id"] : NSNull()
+		body["editorPromptID"] = nativeEditorPicker.indexOfSelectedItem >= 0 && nativeEditorPicker.indexOfSelectedItem < nativeEditorRows.count ? nativeEditorRows[nativeEditorPicker.indexOfSelectedItem]["id"] : NSNull()
+		body["serviceID"] = nativeServicePicker.indexOfSelectedItem >= 0 && nativeServicePicker.indexOfSelectedItem < nativeServiceRows.count ? nativeServiceRows[nativeServicePicker.indexOfSelectedItem]["id"] : NSNull()
 		if let threshold = Double(nativeThreshold.stringValue), 0...10 ~= threshold { body["threshold"] = threshold }
 
 		saveNativeSourcePolicy(body) { [weak self] result in

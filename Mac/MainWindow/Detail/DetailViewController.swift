@@ -102,6 +102,8 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		if case .article(let article, _) = state {
 			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak self] binding in
 				self?.nativeSourceBinding = binding
+				self?.regularWebViewController.setNativeSourceBinding(binding)
+				self?.searchWebViewController.setNativeSourceBinding(binding)
 			}
 		}
 		switch mode {

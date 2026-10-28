@@ -474,7 +474,7 @@ let appName = "NetNewsWire"
 	}
 
 
-	@objc func retryFailedNativeArticles() {
+	@IBAction func retryFailedNativeArticles(_ sender: Any? = nil) {
 		guard let failed = UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]], !failed.isEmpty else { return }
 		var queued = (UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles").flatMap { $0.data(using: .utf8) }.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] }) ?? []
 		queued.append(contentsOf: failed.map { entry in entry.filter { $0.key != "failure" && $0.key != "failedAt" } })

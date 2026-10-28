@@ -387,16 +387,16 @@ def feeds(db, method, body):
                            "processing_mode": changes.get("processingMode", values["processing_mode"]), "curator_prompt_id": changes.get("curatorPromptID", values["curator_prompt_id"]),
                            "editor_prompt_id": changes.get("editorPromptID", values["editor_prompt_id"]), "service_id": changes.get("serviceID", values["service_id"]), "threshold": changes.get("threshold", values["threshold"]),
                            "scoring_strategy": changes.get("scoringStrategy", values["scoring_strategy"]), "body_strategy": changes.get("bodyStrategy", values["body_strategy"])})
+            for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
+                if prompt_id:
+                    prompt_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.prompt." + prompt_id,)).fetchone()
+                    if prompt_row is None or json.loads(prompt_row[0]).get("role") != role:
+                        raise ValueError("Prompt role does not match feed policy")
+            if values["service_id"] and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone() is None:
+                raise ValueError("Service not found")
             if values["processing_mode"] in {"normal", "important"}:
                 if not values["media_type"] or not values["curator_prompt_id"] or not values["service_id"]:
                     raise ValueError("Enabled feed policy requires media and a Curator prompt")
-                for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
-                    if prompt_id:
-                        prompt_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.prompt." + prompt_id,)).fetchone()
-                        if prompt_row is None or json.loads(prompt_row[0]).get("role") != role:
-                            raise ValueError("Prompt role does not match feed policy")
-                if values["service_id"] and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone() is None:
-                    raise ValueError("Service not found")
                 strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
                 allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
                 if any(strategy not in allowed.get(values["media_type"], set()) for strategy in strategies):

@@ -43,6 +43,10 @@ final class DetailWebViewController: NSViewController {
 		DetailWindowState(isShowingExtractedArticle: isShowingExtractedArticle, windowScrollY: windowScrollY ?? 0)
 	}
 
+	private var nativeSourceBinding: [String: Any]? {
+		didSet { if isViewLoaded { reloadHTML() } }
+	}
+
 	var article: Article? {
 		switch state {
 		case .article(let article, _):
@@ -54,7 +58,11 @@ final class DetailWebViewController: NSViewController {
 		}
 	}
 
-	private var articleTextSize = AppDefaults.articleTextSize
+	func setNativeSourceBinding(_ binding: [String: Any]?) {
+		nativeSourceBinding = binding
+	}
+
+
 	private var isArticleContentJavascriptEnabled = AppDefaults.isArticleContentJavascriptEnabled
 
 	private var webInspectorEnabled: Bool {
@@ -384,11 +392,15 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
 		}
 
+		let nativeBanner = nativeSourceBinding.map { binding in
+			let state = binding["identity_state"] as? String ?? "unresolved"
+			return "<aside class=\"nonews-native-source\" aria-label=\"Native source context\">Native source context: \(state)</aside>"
+		} ?? ""
 		let substitutions = [
 			"title": rendering.title,
 			"baseURL": rendering.baseURL,
 			"style": rendering.style,
-			"body": rendering.html
+			"body": nativeBanner + rendering.html
 		]
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)
