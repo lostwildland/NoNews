@@ -281,6 +281,10 @@ final class ProcessingEngine {
 		let tracked = method != "GET" && !path.hasPrefix("/api/config/migration/") && path != "/api/config/render" && path != "/api/settings/processing/probe"
 		let mutation = tracked ? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased() : nil
 		if let mutation { message["mutationId"] = mutation }
+		if mutation != nil, unconfirmedMutations.count >= 32 {
+			completion(.failure(EngineError.unavailable))
+			return
+		}
 		guard let bytes = try? JSONSerialization.data(withJSONObject: message), bytes.count < limit else {
 			completion(.failure(EngineError.invalidRequest))
 			return
@@ -388,7 +392,6 @@ final class ProcessingEngine {
 					completion(.failure(error))
 					self?.forgetMutation(identity)
 				} else {
-					self?.dropMutation(identity)
 					completion(.failure(EngineError.outcomeUnknown(identity)))
 				}
 			case .success(let value):

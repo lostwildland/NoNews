@@ -411,7 +411,7 @@ class Application:
                             magpie_migration.release_report(db.db, {'snapshotId': result['snapshotId']})
                             raise magpie_migration.SnapshotExpired('Migration operation cancelled')
         except Exception as error:
-            if operation['action'] == 'mutation' and not operation.get('render'):
+            if operation['action'] == 'mutation' and not operation.get('render') and not isinstance(error, configuration.ConfigurationError):
                 try:
                     result = {'_outcome': self._write_mutation_outcome(operation['id'], 'notCommitted', 'transaction_failed')}
                     error = None

@@ -392,7 +392,8 @@ import Secrets
 	}
 
 	private func serviceLabel(_ row: [String: Any]) -> String {
-		MigrationReviewState.serviceLabel(name: row["name"] as? String ?? "Unavailable service", id: row["id"] as? String ?? "unknown")
+		let label = MigrationReviewState.serviceLabel(name: row["name"] as? String ?? "Unavailable service", id: row["id"] as? String ?? "unknown")
+		return row["credentialState"] as? String == "incomplete" ? "\(label) (Credential incomplete)" : label
 	}
 
 	private func loadPage(_ kind: String, after: String?, collected: [[String: Any]], then: @escaping ([[String: Any]]) -> Void) {
@@ -431,7 +432,11 @@ import Secrets
 			self.serviceType.selectItem(at: value["type"] as? String == "magpie" ? 0 : 1)
 			self.credential.stringValue = ""
 			let checked = value["checkedAt"] as? String ?? "never"
-			self.feedback.stringValue = value["stale"] as? Bool == true ? "Directory is stale; last checked: \(checked). Refresh to select a new target." : "Directory checked: \(checked). This does not test generation."
+			if value["credentialState"] as? String == "incomplete" {
+				self.feedback.stringValue = "Credential storage is incomplete. Save and verify the credential before refreshing the directory."
+			} else {
+				self.feedback.stringValue = value["stale"] as? Bool == true ? "Directory is stale; last checked: \(checked). Refresh to select a new target." : "Directory checked: \(checked). This does not test generation."
+			}
 		}
 	}
 

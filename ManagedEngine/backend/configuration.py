@@ -24,6 +24,12 @@ class RenderCapacityError(ValueError):
     code = 'render_too_large'
 
 
+def _credential_state(value):
+    if value.get('type') == 'magpie':
+        return 'not_required'
+    return value.get('credentialState') or 'incomplete'
+
+
 def _record(db, kind, identity):
     if not isinstance(identity, str) or len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity):
         raise ConfigurationError('Invalid identity')
@@ -31,6 +37,8 @@ def _record(db, kind, identity):
     if row is None:
         raise ConfigurationError('Configuration not found')
     value = json.loads(row[0])
+    if kind == 'service':
+        value['credentialState'] = _credential_state(value)
     if kind == 'service' and value.get('checkedAt'):
         try:
             value['stale'] = bool(value.get('error')) or (datetime.now(timezone.utc) - datetime.fromisoformat(value['checkedAt'])).total_seconds() > 300
@@ -417,7 +425,7 @@ def _list(db, kind, body):
                       (prefix + after, f'nonews.{kind}/')).fetchall()
     values = [json.loads(row[0]) for row in rows[:100]]
     if kind == 'service':
-        values = [{key: value[key] for key in ('id', 'name', 'type', 'endpoint', 'credentialState')} for value in values]
+        values = [{**value, 'credentialState': _credential_state(value)} for value in values]
     return {kind + 's': values, 'next': values[-1]['id'] if len(rows) > 100 else None}
 
 
