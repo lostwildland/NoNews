@@ -51,6 +51,7 @@ final class CloudKitReceiveStatusOperation: MainThreadOperation, @unchecked Send
 				Self.logger.debug("iCloud: Finished refreshing article statuses")
 				activityLog.didComplete(id: activityID, message: cloudKitSyncMessage(changed: totals.changed, deleted: totals.deleted))
 			} catch {
+				self.failure = error
 				Self.logger.error("iCloud: Receive status error: \(error.localizedDescription)")
 				activityLog.didFail(id: activityID, error: error)
 			}

@@ -2,6 +2,10 @@
 
 2026-10-28. Starting commit: `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`. The following initial investigation preceded the implementation described below. Issue #32 and its feature, migration, sync and UI dependencies remain open.
 
+## Coordinator receive-error correction after R17
+
+At source `65be895`, the receive operation declared `failure` and its caller checked it, but the catch path only logged the error and never assigned the result. The coordinator added that assignment so the existing completion bridge can propagate the actual refresh error. All direct operation/caller references were inspected. This one-line source correction is not runtime proof: the original owner must add a deterministic failing-refresh regression through the queued receive and caller completion, then validate it with the other R17 corrections. Full native and live CloudKit acceptance remain open.
+
 ## Evidence and scope
 
 The existing T00/T02 action logs contain SQLite disk-I/O and open-file unlink diagnostics in synthetic test accounts despite 753 passing tests. The saved T02 action log also reports `DB.sqlite3`, `FeedSettings.db` and `Sync.sqlite3` unlinked during `AccountCredentialsTest.testCreateRetrieveDelete`, so the issue is not limited to a completed Feedbin refresh. The logs do not establish a number of corrupted databases. No personal profile or production data was inspected.
