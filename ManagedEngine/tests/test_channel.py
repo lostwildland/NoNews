@@ -22,7 +22,7 @@ class Application:
     def __init__(self, *args, **kwargs):
         assert not any(k.startswith("INFORMATION_OS_") for k in os.environ)
     def handle(self, method, path, query, body):
-        if path == "/api/jobs": return {"jobs": ["x" * 65536]}
+        if path == "/api/jobs": return {"jobs": ["x" * 1310720]}
         return {"processors": 1}
 ''')
             script = root / 'stdio_service.py'
@@ -47,7 +47,7 @@ class Application:
         python = project / '.prepared/python/bin/python3'
         with tempfile.TemporaryDirectory() as root:
             process = subprocess.run([str(python), str(project / 'stdio_service.py'), root],
-                                     input='x' * 65537 + '\n', text=True, capture_output=True,
+                                     input='x' * 1310721 + '\n', text=True, capture_output=True,
                                      timeout=15, env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
             self.assertNotEqual(process.returncode, 0)
             self.assertEqual(process.stdout, '')

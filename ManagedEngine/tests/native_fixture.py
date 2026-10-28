@@ -26,7 +26,7 @@ if mode == 'malformed':
     time.sleep(10)
     sys.exit()
 if mode == 'oversize':
-    print('x' * 65537, flush=True)
+    print('x' * 1310721, flush=True)
     time.sleep(10)
     sys.exit()
 assert 'INFORMATION_OS_RAW_VAULT' not in os.environ

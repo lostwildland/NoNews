@@ -1,6 +1,6 @@
 """Managed settings-scope slice of the IO Application public dispatch."""
 from pathlib import Path
-from contextlib import closing
+from contextlib import closing, nullcontext
 import sqlite3
 import base64
 import re
@@ -8,8 +8,9 @@ import secrets
 import tempfile
 import time
 import threading
-from . import causes, settings, schema
-from .core import InformationDB, utcnow
+import json
+from . import causes, settings, schema, configuration, magpie_migration
+from .core import InformationDB, utcnow, transaction
 from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
 
 
@@ -24,6 +25,11 @@ class Application:
         self.snapshot_timer = None
         self.preparation = None
         self.preparation_timer = None
+        self.migration_lock = threading.RLock()
+        self.migration_serial = threading.Lock()
+        self.migration_operations = {}
+        self.migration_tail = None
+        self.migration_closed = False
         database.parent.mkdir(parents=True, exist_ok=True)
         if database.exists():
             with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True)) as db:
@@ -33,7 +39,9 @@ class Application:
         with InformationDB(database):
             pass
 
-    def handle(self, method: str, path: str, query: dict, body: dict):
+    def handle(self, method: str, path: str, query: dict, body: dict, *, response_budget=None, mutation_id=None, _queued=False, _connection=None):
+        if method == 'POST' and path.startswith('/api/config/migration/') and (body.get('cooperative') is True or 'operationId' in body):
+            return self._migration_operation(path.rsplit('/', 1)[-1], body, response_budget=response_budget)
         cursor = query.get('cursor') if path == '/api/jobs' else None
         if cursor and cursor.startswith('s:'):
             match = re.fullmatch(r's:([0-9a-f]{32}):([0-9]{1,12})', cursor)
@@ -42,7 +50,48 @@ class Application:
             return self._frame(int(match[2]), match[1])
         if path == '/api/jobs' and method == 'GET':
             return self._jobs(query)
-        with InformationDB(self.database) as db:
+        if not _queued and method != 'GET' and not (path == '/api/config/migration/preview' and 'snapshotId' in body):
+            if mutation_id is not None:
+                with InformationDB(self.database, read_only=True) as db:
+                    saved = self._mutation_receipt(db.db, mutation_id)
+                    if saved is not None and not self._receipt_matches(db.db, mutation_id, method, path):
+                        raise configuration.ConfigurationError('Mutation identity belongs to another operation')
+                    outcome = None if saved is not None else self._mutation_outcome(db.db, mutation_id)
+                if saved is not None:
+                    return saved
+                if outcome is not None:
+                    raise magpie_migration.MigrationBusy('Mutation has a definitive outcome')
+            with self.migration_lock:
+                busy = any(not item['done'] for item in self.migration_operations.values())
+                if mutation_id is not None or busy:
+                    pending = self._start_migration('mutation', {'method': method, 'path': path, 'query': query, 'body': body, 'response_budget': response_budget}, identity=mutation_id)
+                    return {'_pendingMutation': pending['operationId']}
+        read_only = method == 'GET' or (path == '/api/config/migration/preview' and 'snapshotId' in body)
+        with (nullcontext(_connection) if _connection is not None else InformationDB(self.database, read_only=read_only)) as db:
+            if path == '/api/config/services':
+                return configuration.service(db.db, method, body, response_budget=response_budget)
+            if path == '/api/config/prompts':
+                return configuration.prompt(db.db, method, body)
+            if path == '/api/config/history':
+                return configuration.history(db.db, body)
+            if path == '/api/config/copy':
+                return configuration.copy_prompt(db.db, body)
+            if path == '/api/config/restore':
+                return configuration.restore(db.db, body)
+            if path == '/api/config/refresh':
+                return configuration.refresh(db.db, body)
+            if path == '/api/config/references':
+                return configuration.references(db.db, method, body)
+            if path == '/api/config/render':
+                return configuration.render(db.db, body, **({'wire_budget': response_budget} if response_budget is not None else {}))
+            if path == '/api/config/bind':
+                return configuration.bind(db.db, body)
+            if path == '/api/config/import-legacy':
+                return configuration.import_legacy(db.db, body)
+            if path == '/api/config/legacy':
+                return configuration.legacy(db.db, body)
+            if path.startswith('/api/config/migration/'):
+                return magpie_migration.command(db.db, path.rsplit('/', 1)[-1], body)
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
             if path == '/api/settings/processing/probe' and method == 'POST':
@@ -129,6 +178,271 @@ class Application:
 
     def close(self):
         self._clear_snapshot()
+        with self.migration_lock:
+            self.migration_closed = True
+            operations = list(self.migration_operations.values())
+            for operation in operations:
+                operation['timer'].cancel()
+                if not operation['done'] and (operation['action'] != 'mutation' or not operation.get('started')):
+                    operation['cancel'].set()
+        for operation in operations:
+            operation['thread'].join()
+        for operation in operations:
+            if operation['action'] == 'mutation' and operation.get('result') is None and operation.get('error') is None:
+                try:
+                    with InformationDB(self.database, read_only=True) as db:
+                        committed = self._mutation_receipt(db.db, operation['id']) is not None
+                    if not committed:
+                        outcome = 'cancelled' if not operation.get('started') else 'notCommitted'
+                        operation['result'] = {'_outcome': self._write_mutation_outcome(operation['id'], outcome, 'service_stopped')}
+                except Exception:
+                    pass
+        for operation in operations:
+            if operation.get('cleanup'):
+                operation['cleanup'].join()
+            self._discard_unread_migration(operation)
+
+    def _discard_unread_migration(self, operation):
+        with self.migration_lock:
+            result = operation['result']
+            if operation['action'] != 'preview' or operation['read'] or not isinstance(result, dict) or not result.get('snapshotId'):
+                return
+            operation['read'] = True
+        with InformationDB(self.database) as db:
+            try:
+                magpie_migration.release_report(db.db, {'snapshotId': result['snapshotId']})
+            except magpie_migration.SnapshotExpired:
+                pass
+
+    def _expire_migration(self, identity):
+        with self.migration_lock:
+            operation = self.migration_operations.get(identity)
+            if not operation:
+                return
+            remaining = operation['deadline'] - time.monotonic()
+            if remaining > 0:
+                operation['timer'] = threading.Timer(remaining, self._expire_migration, args=(identity,))
+                operation['timer'].daemon = True
+                operation['timer'].start()
+                return
+            if operation['action'] != 'mutation' or not operation.get('started'):
+                operation['cancel'].set()
+        operation['thread'].join()
+        if operation.get('cleanup'):
+            operation['cleanup'].join()
+        self._discard_unread_migration(operation)
+        with self.migration_lock:
+            self.migration_operations.pop(identity, None)
+
+    def _start_migration(self, action, body, *, identity=None):
+        if self.migration_closed:
+            raise magpie_migration.SnapshotExpired('Migration service stopped')
+        for existing_id, existing in tuple(self.migration_operations.items()):
+            if existing['done'] and existing['read'] and (not existing.get('cleanup') or not existing['cleanup'].is_alive()):
+                existing['timer'].cancel()
+                del self.migration_operations[existing_id]
+        if len(self.migration_operations) >= 32:
+            raise magpie_migration.MigrationBusy('Too many migration operations')
+        if action == 'preview':
+            for existing in self.migration_operations.values():
+                if existing['action'] == 'preview' and not existing['done']:
+                    existing['cancel'].set()
+        if identity is not None and (not isinstance(identity, str) or not re.fullmatch(r'[0-9a-f]{32}', identity) or identity in self.migration_operations):
+            raise configuration.ConfigurationError('Invalid mutation identity')
+        operation = {'id': identity or secrets.token_hex(16), 'action': action, 'cancel': threading.Event(),
+                     'done': False, 'read': False, 'error': None, 'result': None,
+                     'deadline': time.monotonic() + 120}
+        previous = self.migration_tail
+        operation['thread'] = threading.Thread(target=self._run_migration, args=(operation, dict(body), previous), daemon=True)
+        operation['timer'] = threading.Timer(120, self._expire_migration, args=(operation['id'],))
+        operation['timer'].daemon = True
+        self.migration_operations[operation['id']] = operation
+        self.migration_tail = operation['thread']
+        operation['thread'].start()
+        operation['timer'].start()
+        return {'state': 'running', 'operationId': operation['id']}
+
+    def _migration_operation(self, action, body, *, response_budget=None):
+        if action not in {'preview', 'pause', 'apply', 'release', 'operation', 'ack'}:
+            raise configuration.ConfigurationError('Invalid migration operation')
+        if action == 'operation' and 'operationId' in body:
+            identity = body['operationId']
+            if not isinstance(identity, str) or not re.fullmatch(r'[0-9a-f]{32}', identity):
+                raise configuration.ConfigurationError('Invalid migration operation')
+            with self.migration_lock:
+                present = identity in self.migration_operations
+            if not present:
+                with InformationDB(self.database, read_only=True) as db:
+                    result = self._mutation_receipt(db.db, identity)
+                    outcome = None if result is not None else self._mutation_outcome(db.db, identity)
+                if result is not None:
+                    return {'state': 'complete', 'operationId': identity, 'result': result}
+                if outcome and outcome.get('outcome') == 'rejected':
+                    return {'state': 'rejected', 'operationId': identity, **outcome}
+                return {'state': 'notSaved', 'operationId': identity, **outcome} if outcome else {'state': 'unknown', 'operationId': identity}
+        with self.migration_lock:
+            if 'operationId' not in body:
+                if action == 'operation':
+                    raise configuration.ConfigurationError('Invalid migration operation')
+                return self._start_migration(action, body)
+            identity = body['operationId']
+            if not isinstance(identity, str) or not re.fullmatch(r'[0-9a-f]{32}', identity):
+                raise configuration.ConfigurationError('Invalid migration operation')
+            operation = self.migration_operations.get(identity)
+            if not operation and action == 'operation':
+                return {'state': 'unknown', 'operationId': identity}
+            if not operation or action != ('operation' if operation['action'] == 'mutation' else operation['action']):
+                raise magpie_migration.SnapshotExpired('Migration operation expired')
+            operation['deadline'] = time.monotonic() + 120
+            if body.get('cancel') is True and operation['action'] == 'mutation' and not operation.get('started'):
+                operation['cancel'].set()
+            if body.get('cancel') is True and operation['action'] not in {'apply', 'mutation'}:
+                operation['cancel'].set()
+                if operation['done'] and operation['action'] == 'preview':
+                    if not operation['read']:
+                        if not operation.get('cleanup'):
+                            operation['cleanup'] = threading.Thread(target=self._discard_unread_migration, args=(operation,), daemon=True)
+                            operation['cleanup'].start()
+                    raise magpie_migration.SnapshotExpired('Migration operation cancelled')
+            if not operation['done']:
+                return {'state': 'running', 'operationId': operation['id']}
+            if operation['cancel'].is_set() and operation['action'] == 'mutation' and not operation.get('started'):
+                operation['read'] = True
+                return {'state': 'notSaved', 'operationId': identity, **(operation.get('result') or {'outcome': 'cancelled'})}
+            if operation['cancel'].is_set() and operation['action'] == 'preview':
+                if operation['error']:
+                    operation['read'] = True
+                raise magpie_migration.SnapshotExpired('Migration operation cancelled')
+            operation['read'] = True
+            if operation['error']:
+                raise operation['error']
+            if operation['action'] == 'mutation' and isinstance(operation.get('result'), dict) and operation['result'].get('_outcome'):
+                outcome = operation['result']['_outcome']
+                state = 'rejected' if outcome.get('outcome') == 'rejected' else 'notSaved'
+                return {'state': state, 'operationId': identity, **outcome}
+            if operation.get('render') and response_budget is not None:
+                encoded = json.dumps({'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}, separators=(',', ':'), ensure_ascii=True)
+                if len(encoded) > response_budget:
+                    raise configuration.RenderCapacityError('Rendered response exceeds transport capacity')
+            return {'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}
+
+    @staticmethod
+    def _mutation_receipt(db, identity):
+        row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + identity,)).fetchone()
+        if not row:
+            return None
+        receipt = json.loads(row[0])
+        result = receipt['result']
+        if result.get('id') and result.get('versionId'):
+            version = db.execute('SELECT content FROM prompt_versions WHERE id=? AND role=?', (result['versionId'], result.get('role'))).fetchone()
+            if version is None:
+                raise configuration.ConfigurationError('Saved prompt version unavailable')
+            result['text'] = version[0]
+        return result
+
+    @staticmethod
+    def _mutation_outcome(db, identity):
+        row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-outcome.' + identity,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def _write_mutation_outcome(self, identity, outcome, reason=None, code=None):
+        with InformationDB(self.database) as db, transaction(db.db):
+            existing = self._mutation_outcome(db.db, identity)
+            if existing is None:
+                count = db.db.execute("SELECT count(*) FROM app_settings WHERE key>=? AND key<?", ('nonews.mutation-outcome.', 'nonews.mutation-outcome/')).fetchone()[0]
+                if count >= 1024:
+                    raise magpie_migration.MigrationBusy('Mutation outcomes require acknowledgement')
+                value = {'outcome': outcome}
+                if reason:
+                    value['reason'] = reason
+                if code:
+                    value['code'] = code
+                magpie_migration.save(db.db, 'nonews.mutation-outcome.' + identity, json.dumps(value))
+            return existing or value
+
+    @staticmethod
+    def _receipt_matches(db, identity, method, path):
+        row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + identity,)).fetchone()
+        if not row:
+            return True
+        receipt = json.loads(row[0])
+        return receipt.get('method') == method and receipt.get('path') == path
+
+    def _run_migration(self, operation, body, previous):
+        result = None
+        try:
+            if previous:
+                previous.join()
+            with self.migration_serial:
+                with self.migration_lock:
+                    if operation['cancel'].is_set():
+                        if operation['action'] == 'mutation':
+                            result = {'_outcome': self._write_mutation_outcome(operation['id'], 'cancelled')}
+                            operation['started'] = False
+                        else:
+                            raise magpie_migration.SnapshotExpired('Migration operation cancelled')
+                    else:
+                        operation['started'] = True
+                if operation['cancel'].is_set() and operation['action'] == 'mutation':
+                    pass
+                elif operation['action'] == 'mutation':
+                    operation['render'] = body['path'] == '/api/config/render'
+                    if operation['render']:
+                        result = self.handle(body['method'], body['path'], body['query'], body['body'], response_budget=body.get('response_budget'), _queued=True)
+                    else:
+                        with InformationDB(self.database) as db, transaction(db.db):
+                            if not self._receipt_matches(db.db, operation['id'], body['method'], body['path']):
+                                raise configuration.ConfigurationError('Mutation identity belongs to another operation')
+                            result = self._mutation_receipt(db.db, operation['id'])
+                            if result is None:
+                                if db.db.execute("SELECT count(*) FROM app_settings WHERE key>=? AND key<?", ('nonews.mutation-receipt.', 'nonews.mutation-receipt/')).fetchone()[0] >= 1024:
+                                    raise magpie_migration.MigrationBusy('Mutation receipts require acknowledgement')
+                                result = self.handle(body['method'], body['path'], body['query'], body['body'], response_budget=body.get('response_budget'), _queued=True, _connection=db)
+                                receipt = dict(result)
+                                receipt.pop('text', None)
+                                receipt = {'method': body['method'], 'path': body['path'], 'result': receipt}
+                                magpie_migration.save(db.db, 'nonews.mutation-receipt.' + operation['id'], json.dumps(receipt))
+                elif operation['action'] == 'ack':
+                    identity = body.get('receiptId')
+                    if not isinstance(identity, str) or not re.fullmatch(r'[0-9a-f]{32}', identity):
+                        raise configuration.ConfigurationError('Invalid receipt')
+                    with InformationDB(self.database) as db, transaction(db.db):
+                        db.db.execute('DELETE FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + identity,))
+                        db.db.execute('DELETE FROM app_settings WHERE key=?', ('nonews.mutation-outcome.' + identity,))
+                    result = {'acknowledged': True}
+                else:
+                    with InformationDB(self.database) as db:
+                        db.db.set_progress_handler(lambda: int(operation['cancel'].is_set()), 1000)
+                        result = magpie_migration.command(db.db, operation['action'], body, operation_id=operation['id'])
+                        db.db.set_progress_handler(None, 0)
+                        if operation['cancel'].is_set() and operation['action'] == 'preview' and isinstance(result, dict) and result.get('snapshotId'):
+                            magpie_migration.release_report(db.db, {'snapshotId': result['snapshotId']})
+                            raise magpie_migration.SnapshotExpired('Migration operation cancelled')
+        except Exception as error:
+            if operation['action'] == 'mutation' and not operation.get('render') and isinstance(error, configuration.ConfigurationError):
+                try:
+                    result = {'_outcome': self._write_mutation_outcome(operation['id'], 'rejected', str(error), getattr(error, 'code', 'invalid_configuration'))}
+                    error = None
+                except Exception:
+                    pass
+            elif operation['action'] == 'mutation' and not operation.get('render'):
+                try:
+                    result = {'_outcome': self._write_mutation_outcome(operation['id'], 'notCommitted', 'transaction_failed')}
+                    error = None
+                except Exception:
+                    pass
+            if operation['cancel'].is_set():
+                error = magpie_migration.SnapshotExpired('Migration operation cancelled')
+            with self.migration_lock:
+                if result is not None:
+                    operation['result'] = result
+                operation['error'] = error
+        else:
+            with self.migration_lock:
+                operation['result'] = result
+        finally:
+            with self.migration_lock:
+                operation['done'] = True
 
     @staticmethod
     def _steps(iterator, cooperative):

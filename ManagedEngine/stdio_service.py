@@ -6,21 +6,51 @@ import sqlite3
 from pathlib import Path
 import sys
 
-MAX_MESSAGE = 65536
+# 200,000 UTF-8 bytes can expand to 1,200,000 bytes when JSON-escaped.
+MAX_MESSAGE = 1_310_720
+MAX_REFUSAL_PARSE = 8 * 1024 * 1024
 ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
-           ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe')}
+           ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe'),
+           ('GET', '/api/config/services'), ('PUT', '/api/config/services'),
+           ('GET', '/api/config/prompts'), ('PUT', '/api/config/prompts'),
+           ('GET', '/api/config/history'), ('POST', '/api/config/copy'), ('POST', '/api/config/restore'),
+           ('POST', '/api/config/refresh'), ('DELETE', '/api/config/services'), ('DELETE', '/api/config/prompts'),
+           ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
+           ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
+           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release'),
+           ('POST', '/api/config/migration/operation'), ('POST', '/api/config/migration/ack')}
 
 
 def read_message():
     line = sys.stdin.buffer.readline(MAX_MESSAGE + 1)
     if not line:
         return None
-    if len(line) > MAX_MESSAGE or not line.endswith(b'\n'):
-        raise ValueError('invalid message')
-    message = json.loads(line)
+    oversized = len(line) > MAX_MESSAGE or not line.endswith(b'\n')
+    if oversized:
+        data = bytearray(line)
+        while not line.endswith(b'\n'):
+            line = sys.stdin.buffer.readline(65536)
+            if not line:
+                raise ValueError('incomplete message')
+            if data is not None:
+                if len(data) + len(line) <= MAX_REFUSAL_PARSE:
+                    data.extend(line)
+                else:
+                    data = None
+        if data is None:
+            return (None, True)
+        line = data
+    try:
+        message = json.loads(line)
+    except (ValueError, UnicodeError, RecursionError):
+        if oversized:
+            return (None, True)
+        raise
     if not isinstance(message, dict):
+        if oversized:
+            return (None, True)
         raise ValueError('invalid message')
-    return message
+    return message, oversized
 
 
 def send(message):
@@ -38,7 +68,7 @@ def main():
         return 2
     try:
         bootstrap = read_message()
-        token = bootstrap.get('token') if bootstrap else None
+        token = bootstrap[0].get('token') if bootstrap and bootstrap[0] and not bootstrap[1] else None
         if not isinstance(token, str) or len(token) < 24 or not token.isascii():
             return 2
         for key in tuple(os.environ):
@@ -75,9 +105,13 @@ def main():
         send({'status': 'ready'})
         try:
             while True:
-                message = read_message()
-                if message is None:
+                frame = read_message()
+                if frame is None:
                     return 0
+                message, oversized = frame
+                if message is None:
+                    send({'error': 'invalid message'})
+                    continue
                 supplied = message.get('token')
                 if not isinstance(supplied, str) or not supplied.isascii() or not hmac.compare_digest(token, supplied):
                     send({'error': 'unauthorized'})
@@ -87,7 +121,14 @@ def main():
                     send({'error': 'invalid request id'})
                     continue
                 correlation = {} if request_id is None else {'id': request_id}
+                if oversized:
+                    send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration'})
+                    continue
                 method, path = message.get('method'), message.get('path')
+                mutation_id = message.get('mutationId')
+                if mutation_id is not None and (not isinstance(mutation_id, str) or len(mutation_id) != 32 or any(c not in '0123456789abcdef' for c in mutation_id)):
+                    send({**correlation, 'error': 'invalid operation'})
+                    continue
                 body = message.get('body', {})
                 query = message.get('query', {})
                 if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
@@ -98,10 +139,35 @@ def main():
                     send({**correlation, 'error': 'invalid query'})
                     continue
                 try:
-                    send({**correlation, 'result': app.handle(method, path, query, body)})
+                    if path == '/api/config/render':
+                        envelope = json.dumps({**correlation, 'result': {'text': ''}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1, mutation_id=mutation_id)
+                    elif path == '/api/config/migration/operation':
+                        envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) + 1)
+                    elif method == 'GET' and path == '/api/config/services':
+                        envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1)
+                    else:
+                        if mutation_id is None:
+                            result = app.handle(method, path, query, body)
+                        else:
+                            result = app.handle(method, path, query, body, mutation_id=mutation_id)
+                    send({**correlation, 'result': result})
                 except ValueError as error:
                     if getattr(error, 'code', None) == 'job_record_too_large':
                         send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
+                    elif getattr(error, 'code', None) == 'invalid_configuration':
+                        details = {'placeholders': error.names} if hasattr(error, 'names') else {}
+                        send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration', **details})
+                    elif getattr(error, 'code', None) == 'render_too_large':
+                        send({**correlation, 'error': 'rendered response is too large', 'code': 'render_too_large'})
+                    elif getattr(error, 'code', None) == 'snapshot_expired':
+                        send({**correlation, 'error': 'migration report expired', 'code': 'snapshot_expired'})
+                    elif getattr(error, 'code', None) == 'migration_busy':
+                        send({**correlation, 'error': 'migration is in progress', 'code': 'migration_busy'})
+                    elif getattr(error, 'code', None) == 'snapshot_capacity':
+                        send({**correlation, 'error': 'migration report exceeds snapshot capacity', 'code': 'snapshot_capacity'})
                     else:
                         send({**correlation, 'error': 'invalid query'})
                 except Exception:
