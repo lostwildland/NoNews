@@ -463,8 +463,7 @@ let appName = "NetNewsWire"
 				}
 				if case .failure(let error) = result {
 					self.recordNativeArticleFailure(body, error: String(describing: error))
-					self.removeNativeArticleFromQueue(body)
-					sendNext()
+					self.nativeArticleDrainActive = false
 					return
 				}
 			}
