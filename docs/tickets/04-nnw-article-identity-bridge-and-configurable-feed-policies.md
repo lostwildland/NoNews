@@ -22,8 +22,9 @@ A native subscription can be mapped to IO observations and configured for media,
 
 [Native source identity and processing contexts](../specs/native-source-identity.md) specifies namespaced native observation bindings, independent source contexts, coherent result selection, preserved legacy pins and the public bridge checks. Current IO's single per-item pin/latest-result lookup does not already implement these requirements.
 
-## Blocked by
+## Platform boundary
 
+T04 implements the managed native source bridge for the macOS ProcessingEngine, because that is the managed runtime delivered by T03. iOS article lifecycle persistence and managed-engine handoff are owned by T26; T04 does not claim iOS observation delivery or iOS processing UI acceptance. The shared identity and policy schema is designed for that later client without changing iOS read/Star behavior.
 - https://github.com/lostwildland/NoNews/issues/5
 
 ## Delivery contract

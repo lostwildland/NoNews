@@ -53,6 +53,14 @@ class NativeSourceTest(unittest.TestCase):
         self.assertEqual(repeated['identity_state'], 'verified')
         self.assertEqual(repeated['item_id'], original['item_id'])
         self.assertEqual(len(repeated['identityEvidence']), 1)
+        self.assertEqual(repeated['identityEvidence'][0]['raw_identity_value'], 'https://example.com/story')
+
+    def test_identity_must_match_media_type(self):
+        with self.assertRaises(ValueError):
+            native_source.observe(self.db, {
+                'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+                'title': 'Wrong media', 'mediaType': 'paper', 'identityType': 'video', 'identityValue': 'video-id-1',
+            })
 
     def test_policy_is_pinned_into_new_processing_context(self):
         native_source.feeds(self.db, 'PUT', {'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'title': 'Named feed', 'curatorPromptID': 'curator', 'threshold': 7})
@@ -111,7 +119,7 @@ class NativeSourceTest(unittest.TestCase):
             db.commit()
             db.close()
             with InformationDB(path) as migrated:
-                self.assertEqual(schema.version(migrated.db), 43)
+                self.assertEqual(schema.version(migrated.db), 44)
                 self.assertIsNotNone(migrated.db.execute("SELECT 1 FROM sqlite_master WHERE name='native_source_observations'").fetchone())
                 self.assertEqual(migrated.db.execute("SELECT title FROM feeds WHERE id='f'").fetchone()[0], 'Feed')
 

@@ -220,6 +220,7 @@ let appName = "NetNewsWire"
 
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(nativeProcessingEngineDidChange(_:)), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
 		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
 			MainActor.assumeIsolated {
 				self.userDefaultsDidChange()
@@ -396,38 +397,68 @@ let appName = "NetNewsWire"
 	}
 
 	@objc func accountDidDownloadArticles(_ note: Notification) {
-		guard ProcessingEngine.shared.state == .ready else { return }
 		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? Set<Article>) ?? [])
 			.union((note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>) ?? [])
 		guard !articles.isEmpty else { return }
-		let namespaceDefaultsKey = "NoNews.NativeSource.InstallationNamespace"
-		let namespace: String = if let saved = UserDefaults.standard.string(forKey: namespaceDefaultsKey), !saved.isEmpty {
+		let namespaceKey = "NoNews.NativeSource.InstallationNamespace"
+		let namespace: String = if let saved = UserDefaults.standard.string(forKey: namespaceKey), !saved.isEmpty {
 			saved
 		} else {
 			let generated = "mac-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-			UserDefaults.standard.set(generated, forKey: namespaceDefaultsKey)
+			UserDefaults.standard.set(generated, forKey: namespaceKey)
 			generated
 		}
-		for article in articles {
-			var body: [String: Any] = [
-				"namespace": namespace,
-				"accountID": article.accountID,
-				"feedID": article.feedID,
-				"articleID": article.articleID,
-				"uniqueID": article.uniqueID,
-				"title": article.title ?? "",
-				"originalURL": article.rawLink ?? "",
-				"feedURL": article.feedID
-			]
-			if let date = article.datePublished {
-				body["publishedAt"] = ISO8601DateFormatter().string(from: date)
+		let bodies = articles.map { article -> [String: Any] in
+			var body: [String: Any] = ["namespace": namespace, "accountID": article.accountID, "feedID": article.feedID,
+				"articleID": article.articleID, "uniqueID": article.uniqueID, "title": article.title ?? "",
+				"originalURL": article.rawLink ?? "", "feedURL": article.feedID]
+			if let rawLink = article.rawLink, !rawLink.isEmpty {
+				body["identityType"] = "url"
+				body["identityValue"] = rawLink
 			}
-			ProcessingEngine.shared.observeNativeArticle(body) { result in
-				if case .failure(let error) = result {
-					Self.logger.error("Native article bridge failed: \(String(describing: error), privacy: .public)")
+			if let date = article.datePublished { body["publishedAt"] = ISO8601DateFormatter().string(from: date) }
+			return body
+		}
+		enqueueNativeArticleBodies(bodies)
+		drainNativeArticleQueue()
+	}
+
+	private func enqueueNativeArticleBodies(_ bodies: [[String: Any]]) {
+		var queued: [[String: Any]] = []
+		if let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), let saved = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+			queued = saved
+		}
+		queued.append(contentsOf: bodies)
+		if queued.count > 256 { queued.removeFirst(queued.count - 256) }
+		saveNativeArticleQueue(queued)
+	}
+
+	private func drainNativeArticleQueue() {
+		guard ProcessingEngine.shared.state == .ready else { return }
+		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
+			let data = text.data(using: .utf8), let queued = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], !queued.isEmpty else { return }
+		var remaining = queued
+		func sendNext() {
+			guard !remaining.isEmpty, ProcessingEngine.shared.state == .ready else { return }
+			ProcessingEngine.shared.observeNativeArticle(remaining[0]) { [weak self] result in
+				guard let self else { return }
+				if case .success = result {
+					remaining.removeFirst()
+					self.saveNativeArticleQueue(remaining)
+					sendNext()
 				}
 			}
 		}
+		sendNext()
+	}
+
+	private func saveNativeArticleQueue(_ bodies: [[String: Any]]) {
+		guard let data = try? JSONSerialization.data(withJSONObject: bodies), let text = String(data: data, encoding: .utf8) else { return }
+		UserDefaults.standard.set(text, forKey: "NoNews.NativeSource.PendingArticles")
+	}
+
+	@objc func nativeProcessingEngineDidChange(_ note: Notification) {
+		drainNativeArticleQueue()
 	}
 
 	@objc func feedSettingDidChange(_ note: Notification) {

@@ -55,7 +55,7 @@ for line in sys.stdin:
     if path == '/api/settings/processing/probe':
         result = {'writable': True}
     elif path == '/api/status':
-        result = {'schemaVersion': 43}
+        result = {'schemaVersion': 44}
     elif path == '/api/jobs':
         cursor = request.get('query', {}).get('cursor')
         if cursor in {'capacity', 'invalid', 'unknown'}:

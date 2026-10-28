@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS native_observation_identities(
   media_type TEXT NOT NULL,
   identity_type TEXT NOT NULL,
   identity_value TEXT NOT NULL,
+  raw_identity_value TEXT NOT NULL,
   evidence_state TEXT NOT NULL CHECK(evidence_state IN ('verified','conflict')),
   observed_at TEXT NOT NULL,
   UNIQUE(observation_id, media_type, identity_type, identity_value)
@@ -96,6 +97,8 @@ def ensure_schema(db) -> None:
     for name, declaration in additions.items():
         if name not in columns:
             db.execute(f"ALTER TABLE native_processing_contexts ADD COLUMN {name} {declaration}")
+    if "raw_identity_value" not in {row[1] for row in db.execute("PRAGMA table_info(native_observation_identities)")}:
+        db.execute("ALTER TABLE native_observation_identities ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
     if "service_id" not in policy_columns:
         db.execute("ALTER TABLE native_feed_policies ADD COLUMN service_id TEXT")
@@ -146,7 +149,7 @@ def _verified_identity(body):
             raise ValueError("Unsupported video identity")
     else:
         raise ValueError("Unsupported content identity type")
-    return identity_type, value
+    return identity_type, value, _text(body.get("identityValue", ""), "identity value", required=True, maximum=2048)
 
 
 def _observation_id(namespace, account_id, feed_id, article_id):
@@ -192,11 +195,19 @@ def observe(db, body):
     original_url = _text(body.get("originalURL", ""), "original URL", maximum=2048)
     published = _text(body.get("publishedAt", ""), "published date", maximum=128) or None
     media_type = _text(body.get("mediaType", ""), "media type", maximum=32).lower()
+    if not media_type:
+        policy = db.execute("SELECT media_type FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()
+        media_type = policy[0] if policy and policy[0] else ""
     if media_type and media_type not in MEDIA_TYPES:
         raise ValueError("Unsupported media type")
     identity = _verified_identity(body)
     if identity and not media_type:
         raise ValueError("Verified identity requires media type")
+    if identity:
+        identity_type = identity[0]
+        compatible = {"url": MEDIA_TYPES, "doi": {"paper", "news"}, "arxiv": {"paper"}, "video": {"video"}}
+        if media_type not in compatible.get(identity_type, set()):
+            raise ValueError("Identity is incompatible with media type")
     observation_id = _observation_id(namespace, account_id, feed_id, article_id)
     now = utcnow()
     with transaction(db):
@@ -205,9 +216,9 @@ def observe(db, body):
         state = "unresolved"
         identity_type = identity_value = ""
         if identity:
-            identity_type, identity_value = identity
+            identity_type, identity_value, raw_identity_value = identity
             prior_identity = (existing["identity_type"], existing["identity_value"]) if existing and existing["identity_type"] else None
-            if existing and existing["item_id"] and prior_identity and prior_identity != identity:
+            if existing and existing["item_id"] and prior_identity and prior_identity != (identity_type, identity_value):
                 state = "conflict"
                 item_id = existing["item_id"]
             else:
@@ -222,8 +233,8 @@ def observe(db, body):
                 item_id = existing["item_id"] if existing else None
         if existing:
             if identity:
-                db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?)",
-                           (observation_id, media_type, identity_type, identity_value, state if state in {"verified", "conflict"} else "verified", now))
+                db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
+                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
             prior_state = existing["identity_state"]
             if not identity and prior_state in {"verified", "conflict"}:
                 state = prior_state
@@ -237,8 +248,8 @@ def observe(db, body):
                        (observation_id, namespace, account_id, feed_id, article_id, unique_id, feed_url, title, original_url,
                         published, item_id, state, identity_type, identity_value, now, now))
             if identity:
-                db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?)",
-                           (observation_id, media_type, identity_type, identity_value, state if state in {"verified", "conflict"} else "verified", now))
+                db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
+                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
@@ -256,7 +267,7 @@ def observation(db, identity):
         raise ValueError("Observation not found")
     result = dict(row)
     result["contexts"] = [dict(item) for item in db.execute("SELECT * FROM native_processing_contexts WHERE observation_id=? ORDER BY created_at,id", (identity,))]
-    result["identityEvidence"] = [dict(item) for item in db.execute("SELECT media_type,identity_type,identity_value,evidence_state,observed_at FROM native_observation_identities WHERE observation_id=? ORDER BY observed_at,id", (identity,))]
+    result["identityEvidence"] = [dict(item) for item in db.execute("SELECT media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at FROM native_observation_identities WHERE observation_id=? ORDER BY observed_at,id", (identity,))]
     return result
 
 

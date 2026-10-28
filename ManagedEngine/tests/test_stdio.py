@@ -27,7 +27,7 @@ class ManagedServiceTest(unittest.TestCase):
             self.assertEqual(responses[2]['error'], 'unauthorized')
             self.assertEqual(responses[3]['error'], 'invalid request id')
             self.assertEqual(responses[4], {'error': 'invalid message'})
-            self.assertEqual(responses[5]['result']['schemaVersion'], 43)
+            self.assertEqual(responses[5]['result']['schemaVersion'], 44)
 
     def test_native_routes_are_reachable_through_authenticated_stdio(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
@@ -72,7 +72,7 @@ class ManagedServiceTest(unittest.TestCase):
                                      env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
             self.assertEqual(process.returncode, 0, process.stderr)
             replies = [json.loads(line) for line in process.stdout.splitlines()]
-            self.assertEqual(replies[1]['result']['schemaVersion'], 43)
+            self.assertEqual(replies[1]['result']['schemaVersion'], 44)
             self.assertEqual(replies[2]['result']['processors'], 1)
 
     @unittest.skipUnless(os.environ.get('IO_TEST_PYTHON') and os.environ.get('IO_TEST_SOURCE'),

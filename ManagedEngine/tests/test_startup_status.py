@@ -251,7 +251,7 @@ class StartupStatusTest(unittest.TestCase):
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news',?,'2026','2026','2026','2026')", ('x'*20000,))
                 db.executemany("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,error) VALUES (?,'item','curator',?,'failed','2026','2026','2026',?)", [(str(i), str(i), 'e'*20000) for i in range(201)])
             response = run([{'token':token},{'id':1,'token':token,'method':'GET','path':'/api/status'}])
-            self.assertEqual(response[1], {'id':1, 'result':{'schemaVersion':43}})
+            self.assertEqual(response[1], {'id':1, 'result':{'schemaVersion':44}})
             full = run([{'token':token},{'id':2,'token':token,'method':'GET','path':'/api/jobs'}])
             self.assertLess(len(json.dumps(full[1])), 65536)
             self.assertIsNotNone(full[1]['result']['next'])

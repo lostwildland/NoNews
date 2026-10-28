@@ -12,7 +12,7 @@ for line in sys.stdin:
     mode = (root / 'mode').read_text()
     result = {}
     if path == '/api/status':
-        result = {'schemaVersion': 43}
+        result = {'schemaVersion': 44}
     elif path == '/api/settings/processing':
         result = {'processors': 1}
     elif path == '/api/settings/processing/probe':
