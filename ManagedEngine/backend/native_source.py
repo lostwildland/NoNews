@@ -322,7 +322,9 @@ def replay(db, body):
         raise ValueError("Context not found")
     if row[8] not in {"normal", "important"} or row[12] is None:
         raise ValueError("Current source policy is unavailable or disabled for replay")
-    observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
+    original_media = db.execute("SELECT media_type FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
+    if original_media and original_media != row[7]:
+        raise ValueError("Current media policy is incompatible with historical context")
     replay_context_id = uuid.uuid4().hex
     now = utcnow()
     db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
@@ -351,12 +353,15 @@ def complete_job(db, body):
     stage = _text(body.get("stage"), "stage", required=True, maximum=32)
     result = body.get("result")
     claimed_generation = body.get("decisionGeneration")
-    if not isinstance(claimed_generation, int) or stage not in {"curator", "editor", "material"} or not isinstance(result, dict):
-        raise ValueError("Invalid native completion")
+    if stage != "curator" or not isinstance(result, dict) or not isinstance(result.get("run_id"), str):
+        raise ValueError("Native completion must provide a Curator run")
     with transaction(db):
         row = db.execute("SELECT j.decision_generation,j.native_context_id,j.intent_json FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND o.namespace=?", (job_id, namespace)).fetchone()
         if row is None or row[1] != context_id or row[0] != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
             raise ValueError("Native completion was revoked or mismatched")
+        run = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result["run_id"],)).fetchone()
+        if run is None or run[0] != db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]:
+            raise ValueError("Curator result does not belong to native context")
         db.execute("INSERT OR REPLACE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) SELECT ?,item_id,?,?,?,? FROM native_processing_contexts WHERE id=?", (job_id, stage, "ready", json.dumps(result), utcnow(), context_id))
         db.execute("UPDATE processing_jobs SET status='succeeded',result_json=?,updated_at=? WHERE id=?", (json.dumps(result), utcnow(), job_id))
     return {"jobID": job_id, "contextID": context_id, "stage": stage, "status": "ready"}
@@ -498,7 +503,7 @@ def feeds(db, method, body):
                         service_value = configuration._record(db, "service", values["service_id"])
                     else:
                         service_value = json.loads(service_row[0])
-                    if service_value.get("type") != "magpie" and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt")):
+                    if len(values["service_id"]) == 32 and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt")):
                         raise ValueError("Service binding is unavailable")
 
                 strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
