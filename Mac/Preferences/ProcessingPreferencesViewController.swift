@@ -580,6 +580,9 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			actionButton.title = NSLocalizedString("Retry", comment: "Processing action")
 			actionButton.isEnabled = true
 		}
+		if engine.state != .ready {
+			clearNativeSourceControls()
+		}
 		setEnabled(engine.state == .ready, in: configurationTabs)
 		updateCredentialAvailability()
 		role.isEnabled = engine.state == .ready && currentPrompt == nil
