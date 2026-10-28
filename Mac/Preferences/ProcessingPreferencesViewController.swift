@@ -333,39 +333,51 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			self.nativeFeedPicker.addItems(withTitles: feeds.map { ($0["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? ($0["feed_id"] as? String ?? "") })
 			if !feeds.isEmpty { self.nativeFeedPicker.selectItem(at: 0); self.nativeFeedChanged() }
 			self.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
-			self.request("GET", "/api/config/prompts", ["role": "curator"]) { value in
+			self.request("GET", "/api/config/prompts", ["role": "curator"], onFailure: {
 				guard self.nativeSourceGeneration == generation else { return }
-				let rows = value["prompts"] as? [[String: Any]] ?? []
-				self.nativeCuratorRows = rows
+				self.nativeCuratorRows = []; self.nativeCuratorPicker.removeAllItems()
+			}, then: { value in
+				guard self.nativeSourceGeneration == generation else { return }
+				let rows = (value["prompts"] as? [[String: Any]] ?? []).filter { ($0["role"] as? String) == "curator" }
 				self.nativeCuratorPicker.removeAllItems()
 				self.nativeCuratorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
-			}
-			self.request("GET", "/api/config/prompts", ["role": "editor"]) { value in
+			})
+			self.request("GET", "/api/config/prompts", ["role": "editor"], onFailure: {
 				guard self.nativeSourceGeneration == generation else { return }
-				let rows = value["prompts"] as? [[String: Any]] ?? []
-				self.nativeEditorRows = rows
+				self.nativeEditorRows = []; self.nativeEditorPicker.removeAllItems()
+			}, then: { value in
+				guard self.nativeSourceGeneration == generation else { return }
+				let rows = (value["prompts"] as? [[String: Any]] ?? []).filter { ($0["role"] as? String) == "editor" }
 				self.nativeEditorPicker.removeAllItems()
 				self.nativeEditorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
-			}
-			self.request("GET", "/api/config/services", [:]) { value in
+			})
+			self.request("GET", "/api/config/services", [:], onFailure: {
+				guard self.nativeSourceGeneration == generation else { return }
+				self.nativeServiceRows = []; self.nativeServicePicker.removeAllItems()
+			}, then: { value in
 				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["services"] as? [[String: Any]] ?? []
 				self.nativeServiceRows = rows
 				self.nativeServicePicker.removeAllItems()
 				self.nativeServicePicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
-			}
+			})
 		}
 	}
 
 	private func clearNativeSourceControls() {
 		nativeFeedRows = []
+		nativeCuratorRows = []
+		nativeEditorRows = []
+		nativeServiceRows = []
 		nativeFeedPicker.removeAllItems()
-		nativeCuratorPicker.selectItem(at: -1)
-		nativeEditorPicker.selectItem(at: -1)
-		nativeServicePicker.selectItem(at: -1)
+		nativeCuratorPicker.removeAllItems()
+		nativeEditorPicker.removeAllItems()
+		nativeServicePicker.removeAllItems()
+		nativeModePicker.selectItem(at: 0)
+		nativeMediaPicker.selectItem(at: 0)
 		nativeThreshold.stringValue = ""
 	}
 	func saveNativeSourcePolicy(_ body: [String: Any], completion: ((Result<[String: Any], Error>) -> Void)? = nil) {
@@ -581,6 +593,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			actionButton.isEnabled = true
 		}
 		if engine.state != .ready {
+			nativeSourceGeneration += 1
 			clearNativeSourceControls()
 		}
 		setEnabled(engine.state == .ready, in: configurationTabs)
