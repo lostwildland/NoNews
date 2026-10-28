@@ -79,13 +79,13 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Original owner recovered/pushed durableconfiguration, nativepane and Magpie migration source; local/remote4075a7dmatch/clean. Focused systemPython fixture checks passed with optionalskip, nativeclient fixture typechecked but unexecuted; preferences/Keychain/declaredruntime/UI/fullbinding and reviews remainpending. No newworktree/nativegrant.",
+      "implementation_state": "Current review pin4075a7d: root independently ran4configuration/migrationstdio tests7.268s allpass, systemPython+syntheticloopback only. Paired backend R1sevenpaths complete:Standards4findings(worstP1)/Spec4(worstP1). Originalowner resumed substantial7distinct safety corrections source-only, preserving completeT03/native/Keychain/package/UI gates.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
       "last_reported_head": "4075a7d85870d89872e179aa277050ccbef8b850",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
-      "review_evidence": "docs/acceptance/t03-native-processing-configuration.md (worker worktree; not accepted)",
+      "review_evidence": "docs/acceptance/t03-configuration-backend-review-r1.md",
       "script_source_audit": {
         "inventory": "docs/research/io-script-entrypoints.json",
         "scope": "docs/research/io-script-ticket-coverage.md",
@@ -559,10 +559,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "Source0684856/evidence8f392da validated:189focused/786fullMac,zero diskIO/vnode; normalbuild/deepsignature and genericiOSSimulatorbuild. Root independently read actionlog/signature/iOSsuccess. Fresh84path review pending; paired10pathArticlesDatabase R10 found1inheritedSQLfailureP2, coordinator correction+regression parse-only; no integration or fullT30 acceptance. Coordinator correctiona28f3f0 committed/pushed, parse-only; original native evidence not upgraded. R11queues/network10paths Standards1Downloader testscopeP2/Spec0. Freshfree28GiB/no competingXcode permitted originalowner nativeSQLvalidation, sourceboundaries retained.",
+      "implementation_state": "SQL c13 now propagates preparation+cached-step errors; root independently read191focusedpass/0fail/0skip. R11 networkscope and R12 Account/OPML coordinator corrections e46 committed/pushed, parse-only. Original owner source boundary handoff complete; combined public red/green/full/build/iOS validation granted, no current full artifact acceptance. No new worktrees/cleanup. Fresh correction and other scope reviews pending.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "a28f3f05ca3dc848314d7a92c4781a80ef4b4039",
-      "review_evidence": "docs/acceptance/t30-article-storage-review-r10.md",
+      "last_reported_head": "e46b1b4d03b55204f2c379c26444266168c9776d",
+      "review_evidence": "docs/acceptance/t30-account-core-review-r12.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json"
     }
   },

@@ -1,15 +1,15 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "8f392da024de869d3055609eaca111baa4cd7eb8",
-  "source": "068485607fad30ec848c63606c162e8f23a5b54f",
-  "state": "R10ArticlesDatabase10paths Standards1P2/Spec0; SQLcorrectiona28 source-only with originalowner nativevalidation running. R11queues/network10paths Standards1P2Downloader testscope/Spec0; correctionpending. Remaininggroups and connectedassessment pending, fullT30open.",
+  "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+  "source": "e46b1b4d03b55204f2c379c26444266168c9776d",
+  "state": "Consolidated source e46b1b4 pinned/pushed; source-only corrections to R11/R12 plus focused SQL fix c13. Original owner granted combined red/green/full/build/iOS validation, no current full-plan proof. Remaining scope reviews and correction reviews pending; full T30 open.",
   "groups": {
     "consumers": 22,
     "account-core": 7,
     "account-delegates": 11,
-    "storage": 14,
+    "storage": 15,
     "account-tests": 13,
-    "storage-tests": 6,
+    "storage-tests": 7,
     "harness": 11
   },
   "evidence": {
@@ -17,7 +17,9 @@
     "full_native_tests": 786,
     "native_result": "Root previously read xcresult 786 passed/0 failed/0 skipped. Current root independently read action JSON:1200 outputs/10663 lines/zero disk-I/O or vnode-unlink.",
     "normal_build": "Root independently verified deep strict signature and isolated bundle identifier; not app runtime proof.",
-    "ios_build": "Root read BUILD SUCCEEDED in final generic simulator build log; no simulator runtime."
+    "ios_build": "Root read BUILD SUCCEEDED in final generic simulator build log; no simulator runtime.",
+    "sql_focused_source": "c13cea11f89034dbd5cf5d6055c5b7a1680d3252",
+    "sql_focused": "Coordinator independently read191passed/0failed/0skipped in focused xcresult10-44-35; e46 not covered."
   },
   "files": [
     {
@@ -72,13 +74,13 @@
       "path": "Modules/Account/Sources/Account/Account.swift",
       "previous_path": null,
       "group": "account-core",
-      "blob": "88c26244ba016a0bcbbe22a088aab46751ddeb2a",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "blob": "88d4df18f098f3b3601dfc630e45759cc0883fa1",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
-        "blob": "24566536d5911c197bb93c75bd85462cff4cea27",
-        "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
-        "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
+        "blob": "88c26244ba016a0bcbbe22a088aab46751ddeb2a",
+        "standards": "Pending fresh bounded review at current pin",
+        "spec": "Pending fresh bounded review at current pin"
       }
     },
     {
@@ -86,8 +88,8 @@
       "previous_path": null,
       "group": "account-core",
       "blob": "415057384283d09cae62747b9bb4aa867484411b",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
       "prior_review": {
         "blob": "415057384283d09cae62747b9bb4aa867484411b",
         "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
@@ -144,8 +146,8 @@
       "previous_path": null,
       "group": "account-core",
       "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
       "prior_review": {
         "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
         "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
@@ -157,8 +159,8 @@
       "previous_path": null,
       "group": "account-core",
       "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
       "prior_review": {
         "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
         "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
@@ -170,8 +172,8 @@
       "previous_path": null,
       "group": "account-core",
       "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
       "prior_review": {
         "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
         "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
@@ -222,8 +224,8 @@
       "previous_path": null,
       "group": "account-core",
       "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
       "prior_review": {
         "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
         "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
@@ -299,13 +301,13 @@
       "path": "Modules/Account/Sources/Account/OPMLFile.swift",
       "previous_path": null,
       "group": "account-core",
-      "blob": "1b21691031dcedf18403b1f7034b429f93ac4e7c",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "blob": "5c65d2ffebfc85295e5699805dd7f354e460f13a",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
         "blob": "1b21691031dcedf18403b1f7034b429f93ac4e7c",
-        "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
-        "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
+        "standards": "Pending fresh bounded review at current pin",
+        "spec": "Pending fresh bounded review at current pin"
       }
     },
     {
@@ -346,13 +348,13 @@
       "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
       "previous_path": null,
       "group": "account-tests",
-      "blob": "9db5fa390446adfffb4afa191b0d0130fca9d0f3",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "blob": "2417245ecd5ed39a8012e541230e43c3bcf830ae",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
-        "blob": "7845e0a3e1ac4f4120efc1fd39cee2fd5df5e95d",
-        "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
-        "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
+        "blob": "9db5fa390446adfffb4afa191b0d0130fca9d0f3",
+        "standards": "Pending fresh bounded review at current pin",
+        "spec": "Pending fresh bounded review at current pin"
       }
     },
     {
@@ -510,13 +512,13 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "7e43c1a962d8610638ff64e640929b896b5ed3c9",
-      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
-      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "blob": "e168acb9223357e161a2cc326311bbde6f5a72a7",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
-        "blob": "3e6d7960a3d69656e55721d3fadbe87f40046074",
-        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
-        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+        "blob": "7e43c1a962d8610638ff64e640929b896b5ed3c9",
+        "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+        "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
       }
     },
     {
@@ -562,22 +564,27 @@
       "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "02c6ebe196d4a38028a3b1363cc47b6600ef9e2c",
-      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
-      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "blob": "01375ad3516843d97a558e406637b64ef9a0cd23",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
-        "blob": "8ad956e3a60c9e4891f9d562bec9ce9a34e9305b",
-        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
-        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+        "blob": "02c6ebe196d4a38028a3b1363cc47b6600ef9e2c",
+        "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+        "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
       }
     },
     {
       "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
       "previous_path": null,
       "group": "storage-tests",
-      "blob": "16054d41072c55b4472b5537285e02ef8820d587",
-      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
-      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+      "blob": "50bb71b769842b658583d5fa3999bff4297d1726",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
+      "prior_review": {
+        "blob": "16054d41072c55b4472b5537285e02ef8820d587",
+        "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+        "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+      }
     },
     {
       "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
@@ -656,6 +663,14 @@
       }
     },
     {
+      "path": "Modules/RSDatabase/Sources/RSDatabaseObjC/FMResultSet.h",
+      "previous_path": null,
+      "group": "storage",
+      "standards": "New path; fresh review pending",
+      "spec": "New path; fresh review pending",
+      "blob": "f42b49d60be49ff9feac4fdff1c8f2a4ae0ff6b5"
+    },
+    {
       "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseCloseTests.swift",
       "previous_path": null,
       "group": "storage-tests",
@@ -693,14 +708,22 @@
       "path": "Modules/RSWeb/Sources/RSWeb/Downloader.swift",
       "previous_path": null,
       "group": "storage",
-      "blob": "a4139cca3c3484759eaefb8caefabe011510e57f",
-      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
-      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "blob": "79cbe7c9eace4fbc5915f8036924dba569909a93",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
         "blob": "a4139cca3c3484759eaefb8caefabe011510e57f",
-        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
-        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+        "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+        "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared"
       }
+    },
+    {
+      "path": "Modules/RSWeb/Tests/RSWebTests/DownloaderIsolationTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "standards": "New path; fresh review pending",
+      "spec": "New path; fresh review pending",
+      "blob": "c604b7b27f5c057c50fc12501edd1ea9cc46037d"
     },
     {
       "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
@@ -929,13 +952,13 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "f463bb746bdd1adb03f986115d2cdd3db684c8d4",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
       "prior_review": {
-        "blob": "53a925c67c08624b050505322036983546f39104",
-        "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
-        "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
+        "blob": "f463bb746bdd1adb03f986115d2cdd3db684c8d4",
+        "standards": "Pending fresh bounded review at current pin",
+        "spec": "Pending fresh bounded review at current pin"
       }
     },
     {
@@ -963,16 +986,6 @@
       "spec": "Pending fresh bounded review at current pin"
     }
   ],
-  "current_branch_head": "a28f3f05ca3dc848314d7a92c4781a80ef4b4039",
-  "pending_correction": {
-    "head": "a28f3f05ca3dc848314d7a92c4781a80ef4b4039",
-    "base": "8f392da024de869d3055609eaca111baa4cd7eb8",
-    "paths": [
-      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
-      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
-      "docs/acceptance/t30-native-fixture-lifetime.md"
-    ],
-    "validation": "Parse and whitespace only; no typecheck, behavioral red/green, current build or independent correction review."
-  },
-  "native_resource": "T30 originalowner R17 validation only; fresh rootpreflight28GiBfree/no competingxcodebuild; T03native withheld."
+  "current_branch_head": "e46b1b4d03b55204f2c379c26444266168c9776d",
+  "native_resource": "T30 original owner R18 reserved/granted for consolidated validation; T03 source-only."
 }
