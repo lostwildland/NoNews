@@ -79,13 +79,13 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Owner324f40d commits2R3UIcorrections: apply acknowledgement survives readback failure and stableIDs distinguish names; fresh review pending. Rootbff22d0addsMainActor and actual preferences+engine pass strict narrow Swift6typecheck using acceptedT02dependencies/temporary correctedClangmaps. Root pure review-state executable and prior6Python/1optionalSkip are limited checks. >16MiB public regression red remains enabled/uncommitted; sameowner now implements backend storage slice, with native browsing and Apply/evidence streaming still required. T30 holds native resource; no T03 app/Keychain/package/runner acceptance.",
+      "implementation_state": "Staged previewa8f3d2 and incremental Apply/evidence1ddb5a6implemented. Root exact-commit public >16MiBApply/readback/retry/restart/repeat/rollback testPASS1case8.661s; owner12focusedpasses/1optionalskip. Rootb279f1dR4acknowledgement input/generation/retry/historical-state correction has public behavioralred/green and final strictnarrowtypecheck; freshreviewpending. SameownerR10implementsboundednativebrowsing/responsiveness and has standaloneclient/runtime-preparation grant only. Fullbuild/app/Keychain/UI/runner acceptance remainsopen.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "bff22d07649750a1ee214d7df2214b82e956169c",
+      "last_reported_head": "1ddb5a632c87cab75713e17fd11b94a983cf9a85",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
-      "review_evidence": "docs/acceptance/t03-preview-binding-review-r3.md",
+      "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
         "inventory": "docs/research/io-script-entrypoints.json",
         "scope": "docs/research/io-script-ticket-coverage.md",
@@ -95,6 +95,10 @@
       "prior_review_evidence": [
         "docs/acceptance/t03-configuration-backend-review-r1.md",
         "docs/acceptance/t03-configuration-correction-review-r2.md"
+      ],
+      "additional_review_evidence": [
+        "docs/acceptance/t03-ui-acknowledgement-review-r4.md",
+        "docs/acceptance/t03-preview-binding-review-r3.md"
       ]
     },
     "04": {
@@ -563,10 +567,10 @@
         "28",
         "29"
       ],
-      "implementation_state": "Original owner resumed after provider failure, preserving22modified files and1untracked status-command test. Timeline and widget corrections committed afb4365/8cd3f57; status/CloudKit/provider corrections remain in progress. Root independently verified791full passes at5013c91 with zero disk-I/O/vnode lines; not proof for later fixes. R13consumer findings and R14CloudKit/R15provider findings plus incomplete connected review remain open. T30 retains serialized native resource; no new worktree or cleanup.",
+      "implementation_state": "Current clean/pushed checkpoint65be895 preservesR13consumer/R14CloudKit/R15provider corrections and adds propagated article-delete SQL failure before pending-status removal/page commit. Root independently read203focusedpasses/0fail/0skip. Current ledger105paths; boundedcorrection, remainingfixture/harness and connected reviews pending. Historical791fullpasses remain5013c91; currentfullMac/build/signature/iOS deferred until source reviewstabilizes. Native/source resource released; fullT30/liveproviders/migration/sync/UI remainopen.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "8cd3f5702b1e9fc07129755343eb759b7a298f55",
-      "review_evidence": "docs/acceptance/t30-consumer-review-r13.md",
+      "last_reported_head": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+      "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
         "docs/acceptance/t30-cloudkit-review-r14.md",
