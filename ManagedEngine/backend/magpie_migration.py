@@ -164,6 +164,8 @@ def job_kit(db, job):
     observed = db.execute('SELECT f.freshrss_feed_id FROM entry_observations o JOIN feeds f ON f.id=o.feed_id '
                           'WHERE o.item_id=? ORDER BY o.id LIMIT 1', (job['item_id'],)).fetchone()
     live = db.execute('SELECT media_type,kit_id FROM ai_feed_settings WHERE freshrss_feed_id=?', (str(observed[0]),)).fetchone() if observed else None
+    if live and not live['media_type']:
+        live = None
     pinned = db.execute('SELECT media_type,kit_id FROM item_feed_contracts WHERE item_id=?', (job['item_id'],)).fetchone()
     if pinned and not pinned['media_type']:
         pinned = None

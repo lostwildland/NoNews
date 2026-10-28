@@ -89,7 +89,7 @@ def _legacy_key(identity, position):
 
 def _current_text(db, value):
     count = _legacy_count(value)
-    row = db.execute('SELECT id,content FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY rowid DESC LIMIT 1',
+    row = db.execute('SELECT id,content FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY created_at DESC, id DESC LIMIT 1',
                      (value['id'], value['role'])).fetchone()
     if row is None and count:
         member = db.execute('SELECT value FROM app_settings WHERE key=?', (_legacy_key(value['id'], count),)).fetchone()
@@ -280,7 +280,8 @@ def prompt(db, method, body, *, copied=None):
         current = _current_text(db, value) if prior else None
         if current is None or current['content'] != text:
             db.execute('INSERT INTO prompt_versions(id,kit_id,role,content,created_at) VALUES (?,?,?,?,?)',
-                       (uuid.uuid4().hex, value['id'], role, text, utcnow()))
+                       (uuid.uuid4().hex, value['id'], role, text,
+                        datetime.now(timezone.utc).isoformat(timespec='microseconds')))
         _store(db, 'prompt', value)
     return prompt(db, 'GET', {'id': value['id']})
 
@@ -302,15 +303,19 @@ def history(db, body):
         raise ConfigurationError('Invalid history cursor')
     rows = []
     if before is None or before.startswith('o:'):
-        position = 2**63 - 1
+        position = None
         if before:
-            cursor = db.execute('SELECT rowid FROM prompt_versions WHERE id=? AND kit_id=? AND role=?',
+            cursor = db.execute('SELECT created_at,id FROM prompt_versions WHERE id=? AND kit_id=? AND role=?',
                                 (before[2:], value['id'], value['role'])).fetchone()
             if cursor is None:
                 raise ConfigurationError('Invalid history cursor')
-            position = cursor[0]
-        rows = db.execute('SELECT id,created_at FROM prompt_versions WHERE kit_id=? AND role=? AND rowid<? ORDER BY rowid DESC LIMIT 101',
-                          (value['id'], value['role'], position)).fetchall()
+            position = cursor
+        if position is None:
+            rows = db.execute('SELECT id,created_at FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY created_at DESC, id DESC LIMIT 101',
+                              (value['id'], value['role'])).fetchall()
+        else:
+            rows = db.execute('SELECT id,created_at FROM prompt_versions WHERE kit_id=? AND role=? AND (created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC, id DESC LIMIT 101',
+                              (value['id'], value['role'], position['created_at'], position['created_at'], position['id'])).fetchall()
         if len(rows) > 100:
             return {'versions': [{'id': row['id'], 'createdAt': row['created_at']} for row in rows[:100]], 'next': 'o:' + rows[99]['id']}
     versions = [{'id': row['id'], 'createdAt': row['created_at']} for row in rows]
