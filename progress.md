@@ -251,3 +251,7 @@
 ## 2026-10-28 — T03 Sol/high checkpoint
 
 - T03 Sol/high completed preserved correction checkpoint `80528c1`, clean/remote matched. Root ran `run_configuration_native_checks.sh` with accepted T02 Debug products: strict Swift current Engine + Preferences controller compiled/executed; Processing configuration and Preferences controller wiring passed. Reported Python suite18 total,17 passed,1 optional skip. Fresh paired review against24-path current candidate is required. Prepared payload remains stale; full app/Keychain/UI/HIG/signed bundle/T11/platform gates remain open.
+
+## 2026-10-28 — T30 Sol/high R25 checkpoint
+
+- T30 Sol/high pushed clean `e86fe2e`, adding status intent journal/restart replay, fetch lifetime protection and gated startup reset. Root ledger refreshed to112 original-base paths. SyncDatabase13 and ArticlesDatabase2 passed;20 Swift files parsed. Account runtime stopped at existing `RSCore/AppConfig.swift:13` missing SwiftPM bundle metadata force-unwrap; no Account runtime count claimed. Fresh paired review required; full/iOS/live provider/UI acceptance remains open.

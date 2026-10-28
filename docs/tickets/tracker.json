@@ -580,9 +580,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Sol/high replacement owner started on clean4850b7c. Complete110-path manifest. R25 Standards3P2/Spec1P1+1P2 leave three overlapping durability/reconciliation/reset schedules open. Root read focused149/0/0 and150/0/0 including10Sync tests. No full/artifact/iOS/live-provider/migration/UI acceptance.",
+      "implementation_state": "Sol/high R25 checkpoint e86fe2e clean/remote matched; complete112-path ledger. Intent journal/replay, fetch lifetime protection and startup reset gate added. SyncDatabase13 and ArticlesDatabase2 passed; Account runtime stopped at existing AppConfig bundle metadata force-unwrap, so no Account runtime count. Fresh paired review and full/iOS/live/UI acceptance open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "last_reported_head": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
@@ -590,7 +590,8 @@
         "docs/acceptance/t30-provider-review-r15.md",
         "docs/acceptance/t30-account-core-review-r12.md",
         "docs/acceptance/t30-provider-compensation-review-r24.md",
-        "docs/acceptance/t30-provider-correction-review-r25.md"
+        "docs/acceptance/t30-provider-correction-review-r25.md",
+        "docs/acceptance/t30-r25-correction.md"
       ],
       "previous_implementation_threads": [
         "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t30-native-fixture-lifetime-20261028-r1"
