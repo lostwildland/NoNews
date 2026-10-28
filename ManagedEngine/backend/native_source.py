@@ -314,6 +314,8 @@ def observe(db, body):
             if identity:
                 db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else ("unresolved" if not media_type else "verified"), now))
+            elif raw_identity_value:
+                db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "unresolved", now))
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
@@ -324,11 +326,12 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
-            service_available = True
-            if policy and isinstance(policy[2], str) and len(policy[2]) == 32:
-                from . import configuration
-                service_value = configuration._record(db, "service", policy[2])
-                service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
+            service_available = False
+            if policy and isinstance(policy[2], str):
+                service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + policy[2],)).fetchone()
+                if service_row:
+                    service_value = json.loads(service_row[0])
+                    service_available = service_value.get("type") == "magpie" or not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or ("checkedAt" in service_value and not service_value.get("checkedAt")))
             historical_unresolved = db.execute("SELECT 1 FROM native_observation_identities WHERE observation_id=? AND evidence_state='unresolved' LIMIT 1", (observation_id,)).fetchone() is not None
             if service_available and policy and policy[3] == media_type and state == "verified" and not was_unresolved and not historical_unresolved and (existing_context is None or existing_context[2] == policy[8]) and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
@@ -553,7 +556,7 @@ def feeds(db, method, body):
                         service_value = configuration._record(db, "service", values["service_id"])
                     else:
                         service_value = json.loads(service_row[0])
-                    if len(values["service_id"]) == 32 and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt")):
+                    if service_value.get("type") != "magpie" and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or ("checkedAt" in service_value and not service_value.get("checkedAt"))):
                         raise ValueError("Service binding is unavailable")
 
                 strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
