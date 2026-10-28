@@ -14,6 +14,8 @@ import RSParser
 @MainActor final class OPMLFile {
 	private let fileURL: URL
 	private weak var account: Account?
+	// Retain accepted subscription changes until their queued write succeeds.
+	private var pendingAccount: Account?
 
 	private var isDirty = false {
 		didSet {
@@ -21,6 +23,9 @@ import RSParser
 		}
 	}
 	private let saveQueue = CoalescingQueue(name: "Save Queue", interval: 0.5)
+	#if DEBUG
+	var saveQueueForTesting: CoalescingQueue { saveQueue }
+	#endif
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "OPMLFile")
 
 	init(filename: String, account: Account) {
@@ -29,6 +34,7 @@ import RSParser
 	}
 
 	func markAsDirty() {
+		pendingAccount = account
 		isDirty = true
 	}
 
@@ -63,6 +69,7 @@ import RSParser
 		guard isDirty else { return true }
 		guard save() else { return false }
 		isDirty = false
+		pendingAccount = nil
 		return true
 	}
 }

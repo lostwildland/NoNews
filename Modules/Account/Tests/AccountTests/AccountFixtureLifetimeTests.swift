@@ -39,6 +39,133 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
 
+	@Test(arguments: [false, true]) func queuedOPMLRetainsOwnerUntilSuccessfulSave(failFirst: Bool) async throws {
+		let manager = TestAccountManager()
+		var account: Account? = manager.createAccount(type: .onMyMac)
+		let path = try #require(account).dataFolder
+		let articles = try #require(account).database
+		let settings = try #require(account).feedSettingsDatabaseForTesting
+		await account?.waitForFixtureBackgroundWorkForTesting()
+		account?.saveIfNeeded()
+		let queue = try #require(account).opmlSaveQueueForTesting
+		let folder = try #require(account?.ensureFolder(with: "Queued folder"))
+		let feed = try #require(account).createFeed(with: "Queued feed", url: "https://fixture.invalid/queued", feedID: "queued", homePageURL: nil)
+		folder.addFeedToTreeAtTopLevel(feed)
+		let opml = path + "/Subscriptions.opml"
+		if failFirst {
+			if FileManager.default.fileExists(atPath: opml) { try FileManager.default.removeItem(atPath: opml) }
+			try FileManager.default.createDirectory(atPath: opml, withIntermediateDirectories: false)
+		}
+		weak var owner = account
+		account = nil
+		#expect(owner != nil)
+		queue.performCallsImmediately()
+		if failFirst {
+			#expect(owner != nil)
+			try FileManager.default.removeItem(atPath: opml)
+			owner?.saveIfNeeded()
+		}
+		let saved = try? String(contentsOfFile: opml, encoding: .utf8)
+		#expect(saved?.contains("Queued folder") == true && saved?.contains(feed.url) == true)
+		#expect(owner == nil)
+		if let owner {
+			Issue.record("Owner remained alive after successful OPML save")
+			try await manager.deleteAccount(owner)
+			return
+		}
+		let closedArticles = await articles.close()
+		let closedSettings = await settings.close()
+		guard closedArticles && closedSettings else { Issue.record("Could not close fixture databases"); return }
+		try FileManager.default.removeItem(atPath: path)
+	}
+
+	@Test func admittedVacuumCompletesAllStagesBeforeClose() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+		await delegate.waitForSyncInitializationForTesting()
+		let feed = account.createFeed(with: "Fixture", url: "https://fixture.invalid/vacuum", feedID: "vacuum", homePageURL: nil)
+		let path = account.dataFolder
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		var stages = [String]()
+		account.onVacuumStageForTesting = { stage in
+			stages.append(stage)
+			if stage == "articles" { startedSignal.yield(()); for await _ in release { break } }
+			if stage == "settings" { feed.editedName = "Admitted vacuum" }
+			if stage == "delegate" { #expect(await delegate.syncDatabase.insertStatuses([SyncStatus(articleID: "vacuum", key: .starred, flag: true)])) }
+		}
+		let vacuum = Task { await account.vacuumDatabases() }
+		for await _ in started { break }
+		var didClose = false
+		let close = Task { let result = await account.closeForFixtureRemoval(); didClose = true; return result }
+		for await _ in closing { break }
+		let rejectedVacuum = Task { await account.vacuumDatabases() }
+		await Task.yield()
+		#expect(!didClose)
+		#expect(stages == ["articles"])
+		releaseSignal.finish()
+		await rejectedVacuum.value
+		await vacuum.value
+		#expect(await close.value)
+		#expect(stages == ["articles", "settings", "delegate"])
+		#expect(try stringValue(in: path + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'vacuum'") == "Admitted vacuum")
+		#expect(try stringValue(in: path + "/Sync.sqlite3", sql: "SELECT articleID FROM syncStatus WHERE articleID = 'vacuum'") == "vacuum")
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func admittedCloudKitOperationsDrainAndRejectLateDispatch() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let feed = account.createFeed(with: "Fixture", url: "https://fixture.invalid/cloud", feedID: "cloud", homePageURL: nil)
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		var cleanupCalls = 0
+		var statsCalls = 0
+		account.cloudKitCleanupForTesting = { progress in
+			cleanupCalls += 1
+			startedSignal.yield(())
+			for await _ in release { break }
+			feed.editedName = "Admitted cloud"
+			progress(CloudKitCleanUpProgress(phase: .completed, staleStatusDeleted: 0, readContentDeleted: 0, unreadContentDeleted: 0))
+		}
+		account.cloudKitStatsForTesting = { progress in
+			statsCalls += 1
+			startedSignal.yield(())
+			for await _ in release { break }
+			progress(.empty)
+			return .empty
+		}
+		var progressCalls = 0
+		let cleanup = Task { try await account.cleanUpCloudKit { _ in progressCalls += 1; feed.editedName = "Rejected progress" } }
+		let stats = Task { try await account.fetchCloudKitStats { _ in progressCalls += 1; feed.homePageURL = "https://fixture.invalid/rejected" } }
+		var startIterator = started.makeAsyncIterator()
+		_ = await startIterator.next()
+		_ = await startIterator.next()
+		var didClose = false
+		let close = Task { let result = await account.closeForFixtureRemoval(); didClose = true; return result }
+		for await _ in closing { break }
+		let rejectedCleanup = Task { do { try await account.cleanUpCloudKit { _ in }; return false } catch { return error is CancellationError } }
+		let rejectedStats = Task { do { _ = try await account.fetchCloudKitStats { _ in }; return false } catch { return error is CancellationError } }
+		await Task.yield()
+		#expect(!didClose)
+		releaseSignal.finish()
+		let cleanupRejected = await rejectedCleanup.value
+		let statsRejected = await rejectedStats.value
+		#expect(cleanupRejected && statsRejected)
+		#expect(cleanupCalls == 1 && statsCalls == 1)
+		try await cleanup.value
+		_ = try await stats.value
+		#expect(await close.value)
+		#expect(progressCalls == 2 && feed.editedName == "Admitted cloud" && feed.homePageURL == nil)
+		#expect(try stringValue(in: account.dataFolder + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'cloud'") == "Admitted cloud")
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func immediateRefreshDrainsOwnedDownloadAfterCloseBegins() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)
@@ -141,6 +268,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		feed.folderRelationship = ["Folder": "original-id"]
 		try #require(account).startBackground { feed.editedName = "Admitted" }
 		await account?.waitForFixtureBackgroundWorkForTesting()
+		account?.saveIfNeeded()
 		#expect(feed.editedName == "Admitted")
 		let before = try #require(database.allRows()[url])
 		#expect(before.editedName == "Admitted")

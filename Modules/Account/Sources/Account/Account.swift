@@ -249,6 +249,10 @@ public enum FetchType {
 	private var initializationWork: DatabaseWork?
 	#if DEBUG
 	var onFixtureClosingForTesting: (() -> Void)?
+	var onVacuumStageForTesting: ((String) async -> Void)?
+	var cloudKitCleanupForTesting: ((@MainActor @Sendable (CloudKitCleanUpProgress) -> Void) async throws -> Void)?
+	var cloudKitStatsForTesting: ((CloudKitStatsProgressHandler) async throws -> CloudKitStats)?
+	var opmlSaveQueueForTesting: CoalescingQueue { opmlFile.saveQueueForTesting }
 	func waitForFixtureBackgroundWorkForTesting() async {
 		while !backgroundTasks.isEmpty {
 			for task in Array(backgroundTasks.values) { await task.value }
@@ -1187,27 +1191,61 @@ public enum FetchType {
 	}
 
 	public func vacuumDatabases() async {
-		await logActivity(kind: .vacuumDatabase, detail: AppConfig.relativeDataPath(database.databasePath)) {
-			await database.vacuum()
+		try? await withOperation {
+			await logActivity(kind: .vacuumDatabase, detail: AppConfig.relativeDataPath(database.databasePath)) {
+				await database.vacuum()
+			}
+			#if DEBUG
+			await onVacuumStageForTesting?("articles")
+			#endif
+			await logActivity(kind: .vacuumDatabase, detail: AppConfig.relativeDataPath(feedSettingsDatabase.databasePath)) {
+				await feedSettingsDatabase.vacuum()
+			}
+			#if DEBUG
+			await onVacuumStageForTesting?("settings")
+			#endif
+			await delegate.vacuumDatabases()
+			#if DEBUG
+			await onVacuumStageForTesting?("delegate")
+			#endif
 		}
-		await logActivity(kind: .vacuumDatabase, detail: AppConfig.relativeDataPath(feedSettingsDatabase.databasePath)) {
-			await feedSettingsDatabase.vacuum()
-		}
-		await delegate.vacuumDatabases()
 	}
 
 	public func fetchCloudKitStats(progress: @escaping CloudKitStatsProgressHandler) async throws -> CloudKitStats {
+		let callerWork = DatabaseWork.current
+		let callerProgress: CloudKitStatsProgressHandler = { value in
+			DatabaseWork.$current.withValue(callerWork) { progress(value) }
+		}
+		#if DEBUG
+		if let cloudKitStatsForTesting {
+			return try await withOperation { try await cloudKitStatsForTesting(callerProgress) }
+		}
+		#endif
 		guard type == .cloudKit, let cloudKitDelegate = delegate as? CloudKitAccountDelegate else {
 			throw AccountError.invalidParameter
 		}
-		return try await cloudKitDelegate.fetchCloudKitStats(progress: progress)
+		return try await withOperation {
+			try await cloudKitDelegate.fetchCloudKitStats(progress: callerProgress)
+		}
 	}
 
 	public func cleanUpCloudKit(progress: @escaping @MainActor @Sendable (CloudKitCleanUpProgress) -> Void) async throws {
+		let callerWork = DatabaseWork.current
+		let callerProgress: @MainActor @Sendable (CloudKitCleanUpProgress) -> Void = { value in
+			DatabaseWork.$current.withValue(callerWork) { progress(value) }
+		}
+		#if DEBUG
+		if let cloudKitCleanupForTesting {
+			try await withOperation { try await cloudKitCleanupForTesting(callerProgress) }
+			return
+		}
+		#endif
 		guard type == .cloudKit, let cloudKitDelegate = delegate as? CloudKitAccountDelegate else {
 			throw AccountError.invalidParameter
 		}
-		try await cloudKitDelegate.cleanUpCloudKit(progress: progress)
+		try await withOperation {
+			try await cloudKitDelegate.cleanUpCloudKit(progress: callerProgress)
+		}
 	}
 
 	public func debugDropConditionalGetInfo() {
