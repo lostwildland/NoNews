@@ -184,6 +184,11 @@ class ConfigurationTest(unittest.TestCase):
             reference = call('PUT', '/api/config/references', {'sourceId': 'synthetic-source', 'name': 'Source A',
                                                                'role': 'editor', 'promptId': first['id']})
             self.assertEqual(call('GET', '/api/config/references', {'promptId': first['id']})['references'], [reference])
+            self.assertEqual(call('GET', '/api/config/references', {'promptId': copy['id']})['references'], [])
+            process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
+                                            'body': {'id': service['id']}}) + '\n')
+            process.stdin.flush()
+            self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'DELETE', 'path': '/api/config/prompts',
                                             'body': {'id': first['id']}}) + '\n')
             process.stdin.flush()
@@ -228,6 +233,10 @@ class ConfigurationTest(unittest.TestCase):
             self.assertEqual((reply['id'], reply['name'], reply['role'], reply['text'], reply['serviceId'], reply['target']),
                              (saved['id'], 'Careful reader', 'curator', text, service['id'], 'route/Exact'))
             self.assertEqual(reply['versionId'], saved['versionId'])
+            reference = session([request(13, 'PUT', '/api/config/references', {'sourceId': 'synthetic',
+                'name': 'Fixture source', 'role': 'curator', 'promptId': saved['id']})])[0]['result']
+            references = session([request(14, 'GET', '/api/config/references', {'promptId': saved['id']})])[0]['result']
+            self.assertEqual(references['references'], [reference])
             history, version, copied = session([
                 request(8, 'GET', '/api/config/history', {'id': saved['id']}),
                 request(9, 'GET', '/api/config/history', {'id': saved['id'], 'versionId': saved['versionId']}),
