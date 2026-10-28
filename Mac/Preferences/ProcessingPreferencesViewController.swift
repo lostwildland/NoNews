@@ -148,6 +148,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	private var nativeCuratorRows: [[String: Any]] = []
 	private var nativeEditorRows: [[String: Any]] = []
 	private var nativeServiceRows: [[String: Any]] = []
+	private var nativeSourceGeneration = 0
 	private var serviceRows: [[String: Any]] = []
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
@@ -201,6 +202,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
+		nativeSourceGeneration += 1
 		migrationReview.invalidate()
 		cancelMigrationPreview()
 		releaseMigrationReport()
@@ -312,15 +314,16 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			if case .success = result { self?.loadNativeSourceSummary() }
 		}
 	}
-
 	private func loadNativeSourceSummary() {
+		nativeSourceGeneration += 1
+		let generation = nativeSourceGeneration
 		guard engine.state == .ready,
 			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
 		let accountID = AccountManager.shared.defaultAccount.accountID
 		request("GET", "/api/settings/feeds", ["namespace": namespace, "accountID": accountID], onFailure: { [weak self] in
 			self?.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
 		}) { [weak self] value in
-			guard let self else { return }
+			guard let self, self.nativeSourceGeneration == generation else { return }
 			let feeds = value["feeds"] as? [[String: Any]] ?? []
 			self.nativeFeedRows = feeds
 			self.nativeFeedPicker.removeAllItems()
@@ -328,20 +331,21 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			if !feeds.isEmpty { self.nativeFeedPicker.selectItem(at: 0); self.nativeFeedChanged() }
 			self.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
 			self.request("GET", "/api/config/prompts", ["role": "curator"]) { value in
+				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["prompts"] as? [[String: Any]] ?? []
-				self.nativeCuratorRows = rows
 				self.nativeCuratorPicker.removeAllItems()
 				self.nativeCuratorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
 			}
 			self.request("GET", "/api/config/prompts", ["role": "editor"]) { value in
+				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["prompts"] as? [[String: Any]] ?? []
-				self.nativeEditorRows = rows
 				self.nativeEditorPicker.removeAllItems()
 				self.nativeEditorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
 			}
 			self.request("GET", "/api/config/services", [:]) { value in
+				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["services"] as? [[String: Any]] ?? []
 				self.nativeServiceRows = rows
 				self.nativeServicePicker.removeAllItems()
