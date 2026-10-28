@@ -5,12 +5,12 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 ## Phases
 - [x] Record ten answers and create durable active goal.
 - [x] Publish full capability spec and 31 dependency-linked vertical tickets (90 current native edges).
-- [ ] Execute frontier with one Terra high owner per ticket, isolated worktrees.
+- [ ] Execute frontier with one Terra xhigh owner per ticket, isolated worktrees.
 - [ ] Independent Standards/Spec review, bounded UX review, commit/push per completed ticket.
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01/T02 accepted (3/31). T03 checkpointcf95ccd adds transactional queued-save receipts/native recovery, but missing receipt after restart remains explicit unknown and its final source changed after strict native execution; P1 remains open. T03 has source/lightweight work plus conditional standalone native checks after P1 readiness; full app/GUI/Keychain remain ungranted. T30 R18 found two Spec P1 data-integrity risks on source49d80d/evidence51d169; coordinator9ab2069 shared-helper correction is source-only with a four-path R19 scope, not compiled/run. Root independently read217focused passes for51d169e; final full/build/iOS remain open. T04 source-policy audit is preparation only behind accepted T03 APIs. No new worktrees, broad cleanup or masking-model work. Full feature, personal migration, sync, native UI and final parity acceptance remain open.
+T00/T01/T02 remain accepted (3/31). Original owners are correcting T03 and T30 in their existing worktrees with requested Terra xhigh effort; do not overwrite unfinished source. T03 pinned `2ee43f0` now has a complete 23-path manifest and full Spec coverage (61 hunks, changes requested:3P1/1P2); paired Standards pending. Root independently reproduced completed-receipt endpoint mismatch via authenticated stdio. T30 pinned `835cda3` has a complete 109-path manifest; paired R24 finds two provider durability/reconciliation defects (worst P1). Next, validate the owners' corrected public regressions and strict current-source checks, then commission fresh paired rechecks against clean pins. Final artifact/platform/HIG/Keychain/live integration/personal migration/complete feature acceptance remains open. No new worktrees, broad cleanup, privacy repair or acceptance-count change.
 
 ## Errors Encountered
 - T03 narrow preferences typecheck depended on maps referencing a removed private source copy. Temporary maps to matching accepted headers resolved missing RSDatabaseObjC; a one-line MainActor fix then passed warnings-as-errors. No shared cache/map or dependency was modified.

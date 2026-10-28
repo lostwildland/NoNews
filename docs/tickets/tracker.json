@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Correctioncea6222 retains typed mutation rejection outcomes and incremental report limits; Focused source suite16/1skip passed; fresh paired correction review is running. Full app/UI/Keychain/signed bundle/T11/HIG layout acceptance remain open.",
+      "implementation_state": "Committed candidate 2ee43f0 has a complete 23-path blob ledger. Full-source R10 Spec requests changes (3 P1, 1 P2); paired Standards pending. Root authenticated stdio probe reproduces wrong-endpoint receipt success. Original owner correcting current source; app/Keychain/payload/HIG/T11 acceptance open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "cea6222",
+      "last_reported_head": "2ee43f01ea187aad232c5d45916e9b11f8760219",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -98,7 +98,9 @@
       ],
       "additional_review_evidence": [
         "docs/acceptance/t03-ui-acknowledgement-review-r4.md",
-        "docs/acceptance/t03-preview-binding-review-r3.md"
+        "docs/acceptance/t03-preview-binding-review-r3.md",
+        "docs/acceptance/t03-current-source-review-r10.md",
+        "docs/acceptance/t03-receipt-identity-probe.md"
       ],
       "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md",
       "review_coverage": "docs/acceptance/t03-review-coverage.json",
@@ -572,15 +574,16 @@
         "28",
         "29"
       ],
-      "implementation_state": "Correction835cda3 serializes provider compensation and preserves outbox intent when rollback fails; Latest macOS plan passed with zero failures/skips; fresh R23 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
+      "implementation_state": "Committed candidate 835cda3 has a complete 109-path blob ledger. Paired R24 finds two distinct provider outbox/reconciliation defects (worst P1); owner correction in progress. Root independently read historical 19-24-18 summary:827/0/0 with generic runtime warning; private tested-source equality not verified. Final artifact/iOS/live sync/migration/UI acceptance open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "835cda3",
+      "last_reported_head": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
         "docs/acceptance/t30-cloudkit-review-r14.md",
         "docs/acceptance/t30-provider-review-r15.md",
-        "docs/acceptance/t30-account-core-review-r12.md"
+        "docs/acceptance/t30-account-core-review-r12.md",
+        "docs/acceptance/t30-provider-compensation-review-r24.md"
       ]
     }
   },

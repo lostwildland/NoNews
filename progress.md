@@ -7,6 +7,11 @@
 
 ## 2026-10-28 — T03 durable correction and T30 provider propagation
 
+- Root reconciled exact committed candidate manifests: T03 `2ee43f0` now23 paths and T30 `835cda3` now109. Added the five omitted paths and refreshed21 stale blobs, retaining prior review notes. Git objects, not unfinished worker files, define these pins.
+- Independent authenticated stdio probe reproduced the T03 completed-receipt endpoint mismatch; source/profile extracted to a self-cleaning temporary directory, no private data/provider calls. Service exited0. Original owner notified.
+- T03 current R10 Spec inspected61hunks/23paths and requests changes:3P1/1P2. Owner received compile, stale-credential, unknown-receipt and acknowledgement feedback findings; paired Standards remains pending.
+- Root independently read the historical T30 `19-24-18` summary:827/0/0 with generic main-thread warning; tested-source equality to835cda3 remains unverified. R24 report now deduplicates the two underlying findings across both axes instead of summing overlapping reports.
+
 - T03 `cea6222` retains typed mutation rejection outcomes across restart and checks report row capacity incrementally; fresh paired review remains pending.
 - T30 `835cda3` serializes provider compensation and preserves outbox intent if rollback fails. Latest macOS plan passed with zero failures/skips; fresh paired R24 review is pending.
 

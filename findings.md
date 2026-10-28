@@ -1,5 +1,11 @@
 # Execution findings
 
+2026-10-28 — Current manifest reconciliation and public receipt probe:
+- Fixed Git-object checks found23 T03 paths (2 omitted from the old ledger,8 stale blobs) and109 T30 paths (3 omitted,13 stale blobs). Refreshed all path/status/blob pins while preserving historical verdicts; excludes dirty worker files and adds no review clearance.
+- Root authenticated stdio probe at2ee43f0 created a service receipt, reused its ID for processing settings and received the old service as success instead of invalid_configuration. Setting remained1, EOF exit0, temporary profile removed. Original owner received the reproduction; no prepared runtime, app or private data was used.
+- T03 R10 Spec inspected61/61hunks and23/23paths:3P1 controller compile/stale credential save/dropped unknown identity,1P2 premature acknowledgement feedback. These are reviewer source findings, not root runtime reproductions. Standards remains pending.
+- Root read19-24-18T30xcresult:827passed/0failed/0skipped plus generic main-thread warning. Root did not prove the private tested copy matches committed835cda3; R24's two overlapping provider findings (worstP1) remain open.
+
 2026-10-28 — Connected R17 review candidate:
 - T30 source49d80d0 and evidence51d169e differ only in the worker evidence document. Root independently read217focused passes/0fail/0skip at15-57-10. Owner reports actual COMMIT/cache/callback/admission red/green with synthetic checkpoint; no real server token/full page atomicity/current full-plan claim.19-path connected correction ready for fresh paired R18.
 - T03 partialf96d605 reports render/cancel cleanup but still leaves queued-save P1. Same ownerR14 now finishes transaction-coupled outcomes and native recovery; root grants strict standalone/component checks only after source/functional readiness. Full app/GUI/Keychain remain pending.
