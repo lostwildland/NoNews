@@ -339,6 +339,24 @@
       "result": "Completed service-mutation ID reused for PUT /api/settings/processing returns the original service receipt instead of invalid_configuration; processing setting remains 1; EOF exit 0. Synthetic temporary profile only.",
       "state": "independently reproduced defect; original owner notified",
       "report": "docs/acceptance/t03-receipt-identity-probe.md"
+    },
+    "credential_order_probe": {
+      "source": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+      "boundary": "authenticated stdio, extracted committed source, temporary synthetic profile",
+      "sequence": [
+        "save A",
+        "save B for same service ID and confirm public readback",
+        "submit captured A metadata plus verified credential state"
+      ],
+      "observed": "A name and endpoint restored, newer B lost; all three mutations durable, service EOF exit 0. No AppKit, Keychain or provider calls.",
+      "report": "docs/acceptance/t03-current-source-review-r10.md#coordinator-credential-order-probe",
+      "coverage_limit": "Backend consequence reproduced; actual controller callback race remains source-derived."
+    },
+    "native_check_entry_audit": {
+      "source": "2ee43f01ea187aad232c5d45916e9b11f8760219",
+      "entry": "ManagedEngine/tests/run_configuration_native_checks.sh",
+      "observed": "Compiles engine/configuration check only; fixed-object workflow/build/test search finds no PreferencesControllerChecks invocation. Historical manual controller run remains source-scoped.",
+      "required": "Original owner must make strict current-source controller compile/link/wiring execution reproducible; full app build is a separate gate."
     }
   },
   "previous_candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",

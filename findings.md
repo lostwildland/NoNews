@@ -1,5 +1,9 @@
 # Execution findings
 
+2026-10-28 — Credential-order public probe and native test entry:
+- Exact2ee43f0 authenticated stdio: save serviceA, save/read back newerB, then replay the capturedA metadata with credentialState=verified. Public readback restoresA name/endpoint; B is lost. All three mutations reached durable completion; EOFexit0; synthetic temporary profile only. This is backend schedule reproduction, not AppKit/Keychain execution.
+- The pinned configuration native runner compiles Engine+ProcessingConfigurationChecks only. Fixed-object search finds no invocation of PreferencesControllerChecks in the workflow/build/test entries; the worker evidence records an earlier manual run. Full app compilation is separate. Original owner received the regression and reproducible current-controller check-entry requirement.
+
 2026-10-28 — Current manifest reconciliation and public receipt probe:
 - Fixed Git-object checks found23 T03 paths (2 omitted from the old ledger,8 stale blobs) and109 T30 paths (3 omitted,13 stale blobs). Refreshed all path/status/blob pins while preserving historical verdicts; excludes dirty worker files and adds no review clearance.
 - Root authenticated stdio probe at2ee43f0 created a service receipt, reused its ID for processing settings and received the old service as success instead of invalid_configuration. Setting remained1, EOF exit0, temporary profile removed. Original owner received the reproduction; no prepared runtime, app or private data was used.

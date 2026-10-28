@@ -7,6 +7,9 @@
 
 ## 2026-10-28 — T03 durable correction and T30 provider propagation
 
+- Root independently reproduced the2ee43f0 stale-credential request consequence through authenticated stdio: saveA, saveB/readback, lateA verified-state PUT restoresA metadata. No Keychain/provider/AppKit execution; temporary source/profile removed and process exit0. The owner received this deterministic backend regression.
+- Native test-entry audit confirms the existing configuration runner compiles only Engine+ProcessingConfigurationChecks; PreferencesControllerChecks has no scripted invocation at the pin. Owner is to connect the strict controller check to reproducible validation before later Swift edits are accepted. No CI workflow or worker files changed by root.
+
 - Root reconciled exact committed candidate manifests: T03 `2ee43f0` now23 paths and T30 `835cda3` now109. Added the five omitted paths and refreshed21 stale blobs, retaining prior review notes. Git objects, not unfinished worker files, define these pins.
 - Independent authenticated stdio probe reproduced the T03 completed-receipt endpoint mismatch; source/profile extracted to a self-cleaning temporary directory, no private data/provider calls. Service exited0. Original owner notified.
 - T03 current R10 Spec inspected61hunks/23paths and requests changes:3P1/1P2. Owner received compile, stale-credential, unknown-receipt and acknowledgement feedback findings; paired Standards remains pending.
