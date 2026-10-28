@@ -28,6 +28,7 @@ import Secrets
 	private let instructions = NSTextView()
 	private let titleLanguage = NSPopUpButton()
 	private let typography = NSPopUpButton()
+	private let advancedOutput = NSStackView()
 	private let confirmLegacyOutput = NSButton(checkboxWithTitle: "I reviewed the imported output preferences", target: nil, action: nil)
 	private let history = NSPopUpButton()
 	private let usedBy = NSTextField(wrappingLabelWithString: "Used by: none")
@@ -205,6 +206,15 @@ import Secrets
 		confirmLegacyOutput.isHidden = true
 		titleLanguage.addItems(withTitles: ["Follow instructions", "Chinese"])
 		typography.addItems(withTitles: ["Preserve generated text", "Chinese editorial style"])
+		let advancedButton = NSButton(title: "Advanced", target: self, action: #selector(toggleAdvancedOutput(_:)))
+		advancedButton.setButtonType(.pushOnPushOff)
+		advancedButton.bezelStyle = .disclosure
+		advancedOutput.orientation = .vertical
+		advancedOutput.alignment = .leading
+		advancedOutput.spacing = 6
+		advancedOutput.addArrangedSubview(row("Title language", titleLanguage))
+		advancedOutput.addArrangedSubview(row("Typography", typography))
+		advancedOutput.isHidden = true
 		let textScroll = NSScrollView()
 		textScroll.hasVerticalScroller = true
 		textScroll.borderType = .bezelBorder
@@ -219,9 +229,13 @@ import Secrets
 			row("Prompt", prompts), row("Name", promptName), row("Role", role), row("Service", binding), row("Model or target", target),
 			NSTextField(labelWithString: "Instructions"), textScroll,
 			NSTextField(wrappingLabelWithString: "Available inputs include {{title}}, {{content}}, {{description}} and, for Paper, {{abstract}}. The system validates required output."),
-			row("Title language", titleLanguage), row("Typography", typography), confirmLegacyOutput, usedBy, actions,
+			advancedButton, advancedOutput, confirmLegacyOutput, usedBy, actions,
 			button("Copy Instructions", #selector(copyInstructions)), button("Import Legacy Prompt", #selector(importLegacy)),
 			NSTextField(wrappingLabelWithString: "Restore Text keeps the currently selected service, target, and output preferences."), historyActions])
+	}
+
+	@objc private func toggleAdvancedOutput(_ sender: NSButton) {
+		advancedOutput.isHidden = sender.state != .on
 	}
 
 	@objc private func updateStatus() {
@@ -474,8 +488,10 @@ import Secrets
 			if body["type"] as? String == "openai-compatible", !secret.isEmpty {
 				do {
 					try CredentialsManager.storeCredentials(Credentials(type: .oauthAccessToken, username: "credential", secret: secret), server: "nonews-ai-\(id)")
+					self.updateCredentialState(id: id, state: "verified", from: body)
 					if current && self.credential.stringValue == secret { self.credential.stringValue = "" }
 				} catch {
+					self.updateCredentialState(id: id, state: "incomplete", from: body)
 					if current { self.feedback.stringValue = "Service saved, but the credential could not be stored. The connection is incomplete." }
 					self.loadLists()
 					return
@@ -489,6 +505,7 @@ import Secrets
 						return
 					}
 				} catch {
+					self.updateCredentialState(id: id, state: "incomplete", from: body)
 					if current { self.currentService = value; self.feedback.stringValue = "Service saved, but its credential could not be read. The connection is incomplete." }
 					self.loadLists()
 					return
@@ -499,12 +516,23 @@ import Secrets
 		}
 	}
 
+	private func updateCredentialState(id: String, state: String, from body: [String: Any]) {
+		var update = body
+		update["id"] = id
+		update["credentialState"] = state
+		request("PUT", "/api/config/services", update) { _ in }
+	}
+
 	@objc private func refreshService() {
 		migrationReview.invalidate()
 		guard let service = currentService, let id = service["id"] as? String else { feedback.stringValue = "Save a service first."; return }
 		let generation = serviceGeneration
 		var body: [String: Any] = ["id": id]
 		if service["type"] as? String == "openai-compatible" {
+			guard service["credentialState"] as? String == "verified" else {
+				feedback.stringValue = "Save and verify the service credential before refreshing its directory."
+				return
+			}
 			do {
 				guard let stored = try CredentialsManager.retrieveCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") else {
 					feedback.stringValue = "Add and save the service credential first."

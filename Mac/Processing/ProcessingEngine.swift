@@ -108,7 +108,10 @@ final class ProcessingEngine {
 	var unconfirmedMutations: [String] { UserDefaults.standard.stringArray(forKey: recoveryKey) ?? [] }
 	private func rememberMutation(_ identity: String) {
 		var ids = unconfirmedMutations
-		if !ids.contains(identity) { ids.append(identity); UserDefaults.standard.set(ids, forKey: recoveryKey) }
+		if ids.contains(identity) { return }
+		guard ids.count < 32 else { return }
+		ids.append(identity)
+		UserDefaults.standard.set(ids, forKey: recoveryKey)
 	}
 	func forgetMutation(_ identity: String) {
 		request(method: "POST", path: "/api/config/migration/ack", body: ["cooperative": true, "receiptId": identity]) { [weak self] result in
@@ -384,7 +387,10 @@ final class ProcessingEngine {
 				if error as? EngineError == .invalidConfiguration || error as? EngineError == .renderTooLarge || error as? EngineError == .migrationBusy {
 					completion(.failure(error))
 					self?.forgetMutation(identity)
-				} else { completion(.failure(EngineError.outcomeUnknown(identity))) }
+				} else {
+					self?.dropMutation(identity)
+					completion(.failure(EngineError.outcomeUnknown(identity)))
+				}
 			case .success(let value):
 				guard value["operationId"] as? String == identity else { completion(.failure(EngineError.operation)); return }
 				if value["state"] as? String == "complete", let result = value["result"] as? [String: Any] {

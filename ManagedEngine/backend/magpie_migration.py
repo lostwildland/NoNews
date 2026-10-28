@@ -11,6 +11,12 @@ from .core import transaction, utcnow
 from .job_stream import text_chunks
 
 SNAPSHOT_KEEP = 2
+SNAPSHOT_CAPACITY = 512 * 1024 * 1024
+SNAPSHOT_ROW_CAPACITY = 8 * 1024 * 1024
+
+
+class SnapshotCapacity(ValueError):
+    code = 'snapshot_capacity'
 
 
 class StagedRows:
@@ -280,6 +286,7 @@ def snapshot_report(db, report):
     identity = uuid.uuid4().hex
     prefix = f'nonews.migration-snapshot.{identity}.'
     count = 0
+    total_bytes = 0
     def pieces():
         yield '{'
         for index, (key, value) in enumerate(report.items()):
@@ -300,6 +307,9 @@ def snapshot_report(db, report):
         for piece in pieces():
             for start in range(0, len(piece), 16_000):
                 part = piece[start:start + 16_000].encode('ascii')
+                total_bytes += len(part)
+                if total_bytes > SNAPSHOT_CAPACITY:
+                    raise SnapshotCapacity('Migration report exceeds snapshot capacity')
                 while part:
                     length = min(48_000 - len(data), len(part))
                     data.extend(part[:length])
@@ -338,6 +348,7 @@ def browse_snapshot(db, report):
         info['editorReviewToken'] = report['editorReviewToken']
     info['counts'] = {}
     info['blocked'] = 0
+    total_bytes = 0
     with transaction(db):
         for section in ('models', 'pending', 'evidence'):
             count = 0
@@ -347,9 +358,14 @@ def browse_snapshot(db, report):
                 key = prefix + f'b.{section}.{count}.'
                 buffer = bytearray()
                 parts = 0
+                row_bytes = 0
                 for piece in encoder.iterencode(item):
                     for start in range(0, len(piece), 16000):
                         data = piece[start:start + 16000].encode('ascii')
+                        row_bytes += len(data)
+                        total_bytes += len(data)
+                        if row_bytes > SNAPSHOT_ROW_CAPACITY or total_bytes > SNAPSHOT_CAPACITY:
+                            raise SnapshotCapacity('Migration report row exceeds snapshot capacity')
                         while data:
                             size = min(48000 - len(buffer), len(data))
                             buffer.extend(data[:size])

@@ -15,6 +15,41 @@ from threading import Thread
 
 
 class MigrationTest(unittest.TestCase):
+    def test_direct_mutation_has_restart_safe_receipt(self):
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'd' * 32
+        with tempfile.TemporaryDirectory() as root:
+            process = subprocess.Popen([sys.executable, '-B', str(script), root], stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE, text=True,
+                                        env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            def exchange(message):
+                process.stdin.write(json.dumps(message) + '\n'); process.stdin.flush()
+                return json.loads(process.stdout.readline())
+            self.assertEqual(exchange({'token': token}), {'status': 'ready'})
+            mutation = uuid.uuid4().hex
+            started = exchange({'id': 1, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
+                                'mutationId': mutation,
+                                'body': {'name': 'Direct', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:9'}})
+            self.assertIn('result', started)
+            operation = started['result']['_pendingMutation']
+            while True:
+                response = exchange({'id': 2, 'token': token, 'method': 'POST', 'path': '/api/config/migration/operation',
+                                     'body': {'operationId': operation}})
+                if response.get('result', {}).get('state') == 'complete':
+                    break
+                time.sleep(.01)
+            saved = response['result']['result']
+            process.stdin.close(); process.stdout.close(); self.assertEqual(process.wait(timeout=30), 0)
+            process = subprocess.Popen([sys.executable, '-B', str(script), root], stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE, text=True,
+                                       env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            self.assertEqual(exchange({'token': token}), {'status': 'ready'})
+            recovered = exchange({'id': 3, 'token': token, 'method': 'POST', 'path': '/api/config/migration/operation',
+                                  'body': {'operationId': mutation}})
+            self.assertEqual(recovered['result']['state'], 'complete')
+            self.assertEqual(recovered['result']['result'], saved)
+            process.stdin.close(); process.stdout.close(); self.assertEqual(process.wait(timeout=30), 0)
+
     def test_queued_save_receipt_survives_restart_and_rolls_back_with_save(self):
         class Directory(BaseHTTPRequestHandler):
             def do_GET(self):

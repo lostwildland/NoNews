@@ -61,7 +61,7 @@ class Application:
                     raise magpie_migration.MigrationBusy('Mutation has a definitive outcome')
             with self.migration_lock:
                 busy = any(not item['done'] for item in self.migration_operations.values())
-                if busy:
+                if mutation_id is not None or busy:
                     pending = self._start_migration('mutation', {'method': method, 'path': path, 'query': query, 'body': body, 'response_budget': response_budget}, identity=mutation_id)
                     return {'_pendingMutation': pending['operationId']}
         read_only = method == 'GET' or (path == '/api/config/migration/preview' and 'snapshotId' in body)

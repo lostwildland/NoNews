@@ -95,7 +95,7 @@ def service(db, method, body):
                     raise ConfigurationError('Service is in use by pending work')
             db.execute('DELETE FROM app_settings WHERE key=?', (f"nonews.service.{value['id']}",))
         return {'deleted': True}
-    if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error'}:
+    if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error', 'credentialState'}:
         raise ConfigurationError('Invalid service fields')
     identity = body.get('id')
     prior = _record(db, 'service', identity) if identity is not None else None
@@ -122,6 +122,11 @@ def service(db, method, body):
         value.update({key: prior.get(key) for key in ('targets', 'checkedAt', 'stale', 'error')})
     else:
         value.update({'targets': [], 'checkedAt': None, 'stale': True, 'error': None})
+    credential_state = body.get('credentialState', prior.get('credentialState') if prior else None)
+    if kind == 'magpie':
+        value['credentialState'] = 'not_required'
+    else:
+        value['credentialState'] = credential_state if credential_state in {'unverified', 'incomplete', 'verified'} else 'unverified'
     _store(db, 'service', value)
     return value
 
@@ -153,7 +158,8 @@ def refresh(db, body):
         if len(json.dumps(targets).encode()) > 65536:
             raise ValueError('Directory too large')
         value.update({'targets': targets, 'checkedAt': utcnow(),
-                      'stale': False, 'error': None})
+                      'stale': False, 'error': None,
+                      'credentialState': 'verified' if value['type'] == 'openai-compatible' else 'not_required'})
     except HTTPError as error:
         value.update({'stale': True, 'error': 'authentication' if error.code in (401, 403) else 'network'})
     except (URLError, OSError, TimeoutError):
@@ -411,7 +417,7 @@ def _list(db, kind, body):
                       (prefix + after, f'nonews.{kind}/')).fetchall()
     values = [json.loads(row[0]) for row in rows[:100]]
     if kind == 'service':
-        values = [{key: value[key] for key in ('id', 'name', 'type', 'endpoint')} for value in values]
+        values = [{key: value[key] for key in ('id', 'name', 'type', 'endpoint', 'credentialState')} for value in values]
     return {kind + 's': values, 'next': values[-1]['id'] if len(rows) > 100 else None}
 
 
