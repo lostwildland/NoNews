@@ -104,7 +104,7 @@ class MigrationTest(unittest.TestCase):
                 lock.rollback()
                 self.assertEqual(p.wait(timeout=30), 0)
             p = start()
-            self.assertEqual(call('/api/config/migration/operation', {'operationId': stopped_id})['result']['state'], 'unknown')
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': stopped_id})['result']['state'], 'notSaved')
             self.assertNotIn('Stopped', [row['name'] for row in call('/api/config/services', {}, 'GET')['result']['services']])
             acknowledged = call('/api/config/migration/ack', {'receiptId': prompt_id, 'cooperative': True})['result']['operationId']
             while True:
@@ -121,9 +121,10 @@ class MigrationTest(unittest.TestCase):
                 lock.rollback()
             while True:
                 failed = call('/api/config/migration/operation', {'operationId': failed_id})
-                if 'error' in failed: break
+                if 'error' in failed or failed.get('result', {}).get('state') != 'running': break
                 time.sleep(.01)
-            self.assertEqual(failed['error'], 'operation failed')
+            self.assertEqual(failed['result']['state'], 'notSaved')
+            self.assertEqual(failed['result']['outcome'], 'notCommitted')
             services = call('/api/config/services', {}, 'GET')['result']['services']
             self.assertNotIn('Rollback', [row['name'] for row in services])
             with closing(sqlite3.connect(database)) as db, db:

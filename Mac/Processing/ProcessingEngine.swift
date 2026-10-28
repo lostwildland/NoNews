@@ -386,7 +386,7 @@ final class ProcessingEngine {
 					self?.forgetMutation(identity)
 				} else if value["state"] as? String == "notSaved" {
 					self?.forgetMutation(identity)
-					completion(.failure(EngineError.operation))
+					completion(.failure(EngineError.mutationNotSaved))
 				} else if value["state"] as? String == "running" {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
 						guard let self else { completion(.failure(EngineError.unavailable)); return }
@@ -461,5 +461,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy, outcomeUnknown(String) }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy, outcomeUnknown(String), mutationNotSaved }
 }

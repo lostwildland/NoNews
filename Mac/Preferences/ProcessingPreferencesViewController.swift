@@ -227,7 +227,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 						self.feedback.stringValue = "A previous save was confirmed. Review the saved configuration."
 						self.loadLists()
 					case .failure(let error):
-						self.feedback.stringValue = error as? ProcessingEngine.EngineError == .operation ? "A previous save did not complete. Review your changes before retrying." : "A previous save is still being confirmed."
+						self.feedback.stringValue = error as? ProcessingEngine.EngineError == .mutationNotSaved ? "The save was cancelled before it started. Your configuration was not changed." : "A previous save is still being confirmed."
 					}
 				}
 			}

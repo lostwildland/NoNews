@@ -254,7 +254,10 @@ class Application:
             if not present:
                 with InformationDB(self.database, read_only=True) as db:
                     result = self._mutation_receipt(db.db, identity)
-                return {'state': 'complete', 'operationId': identity, 'result': result} if result is not None else {'state': 'unknown', 'operationId': identity}
+                    outcome = None if result is not None else self._mutation_outcome(db.db, identity)
+                if result is not None:
+                    return {'state': 'complete', 'operationId': identity, 'result': result}
+                return {'state': 'notSaved', 'operationId': identity, **outcome} if outcome else {'state': 'unknown', 'operationId': identity}
         with self.migration_lock:
             if 'operationId' not in body:
                 if action == 'operation':
@@ -283,7 +286,7 @@ class Application:
                 return {'state': 'running', 'operationId': operation['id']}
             if operation['cancel'].is_set() and operation['action'] == 'mutation' and not operation.get('started'):
                 operation['read'] = True
-                return {'state': 'notSaved', 'operationId': identity}
+                return {'state': 'notSaved', 'operationId': identity, **(operation.get('result') or {'outcome': 'cancelled'})}
             if operation['cancel'].is_set() and operation['action'] == 'preview':
                 if operation['error']:
                     operation['read'] = True
@@ -291,6 +294,8 @@ class Application:
             operation['read'] = True
             if operation['error']:
                 raise operation['error']
+            if operation['action'] == 'mutation' and isinstance(operation.get('result'), dict) and operation['result'].get('_outcome'):
+                return {'state': 'notSaved', 'operationId': identity, **operation['result']['_outcome']}
             if operation.get('render') and response_budget is not None:
                 encoded = json.dumps({'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}, separators=(',', ':'), ensure_ascii=True)
                 if len(encoded) > response_budget:
@@ -312,6 +317,24 @@ class Application:
         return result
 
     @staticmethod
+    def _mutation_outcome(db, identity):
+        row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-outcome.' + identity,)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def _write_mutation_outcome(self, identity, outcome, reason=None):
+        with InformationDB(self.database) as db, transaction(db.db):
+            existing = self._mutation_outcome(db.db, identity)
+            if existing is None:
+                count = db.db.execute("SELECT count(*) FROM app_settings WHERE key>=? AND key<?", ('nonews.mutation-outcome.', 'nonews.mutation-outcome/')).fetchone()[0]
+                if count >= 1024:
+                    raise magpie_migration.MigrationBusy('Mutation outcomes require acknowledgement')
+                value = {'outcome': outcome}
+                if reason:
+                    value['reason'] = reason
+                magpie_migration.save(db.db, 'nonews.mutation-outcome.' + identity, json.dumps(value))
+            return existing or value
+
+    @staticmethod
     def _receipt_matches(db, identity, method, path):
         row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + identity,)).fetchone()
         if not row:
@@ -327,9 +350,16 @@ class Application:
             with self.migration_serial:
                 with self.migration_lock:
                     if operation['cancel'].is_set():
-                        raise magpie_migration.SnapshotExpired('Migration operation cancelled')
-                    operation['started'] = True
-                if operation['action'] == 'mutation':
+                        if operation['action'] == 'mutation':
+                            result = {'_outcome': self._write_mutation_outcome(operation['id'], 'cancelled')}
+                            operation['started'] = False
+                        else:
+                            raise magpie_migration.SnapshotExpired('Migration operation cancelled')
+                    else:
+                        operation['started'] = True
+                if operation['cancel'].is_set() and operation['action'] == 'mutation':
+                    pass
+                elif operation['action'] == 'mutation':
                     operation['render'] = body['path'] == '/api/config/render'
                     if operation['render']:
                         result = self.handle(body['method'], body['path'], body['query'], body['body'], response_budget=body.get('response_budget'), _queued=True)
@@ -352,6 +382,7 @@ class Application:
                         raise configuration.ConfigurationError('Invalid receipt')
                     with InformationDB(self.database) as db, transaction(db.db):
                         db.db.execute('DELETE FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + identity,))
+                        db.db.execute('DELETE FROM app_settings WHERE key=?', ('nonews.mutation-outcome.' + identity,))
                     result = {'acknowledged': True}
                 else:
                     with InformationDB(self.database) as db:
@@ -362,9 +393,17 @@ class Application:
                             magpie_migration.release_report(db.db, {'snapshotId': result['snapshotId']})
                             raise magpie_migration.SnapshotExpired('Migration operation cancelled')
         except Exception as error:
+            if operation['action'] == 'mutation' and not operation.get('render'):
+                try:
+                    result = {'_outcome': self._write_mutation_outcome(operation['id'], 'notCommitted', 'transaction_failed')}
+                    error = None
+                except Exception:
+                    pass
             if operation['cancel'].is_set():
                 error = magpie_migration.SnapshotExpired('Migration operation cancelled')
             with self.migration_lock:
+                if result is not None:
+                    operation['result'] = result
                 operation['error'] = error
         else:
             with self.migration_lock:
