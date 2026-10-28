@@ -19,7 +19,10 @@ import Articles
 		let status = ArticleStatus(articleID: "missing", read: false, starred: false, dateArrived: Date())
 		let article = Article(accountID: "missing-fixture-\(UUID().uuidString)", articleID: "missing", feedID: "fixture", uniqueID: "missing", title: nil, contentHTML: nil, contentText: nil, markdown: nil, url: nil, externalURL: nil, summary: nil, imageURL: nil, datePublished: nil, dateModified: nil, authors: nil, status: status)
 		let (finished, signal) = AsyncStream<Void>.makeStream()
-		let command = try #require(MarkStatusCommand(initialArticles: [article], markingRead: true, undoManager: undo, completion: { signal.yield(()) }))
+		let command = try #require(MarkStatusCommand(initialArticles: [article], markingRead: true, undoManager: undo, completion: { result in
+			#expect(result.succeeded.isEmpty && result.failed.count == 1)
+			signal.yield(())
+		}))
 		command.perform()
 		for await _ in finished { break }
 		#expect(undo.undoActionName == "Unrelated")

@@ -74,6 +74,12 @@ public struct ArticleCounts: Sendable {
 	}
 	private var acceptsWork: Bool { !sealed && (!closing || DatabaseWork.current?.isActive == true && DatabaseWork.current?.accountID == accountID) }
 	#if DEBUG
+	public func setArticlesTableUnavailableForTesting(_ unavailable: Bool) -> Bool {
+		nonisolated(unsafe) var succeeded = false
+		let sql = unavailable ? "ALTER TABLE articles RENAME TO fixture_saved_articles" : "ALTER TABLE fixture_saved_articles RENAME TO articles"
+		let accepted = queue.runInDatabaseSync { database in succeeded = database.executeStatements(sql) }
+		return accepted && succeeded
+	}
 	public func setStatusTableUnavailableForTesting(_ unavailable: Bool) -> Bool {
 		nonisolated(unsafe) var succeeded = false
 		let sql = unavailable ? "ALTER TABLE statuses RENAME TO fixture_saved_statuses" : "ALTER TABLE fixture_saved_statuses RENAME TO statuses"
@@ -447,12 +453,11 @@ public struct ArticleCounts: Sendable {
 		guard acceptsWork else { return false }
 		activeOperations += 1
 		defer { operationFinished() }
-		await withCheckedContinuation { continuation in
-			_delete(articleIDs: articleIDs) {
-				continuation.resume()
+		return await withCheckedContinuation { continuation in
+			_delete(articleIDs: articleIDs) { succeeded in
+				continuation.resume(returning: succeeded)
 			}
 		}
-		return true
 	}
 
 	// MARK: - ArticleIDs
@@ -676,7 +681,7 @@ private extension ArticlesDatabase {
 		articlesTable.update(feedIDsAndItems, defaultRead, completion)
 	}
 
-	func _delete(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
+	func _delete(articleIDs: Set<String>, completion: @escaping @Sendable (Bool) -> Void) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.delete(articleIDs: articleIDs, completion: completion)
 	}

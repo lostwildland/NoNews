@@ -395,7 +395,6 @@
 			membershipExceptions = (
 				ShareExtension/SafariExt.js,
 				ShareExtension/ShareDefaultContainer.swift,
-				Widget/WidgetData.swift,
 				Widget/WidgetDataDecoder.swift,
 				Widget/WidgetDataEncoder.swift,
 				Widget/WidgetDeepLinks.swift,

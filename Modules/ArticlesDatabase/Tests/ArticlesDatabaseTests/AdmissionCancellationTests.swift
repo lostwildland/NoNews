@@ -5,6 +5,25 @@ import Articles
 @testable import ArticlesDatabase
 
 @MainActor @Suite struct AdmissionCancellationTests {
+	@Test func failedArticleDeleteIsNotReportedAsSuccess() async {
+		let queue = DatabaseQueue(databasePath: ":memory:")
+		let table = ArticlesTable(name: "articles", accountID: "delete-fixture", queue: queue, retentionStyle: .feedBased)
+		queue.runInDatabaseSync { database in
+			#expect(database.executeStatements("CREATE TABLE articles (articleID TEXT); INSERT INTO articles VALUES ('stored');"))
+		}
+		let success = await withCheckedContinuation { continuation in
+			table.delete(articleIDs: ["stored"]) { continuation.resume(returning: $0) }
+		}
+		#expect(success)
+		queue.runInDatabaseSync { database in
+			#expect(database.executeStatements("DROP TABLE articles;"))
+		}
+		let failure = await withCheckedContinuation { continuation in
+			table.delete(articleIDs: ["stored"]) { continuation.resume(returning: $0) }
+		}
+		#expect(!failure)
+		#expect(await queue.close())
+	}
 	@Test func failedStatusQueryIsNotASuccessfulEmptyRead() async {
 		let queue = DatabaseQueue(databasePath: ":memory:")
 		let table = StatusesTable(queue: queue)

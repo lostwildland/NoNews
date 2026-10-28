@@ -1928,7 +1928,7 @@ private extension SceneCoordinator {
 
 	func markArticlesWithUndo(_ articles: [Article], statusKey: ArticleStatus.Key, flag: Bool, completion: (() -> Void)? = nil, didMark: ((Bool, [String: Set<String>]) -> Void)? = nil) {
 		guard let undoManager = undoManager,
-			  let markReadCommand = MarkStatusCommand(initialArticles: articles, statusKey: statusKey, flag: flag, undoManager: undoManager, completion: completion, didMark: didMark) else {
+			  let markReadCommand = MarkStatusCommand(initialArticles: articles, statusKey: statusKey, flag: flag, undoManager: undoManager, completion: { _ in completion?() }, didMark: didMark) else {
 			completion?()
 			return
 		}

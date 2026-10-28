@@ -287,7 +287,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 	// MARK: - API
 
 	func markAllAsRead(completion: (() -> Void)? = nil) {
-		guard let undoManager = undoManager, let markReadCommand = MarkStatusCommand(initialArticles: articles, markingRead: true, undoManager: undoManager, completion: completion) else {
+		guard let undoManager = undoManager, let markReadCommand = MarkStatusCommand(initialArticles: articles, markingRead: true, undoManager: undoManager, completion: { _ in completion?() }) else {
 			completion?()
 			return
 		}

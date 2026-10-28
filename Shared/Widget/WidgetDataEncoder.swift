@@ -85,40 +85,16 @@ import Account
 
 	private func performEncode() async {
 		defer { isRunning = false }
-
-
-		let latestData: WidgetData
 		do {
-			#if DEBUG
-			if let fetchWidgetDataForTesting {
-				latestData = try await fetchWidgetDataForTesting()
-			} else {
-				latestData = try await fetchWidgetData()
+			let (latestData, existingData) = try await WidgetSnapshotStore.publish(dataURL: dataURL, imageDirectory: imageContainer) {
+				#if DEBUG
+				if let fetchWidgetDataForTesting { return try await fetchWidgetDataForTesting() }
+				#endif
+				return try await fetchWidgetData()
 			}
-			#else
-			latestData = try await fetchWidgetData()
-			#endif
-		} catch {
-			return
-		}
-		let encodedData: Data
-		do {
-			encodedData = try JSONEncoder().encode(latestData)
-			Self.logger.debug("WidgetDataEncoder: encoded widget data")
-		} catch {
-			Self.logger.error("WidgetDataEncoder: error encoding widget data: \(error.localizedDescription)")
-			return
-		}
-
-		do {
-			let existingData = (try? Data(contentsOf: dataURL)).flatMap { try? JSONDecoder().decode(WidgetData.self, from: $0) }
-			try encodedData.write(to: dataURL, options: [.atomic])
-			let referencedIcons = Set((latestData.unreadArticles + latestData.starredArticles + latestData.todayArticles).compactMap(\.feedIconPath))
-			removeStaleFaviconsFromSharedContainer(protecting: referencedIcons)
 			reloadTimelines(newData: latestData, existingData: existingData)
-			Self.logger.debug("WidgetDataEncoder: finished refreshing widget data")
 		} catch {
-			Self.logger.error("WidgetDataEncoder: could not write data to container")
+			Self.logger.error("WidgetDataEncoder: could not publish widget data: \(error.localizedDescription)")
 		}
 	}
 
@@ -211,40 +187,6 @@ import Account
 		}
 	}
 
-	func removeStaleFaviconsFromSharedContainer(protecting paths: Set<String>) {
-		let fm = FileManager.default
-		if !fm.fileExists(atPath: imageContainer.path) {
-			try? fm.createDirectory(at: imageContainer, withIntermediateDirectories: true, attributes: nil)
-			return
-		}
-
-		/// We don't have 7 days to test in DEBUG mode.
-		/// So, for testing purposes, images are removed after 30s
-		/// if they haven't been accessed.
-		#if DEBUG
-		let cutoffDate = Date.now.addingTimeInterval(-30)
-		#else
-		let cutoffDate = Date.now.addingTimeInterval(-7 * 24 * 60 * 60)
-		#endif
-
-		do {
-			let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey, .contentAccessDateKey, .contentModificationDateKey]
-			let urls = try fm.contentsOfDirectory(at: imageContainer, includingPropertiesForKeys: Array(resourceKeys), options: [.skipsHiddenFiles])
-			for url in urls {
-				let values = try url.resourceValues(forKeys: resourceKeys)
-				// Skip directories; we only store files in this container
-				if values.isDirectory == true || paths.contains(url.path) { continue }
-
-				// Prefer last access date; fall back to modification date if needed
-				let lastAccess = values.contentAccessDate ?? values.contentModificationDate
-				if let lastAccess, lastAccess < cutoffDate {
-					try? fm.removeItem(at: url)
-				}
-			}
-		} catch {
-			Self.logger.debug("WidgetDataEncoder: unable to remove favicons: \(error.localizedDescription).")
-		}
-	}
 
 	func createLatestArticle(_ article: Article) -> LatestArticle {
 		let truncatedTitle = ArticleStringFormatter.shared.truncatedTitle(article)

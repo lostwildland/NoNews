@@ -344,11 +344,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		}
 	}
 
-	public func delete(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
-		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion?() } }) { database in
-			self.removeArticles(articleIDs, database)
+	public func delete(articleIDs: Set<String>, completion: @escaping @Sendable (Bool) -> Void) {
+		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(false) } }) { database in
+			let succeeded = database.rs_deleteRowsWhereKey(DatabaseKey.articleID, inValues: Array(articleIDs), tableName: self.name)
 			DispatchQueue.main.async {
-				completion?()
+				completion(succeeded)
 			}
 		}
 	}

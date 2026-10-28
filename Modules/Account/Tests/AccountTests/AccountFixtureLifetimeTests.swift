@@ -623,6 +623,27 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		try await manager.deleteAccount(account)
 	}
 
+	@Test func cloudKitFailedArticleDeletePreservesPendingStatusAndPage() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "fixture", key: .read, flag: true, selected: true)]))
+		#expect(account.database.setArticlesTableUnavailableForTesting(true))
+		let recordID = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
+		var committed = false
+		do {
+			try await zone.applyFetchedPage(changed: [], deleted: [(CloudKitArticlesZone.CloudKitArticleStatus.recordType, recordID)], work: nil) { committed = true }
+			Issue.record("Failed article deletion committed a CloudKit page")
+		} catch { }
+		#expect(!committed)
+		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("fixture"))
+		#expect(account.database.setArticlesTableUnavailableForTesting(false))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func cloudKitQueuedOperationsKeepTheirOwnWorkAndCancelledSendFails() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)

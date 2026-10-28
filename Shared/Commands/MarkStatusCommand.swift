@@ -21,7 +21,7 @@ import Account
 	let undoManager: UndoManager
 	let flag: Bool
 	let statusKey: ArticleStatus.Key
-	var completion: (() -> Void)?
+	var completion: ((ArticleMarkResult) -> Void)?
 	private var pendingMark: Task<[String: Set<String>], Never>?
 	#if DEBUG
 	var accountResolverForTesting: ((String) -> Account?)?
@@ -32,7 +32,7 @@ import Account
 	// the UI in the right direction. Unlike completion, it’s not one-shot.
 	let didMark: ((Bool, [String: Set<String>]) -> Void)?
 
-	init?(initialArticles: [Article], statusKey: ArticleStatus.Key, flag: Bool, undoManager: UndoManager, completion: (() -> Void)? = nil, didMark: ((Bool, [String: Set<String>]) -> Void)? = nil) {
+	init?(initialArticles: [Article], statusKey: ArticleStatus.Key, flag: Bool, undoManager: UndoManager, completion: ((ArticleMarkResult) -> Void)? = nil, didMark: ((Bool, [String: Set<String>]) -> Void)? = nil) {
 
         // Filter out articles that already have the desired status or can’t be marked.
 		let articlesToMark = MarkStatusCommand.filteredArticles(initialArticles, statusKey, flag)
@@ -52,11 +52,11 @@ import Account
 		self.redoActionName = actionName
     }
 
-	convenience init?(initialArticles: [Article], markingRead: Bool, undoManager: UndoManager, completion: (() -> Void)? = nil) {
+	convenience init?(initialArticles: [Article], markingRead: Bool, undoManager: UndoManager, completion: ((ArticleMarkResult) -> Void)? = nil) {
 		self.init(initialArticles: initialArticles, statusKey: .read, flag: markingRead, undoManager: undoManager, completion: completion)
 	}
 
-	convenience init?(initialArticles: [Article], markingStarred: Bool, undoManager: UndoManager, completion: (() -> Void)? = nil) {
+	convenience init?(initialArticles: [Article], markingStarred: Bool, undoManager: UndoManager, completion: ((ArticleMarkResult) -> Void)? = nil) {
 		self.init(initialArticles: initialArticles, statusKey: .starred, flag: markingStarred, undoManager: undoManager, completion: completion)
 	}
 
@@ -103,7 +103,7 @@ import Account
 				if registerAfterSuccess { registerUndo() }
 				didMark?(flag, outcome.succeeded)
 			}
-			completion?()
+			completion?(outcome)
 			#if DEBUG
 			onMarkFinishedForTesting?(outcome)
 			#endif
