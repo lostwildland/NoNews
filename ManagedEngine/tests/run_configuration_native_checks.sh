@@ -3,7 +3,11 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/nonews-config-check.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
-products="${NONEWS_T02_DEBUG_PRODUCTS:-/Users/extension/.t3/worktrees/no-news/t3-25a8a298/.build/acceptance/Build/Products/Debug}"
+products="${NONEWS_T02_DEBUG_PRODUCTS:-}"
+if [[ -z "$products" ]]; then
+	echo "set NONEWS_T02_DEBUG_PRODUCTS to the accepted T02 Debug products directory" >&2
+	exit 2
+fi
 for artifact in Secrets.o ErrorLog.o RSCore.o RSDatabase.o RSDatabaseObjC.o RSCoreObjC.o; do
 	if [[ ! -f "$products/$artifact" ]]; then
 		echo "accepted T02 Debug product is missing: $products/$artifact" >&2

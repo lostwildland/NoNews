@@ -30,6 +30,22 @@ def _credential_state(value):
     return value.get('credentialState') or 'incomplete'
 
 
+def _connection_state(value):
+    checked = value.get('checkedAt')
+    suffix = f"; last checked {checked}" if checked else ''
+    if value.get('credentialState') == 'incomplete':
+        return 'Credential incomplete' + suffix
+    if value.get('error') == 'authentication':
+        return 'Authentication failed; directory stale' + suffix
+    if value.get('error') == 'network':
+        return 'Network error; directory stale' + suffix
+    if value.get('error') == 'invalid_output':
+        return 'Invalid directory response; directory stale' + suffix
+    if value.get('stale'):
+        return 'Directory stale' + suffix
+    return ('Directory checked' + suffix) if checked else 'Directory not checked'
+
+
 def _record(db, kind, identity):
     if not isinstance(identity, str) or len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity):
         raise ConfigurationError('Invalid identity')
@@ -44,6 +60,8 @@ def _record(db, kind, identity):
             value['stale'] = bool(value.get('error')) or (datetime.now(timezone.utc) - datetime.fromisoformat(value['checkedAt'])).total_seconds() > 300
         except (TypeError, ValueError):
             value['stale'] = True
+    if kind == 'service':
+        value['connectionState'] = _connection_state(value)
     return value
 
 
@@ -114,9 +132,10 @@ def service(db, method, body):
             value = dict(prior)
             value['credentialState'] = state
             value['revision'] = uuid.uuid4().hex
+            value['connectionState'] = _connection_state(value)
             _store(db, 'service', value)
             return value
-        if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error', 'credentialState', 'revision'}:
+        if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error', 'credentialState', 'connectionState', 'revision'}:
             raise ConfigurationError('Invalid service fields')
         identity = body.get('id')
         prior = _record(db, 'service', identity) if identity is not None else None
@@ -153,6 +172,7 @@ def service(db, method, body):
             value['credentialState'] = 'not_required'
         else:
             value['credentialState'] = credential_state if credential_state in {'unverified', 'incomplete', 'verified'} else 'unverified'
+        value['connectionState'] = _connection_state(value)
         _store(db, 'service', value)
         return value
 
@@ -197,6 +217,7 @@ def refresh(db, body):
         if current['endpoint'] != value['endpoint'] or current['type'] != value['type']:
             raise ConfigurationError('Service changed during refresh')
         value['name'] = current['name']
+        value['connectionState'] = _connection_state(value)
         _store(db, 'service', value)
     return value
 
@@ -443,7 +464,7 @@ def _list(db, kind, body):
                       (prefix + after, f'nonews.{kind}/')).fetchall()
     values = [json.loads(row[0]) for row in rows[:100]]
     if kind == 'service':
-        values = [{**value, 'credentialState': _credential_state(value)} for value in values]
+        values = [_record(db, 'service', value['id']) for value in values]
     return {kind + 's': values, 'next': values[-1]['id'] if len(rows) > 100 else None}
 
 

@@ -598,7 +598,20 @@ class MigrationTest(unittest.TestCase):
                 'body': {'name': 'Other Gateway', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}}])[0]['result']
             session([call(2, '/api/config/refresh', {'id': service['id']})])
             session([call(2, '/api/config/refresh', {'id': other['id']})])
+            stale = session([{'id': 1, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
+                'body': {'name': 'Stale Gateway', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}}])[0]['result']
+            limited = session([{'id': 1, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
+                'body': {'name': 'Limited Gateway', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}}])[0]['result']
+            session([call(2, '/api/config/refresh', {'id': limited['id']})])
             database = Path(root) / 'information.sqlite'
+            with closing(sqlite3.connect(database)) as db, db:
+                limited_value = json.loads(db.execute('SELECT value FROM app_settings WHERE key=?',
+                                                      ('nonews.service.' + limited['id'],)).fetchone()[0])
+                limited_value['targets'] = ['old/model']
+                db.execute('UPDATE app_settings SET value=? WHERE key=?',
+                           (json.dumps(limited_value), 'nonews.service.' + limited['id']))
+                db.execute('INSERT INTO model_configs VALUES (?,?,?,?)',
+                           ('preflight', 'editor', json.dumps({'target': 'old/model'}), 'now'))
             with closing(sqlite3.connect(database)) as db, db:
                 db.execute("INSERT INTO model_configs VALUES ('news','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model'}),))
                 db.execute("INSERT INTO model_configs VALUES ('news','editor',?, 'now')", (json.dumps({'provider': 'old', 'model': 'other'}),))
@@ -631,6 +644,14 @@ class MigrationTest(unittest.TestCase):
                 db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES ('unresolved','paper','curator','unresolved','pending','now','now','now')")
                 db.execute("INSERT INTO item_feed_contracts(item_id,media_type,kit_id,pinned_at) VALUES ('paper','paper','missing-kit','now')")
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('unresolved','paper','curator','pending',?, 'now')", (json.dumps({'model': 'original'}),))
+            stale_preview = session([call(31, '/api/config/migration/preview',
+                {'serviceId': service['id'], 'editorServices': {'pending': stale['id']}})])[0]['result']
+            self.assertIn('Proposed Editor gateway directory is stale',
+                          next(row for row in stale_preview['pending'] if row['id'] == 'pending')['blocked'])
+            limited_preview = session([call(32, '/api/config/migration/preview',
+                {'serviceId': service['id'], 'editorServices': {'pending': limited['id']}})])[0]['result']
+            self.assertIn('Proposed Editor gateway does not advertise the pinned target',
+                          next(row for row in limited_preview['pending'] if row['id'] == 'pending')['blocked'])
             body = {'serviceId': service['id'], 'choices': {'news/editor': 'editor/new'}}
             choice_report = session([call(9, '/api/config/migration/preview', {'serviceId': service['id'],
                 'choices': {'old/model': 'route/B', 'beta/curator': 'route/A'}})])[0]['result']

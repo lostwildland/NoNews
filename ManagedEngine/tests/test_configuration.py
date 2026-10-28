@@ -69,6 +69,9 @@ class ConfigurationTest(unittest.TestCase):
             self.assertEqual(observed, [])
             refreshed = call('POST', '/api/config/refresh', {'id': service['id']})
             self.assertEqual(refreshed['targets'], ['Route/Exact', 'route/exact'])
+            self.assertTrue(refreshed['connectionState'].startswith('Directory checked; last checked '))
+            self.assertEqual(call('GET', '/api/config/services', {})['services'][0]['connectionState'],
+                             refreshed['connectionState'])
             self.assertEqual(observed, [('/v1/models', None)])
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'PUT', 'path': '/api/config/prompts',
                 'body': {'name': 'Invalid', 'role': 'curator', 'text': 'Text', 'serviceId': service['id'], 'target': 'missing'}}) + '\n')
@@ -97,6 +100,7 @@ class ConfigurationTest(unittest.TestCase):
             failed = call('POST', '/api/config/refresh', {'id': direct['id'], 'credential': 'synthetic-token'})
             self.assertEqual((failed['error'], failed['stale'], failed['targets']),
                              ('authentication', True, ['Route/Exact', 'route/exact']))
+            self.assertTrue(failed['connectionState'].startswith('Authentication failed; directory stale; last checked '))
             self.assertEqual(failed['checkedAt'], result['checkedAt'])
             self.assertNotIn('synthetic-token', json.dumps(call('GET', '/api/config/services', {'id': direct['id']})))
             newer = call('PUT', '/api/config/services', {**failed, 'name': 'Newer',

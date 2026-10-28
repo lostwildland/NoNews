@@ -99,6 +99,7 @@ struct PreferencesControllerChecks {
 		precondition(rejected.contains("rejected"))
 		precondition(!rejected.contains("still being confirmed"))
 		precondition(controller.debugRecoveryMessage(.outcomeUnknown("mutation")).contains("still being confirmed"))
+		precondition(controller.debugRecoveryMessage(.mutationNotSaved).contains("No configuration change was made"))
 
 		let serviceA: [String: Any] = ["id": "service-a", "name": "A", "type": "openai-compatible",
 			"revision": "revision-a", "endpoint": "https://a.example", "credential": "secret-a", "targets": [], "stale": true]
@@ -138,6 +139,7 @@ struct PreferencesControllerChecks {
 		precondition(controller.debugServiceSnapshot()["credentialState"] as? String == "incomplete")
 		precondition(controller.debugRecoveryControl().feedback.contains("could not be stored or read"))
 		precondition(controller.debugCredentialText() == "secret-b")
+		precondition(controller.debugServiceLabel(["id": "gateway-b", "name": "Gateway B", "connectionState": "Authentication failed; directory stale; last checked now"]).contains("Authentication failed"))
 
 		let copyClient = DeferredPreferencesRequests()
 		let copyController = ProcessingPreferencesViewController(requestClient: copyClient)
@@ -157,6 +159,21 @@ struct PreferencesControllerChecks {
 		copyClient.respond(path: "/api/config/prompts", value: ["prompts": [original, copied]])
 		precondition(copyController.debugSelectedPromptID() == "original")
 		precondition(copyController.debugPromptBody()?["id"] as? String == "original")
+
+		let returningClient = DeferredPreferencesRequests()
+		let returningController = ProcessingPreferencesViewController(requestClient: returningClient)
+		returningController.loadView()
+		returningController.debugSetServices([service("gateway-a", "target-a")])
+		returningController.debugSetPromptEditor(original)
+		returningController.debugViewDidAppear()
+		returningClient.respond(path: "/api/config/services", value: ["services": [service("gateway-a", "target-a")]])
+		returningClient.respond(path: "/api/config/prompts", value: ["prompts": [original]])
+		precondition(returningController.debugSelectedPromptID() == "original")
+		var removed: [String] = []
+		returningController.debugSetCredentialRemove { removed.append($0) }
+		returningController.debugRememberPendingCredentialDeletion("service-a")
+		returningController.debugRetryPendingCredentialDeletions()
+		precondition(removed == ["service-a"] && returningController.debugPendingCredentialDeletions().isEmpty)
 
 		try await checkRecovery()
 		print("Preferences controller request wiring checks passed")

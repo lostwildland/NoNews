@@ -247,6 +247,10 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
                 chosen = configuration._record(db, 'service', proposed)
                 if chosen['type'] != 'magpie':
                     raise configuration.ConfigurationError('Pinned Editor service must be Magpie')
+                if chosen['stale']:
+                    blocked.append('Proposed Editor gateway directory is stale')
+                elif job['editor_target'] not in chosen.get('targets', []):
+                    blocked.append('Proposed Editor gateway does not advertise the pinned target')
             if binding and (binding.get('target') != job['editor_target'] or (proposed is not None and proposed != binding.get('serviceId'))):
                 blocked.append('Existing Editor association conflicts with this proposal')
             elif binding:

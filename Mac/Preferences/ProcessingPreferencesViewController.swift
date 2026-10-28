@@ -13,12 +13,104 @@ import Secrets
 	}
 }
 
-@MainActor final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate, NSTextViewDelegate {
+private final class ProcessingPreferencesRootView: NSView {
+	private let heading: NSView
+	private let status: NSView
+	private let action: NSView
+	private let recovery: NSView
+	private let tabs: NSView
+	private let feedback: NSView
+	private var didInstallConstraints = false
+
+	init(heading: NSView, status: NSView, action: NSView, recovery: NSView, tabs: NSView, feedback: NSView) {
+		self.heading = heading
+		self.status = status
+		self.action = action
+		self.recovery = recovery
+		self.tabs = tabs
+		self.feedback = feedback
+		super.init(frame: NSRect(x: 0, y: 0, width: 640, height: 620))
+		for control in [heading, status, action, recovery, tabs, feedback] {
+			control.translatesAutoresizingMaskIntoConstraints = false
+			addSubview(control)
+		}
+		needsUpdateConstraints = true
+	}
+
+	required init?(coder: NSCoder) { fatalError("Processing preferences root is code-owned") }
+
+	override func updateConstraints() {
+		if !didInstallConstraints {
+			didInstallConstraints = true
+			NSLayoutConstraint.activate([
+				heading.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
+				heading.topAnchor.constraint(equalTo: topAnchor, constant: 24),
+				status.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
+				status.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -24),
+				status.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 12),
+				action.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
+				action.topAnchor.constraint(equalTo: status.bottomAnchor, constant: 12),
+				recovery.leadingAnchor.constraint(equalTo: action.trailingAnchor, constant: 12),
+				recovery.centerYAnchor.constraint(equalTo: action.centerYAnchor),
+				tabs.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
+				tabs.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
+				tabs.topAnchor.constraint(equalTo: action.bottomAnchor, constant: 12),
+				tabs.bottomAnchor.constraint(equalTo: feedback.topAnchor, constant: -8),
+				feedback.leadingAnchor.constraint(equalTo: tabs.leadingAnchor),
+				feedback.trailingAnchor.constraint(equalTo: tabs.trailingAnchor),
+				feedback.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16)
+			])
+		}
+		super.updateConstraints()
+	}
+}
+
+private final class ProcessingPreferencesFormScrollView: NSScrollView {
+	private let stack: NSStackView
+	private let controls: [NSView]
+	private var didInstallConstraints = false
+
+	init(controls: [NSView]) {
+		self.controls = controls
+		self.stack = NSStackView(views: controls)
+		super.init(frame: .zero)
+		stack.orientation = .vertical
+		stack.alignment = .leading
+		stack.spacing = 10
+		stack.translatesAutoresizingMaskIntoConstraints = false
+		hasVerticalScroller = true
+		documentView = stack
+		needsUpdateConstraints = true
+	}
+
+	required init?(coder: NSCoder) { fatalError("Processing preferences form is code-owned") }
+
+	override func updateConstraints() {
+		if !didInstallConstraints {
+			didInstallConstraints = true
+			NSLayoutConstraint.activate([
+				stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+				stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+				stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+				stack.widthAnchor.constraint(equalTo: contentView.widthAnchor, constant: -24)
+			])
+			for control in controls {
+				control.setContentHuggingPriority(.defaultLow, for: .horizontal)
+				if control is NSButton { control.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor).isActive = true }
+				else { control.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
+			}
+		}
+		super.updateConstraints()
+	}
+}
+
+@MainActor final class ProcessingPreferencesViewController: NSViewController {
 	private let requestClient: ProcessingPreferencesRequesting
 	private let engine: ProcessingEngine
 #if DEBUG
 	private var debugCredentialStore: ((String, String) throws -> Void)?
 	private var debugCredentialRead: ((String) throws -> String?)?
+	private var debugCredentialRemove: ((String) throws -> Void)?
 #endif
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
@@ -80,6 +172,7 @@ import Secrets
 	private var listGeneration = 0
 	private var recoveringMutations = Set<String>()
 	private var acknowledgingMutations = false
+	private let pendingCredentialDeletionKey = "NoNews.Processing.PendingCredentialDeletions"
 
 	init(requestClient: ProcessingPreferencesRequesting? = nil, engine: ProcessingEngine = .shared) {
 		self.engine = engine
@@ -100,8 +193,13 @@ import Secrets
 		releaseMigrationReport()
 	}
 
+	override func viewDidAppear() {
+		super.viewDidAppear()
+		loadLists(selectPromptID: promptSelectionID)
+		retryPendingCredentialDeletions()
+	}
+
 	override func loadView() {
-		view = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 620))
 		let heading = NSTextField(labelWithString: NSLocalizedString("Processing", comment: "Preferences"))
 		heading.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
 		statusLabel.lineBreakMode = .byWordWrapping
@@ -111,13 +209,7 @@ import Secrets
 		recoveryButton.target = self
 		recoveryButton.action = #selector(acknowledgeUnknownSaves)
 		recoveryButton.isHidden = true
-		for control in [heading, statusLabel, actionButton, recoveryButton] {
-			control.translatesAutoresizingMaskIntoConstraints = false
-			view.addSubview(control)
-		}
 		let tabs = configurationTabs
-		tabs.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(tabs)
 		let serviceTab = NSTabViewItem(identifier: "services")
 		serviceTab.label = "Services"
 		serviceTab.view = serviceForm()
@@ -126,26 +218,9 @@ import Secrets
 		promptTab.label = "Prompts"
 		promptTab.view = promptForm()
 		tabs.addTabViewItem(promptTab)
-		feedback.translatesAutoresizingMaskIntoConstraints = false
-		view.addSubview(feedback)
-		NSLayoutConstraint.activate([
-			heading.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-			heading.topAnchor.constraint(equalTo: view.topAnchor, constant: 24),
-			statusLabel.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
-			statusLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24),
-			statusLabel.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 12),
-			actionButton.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
-			actionButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 12),
-			recoveryButton.leadingAnchor.constraint(equalTo: actionButton.trailingAnchor, constant: 12),
-			recoveryButton.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
-			tabs.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-			tabs.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-			tabs.topAnchor.constraint(equalTo: actionButton.bottomAnchor, constant: 12),
-			tabs.bottomAnchor.constraint(equalTo: feedback.topAnchor, constant: -8),
-			feedback.leadingAnchor.constraint(equalTo: tabs.leadingAnchor),
-			feedback.trailingAnchor.constraint(equalTo: tabs.trailingAnchor),
-			feedback.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -16)
-		])
+		view = ProcessingPreferencesRootView(heading: heading, status: statusLabel, action: actionButton,
+			recovery: recoveryButton, tabs: tabs, feedback: feedback)
+		configureAccessibilityAndKeyViewOrder()
 		NotificationCenter.default.addObserver(self, selector: #selector(updateStatus), name: ProcessingEngine.didChange, object: engine)
 		updateStatus()
 	}
@@ -190,6 +265,23 @@ import Secrets
 		if !required { credential.stringValue = "" }
 	}
 
+	private func configureAccessibilityAndKeyViewOrder() {
+		let labels: [(NSView, String)] = [
+			(services, "AI services"), (serviceName, "Service name"), (serviceType, "Service type"),
+			(endpoint, "Service endpoint"), (credential, "Bearer credential"), (prompts, "Saved prompts"),
+			(promptName, "Prompt name"), (role, "Prompt role"), (binding, "Prompt service"),
+			(target, "Prompt model or target"), (instructions, "Prompt instructions"),
+			(titleLanguage, "Generated title language"), (typography, "Generated text typography"),
+			(reportSection, "Migration report section"), (reportDetail, "Migration report entry")
+		]
+		for (view, label) in labels { view.setAccessibilityLabel(label) }
+		let serviceOrder: [NSView] = [services, serviceName, serviceType, endpoint, credential]
+		let promptOrder: [NSView] = [prompts, promptName, role, binding, target, instructions, titleLanguage, typography, history]
+		for order in [serviceOrder, promptOrder] {
+			for (current, next) in zip(order, order.dropFirst()) { current.nextKeyView = next }
+		}
+	}
+
 	private func resizeTextView(_ textView: NSTextView, height: NSLayoutConstraint?, minimum: CGFloat) {
 		guard let container = textView.textContainer, let layout = textView.layoutManager else { return }
 		layout.ensureLayout(for: container)
@@ -214,24 +306,7 @@ import Secrets
 	}
 
 	private func form(_ controls: [NSView]) -> NSView {
-		let stack = NSStackView(views: controls)
-		stack.orientation = .vertical
-		stack.alignment = .leading
-		stack.spacing = 10
-		stack.translatesAutoresizingMaskIntoConstraints = false
-		let scroll = NSScrollView()
-		scroll.hasVerticalScroller = true
-		scroll.documentView = stack
-		NSLayoutConstraint.activate([stack.leadingAnchor.constraint(equalTo: scroll.contentView.leadingAnchor, constant: 12),
-			stack.trailingAnchor.constraint(equalTo: scroll.contentView.trailingAnchor, constant: -12),
-			stack.topAnchor.constraint(equalTo: scroll.contentView.topAnchor, constant: 12),
-			stack.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor, constant: -24)])
-		for control in controls {
-			control.setContentHuggingPriority(.defaultLow, for: .horizontal)
-			if control is NSButton { control.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor).isActive = true }
-			else { control.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
-		}
-		return scroll
+		ProcessingPreferencesFormScrollView(controls: controls)
 	}
 
 	private func serviceForm() -> NSView {
@@ -315,6 +390,7 @@ import Secrets
 			row("Prompt", prompts), row("Name", promptName), row("Role", role), row("Service", binding), row("Model or target", target),
 			NSTextField(labelWithString: "Instructions"), instructions,
 			NSTextField(wrappingLabelWithString: "Available inputs include {{title}}, {{content}}, {{description}} and, for Paper, {{abstract}}. The system validates required output."),
+			NSTextField(wrappingLabelWithString: "Advanced output choices affect future generated results only. Required score, reason, material, and format validation remains enforced; Chinese title checks apply when selected, while original text, links, code, images, and historical results are preserved."),
 			advancedButton, advancedOutput, confirmLegacyOutput, usedBy, actions,
 			button("Copy Instructions", #selector(copyInstructions)), button("Import Legacy Prompt", #selector(importLegacy)),
 			NSTextField(wrappingLabelWithString: "Restore Text keeps the currently selected service, target, and output preferences."), historyActions])
@@ -390,7 +466,7 @@ import Secrets
 	private func recoveryMessage(for error: ProcessingEngine.EngineError) -> String {
 		switch error {
 		case .mutationNotSaved:
-			return "The save was cancelled before it started. Your configuration was not changed."
+			return "The save was cancelled before it started. No configuration change was made; read the service or prompt again before retrying."
 		case .invalidConfiguration, .mutationRejected:
 			return "The previous save was rejected. Configuration is invalid or in use; your configuration was not changed."
 		default:
@@ -406,6 +482,8 @@ import Secrets
 				if let onFailure { onFailure(); return }
 				if case .some(.outcomeUnknown(_)) = error as? ProcessingEngine.EngineError {
 					self?.feedback.stringValue = "The save is being confirmed. Restart processing and check the saved configuration before retrying."
+				} else if error as? ProcessingEngine.EngineError == .mutationNotSaved {
+					self?.feedback.stringValue = "The save was cancelled before it started. No configuration change was made; read the saved configuration before retrying."
 				} else if error as? ProcessingEngine.EngineError == .mutationRejected {
 					self?.feedback.stringValue = "The save was rejected. Review the saved configuration before retrying."
 				} else if error as? ProcessingEngine.EngineError == .migrationBusy {
@@ -513,7 +591,8 @@ import Secrets
 
 	private func serviceLabel(_ row: [String: Any]) -> String {
 		let label = MigrationReviewState.serviceLabel(name: row["name"] as? String ?? "Unavailable service", id: row["id"] as? String ?? "unknown")
-		return row["credentialState"] as? String == "incomplete" ? "\(label) (Credential incomplete)" : label
+		let state = row["connectionState"] as? String ?? (row["credentialState"] as? String == "incomplete" ? "Credential incomplete" : "Directory not checked")
+		return "\(label) — \(state)"
 	}
 
 	private func loadPage(_ kind: String, after: String?, collected: [[String: Any]], then: @escaping ([[String: Any]]) -> Void) {
@@ -718,18 +797,6 @@ import Secrets
 		}
 	}
 
-	func controlTextDidChange(_ notification: Notification) {
-		if notification.object as? NSTextField === promptName { promptGeneration += 1; return }
-		serviceGeneration += 1
-		serviceRequestGeneration += 1
-		migrationReview.invalidate(); cancelMigrationPreview(); releaseMigrationReport()
-	}
-	func textDidChange(_ notification: Notification) {
-		if notification.object as? NSTextView === instructions {
-			promptGeneration += 1
-			resizeTextView(instructions, height: instructionsHeight, minimum: 160)
-		}
-	}
 	@objc private func promptInputChanged() { promptGeneration += 1 }
 	@objc private func migrationInputChanged() {
 		serviceGeneration += 1
@@ -942,16 +1009,50 @@ import Secrets
 		alert.addButton(withTitle: "Remove")
 		alert.addButton(withTitle: "Cancel")
 		guard alert.runModal() == .alertFirstButtonReturn else { return }
-		request("DELETE", "/api/config/services", ["id": id]) { [weak self] _ in
+		rememberPendingCredentialDeletion(id)
+		request("DELETE", "/api/config/services", ["id": id], onFailure: { [weak self] in
+			self?.clearPendingCredentialDeletion(id)
+		}) { [weak self] _ in
 			guard let self else { return }
-			var failed = false
-			do { try CredentialsManager.removeCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential") }
-			catch { failed = true }
+			guard self.serviceGeneration == generation else { return }
+			self.retryCredentialDeletion(id)
 			self.loadLists()
 			guard self.serviceGeneration == generation else { return }
 			self.resetService()
-			self.feedback.stringValue = failed ? "Service removed, but its Keychain credential could not be removed." : "Service removed. Services in use cannot be removed."
+			self.feedback.stringValue = self.pendingCredentialDeletions().contains(id) ? "Service removed, but its Keychain credential is queued for retry." : "Service removed. Services in use cannot be removed."
 		}
+	}
+
+	private func pendingCredentialDeletions() -> [String] {
+		UserDefaults.standard.stringArray(forKey: pendingCredentialDeletionKey) ?? []
+	}
+
+	private func rememberPendingCredentialDeletion(_ id: String) {
+		var ids = pendingCredentialDeletions()
+		if !ids.contains(id) { ids.append(id) }
+		UserDefaults.standard.set(ids, forKey: pendingCredentialDeletionKey)
+	}
+
+	private func clearPendingCredentialDeletion(_ id: String) {
+		UserDefaults.standard.set(pendingCredentialDeletions().filter { $0 != id }, forKey: pendingCredentialDeletionKey)
+	}
+
+	private func removeCredential(_ id: String) throws {
+#if DEBUG
+		if let debugCredentialRemove { try debugCredentialRemove(id); return }
+#endif
+		try CredentialsManager.removeCredentials(type: .oauthAccessToken, server: "nonews-ai-\(id)", username: "credential")
+	}
+
+	private func retryCredentialDeletion(_ id: String) {
+		do {
+			try removeCredential(id)
+			clearPendingCredentialDeletion(id)
+		} catch { }
+	}
+
+	private func retryPendingCredentialDeletions() {
+		for id in pendingCredentialDeletions() { retryCredentialDeletion(id) }
 	}
 
 	@objc private func selectPrompt() {
@@ -1353,7 +1454,13 @@ import Secrets
 	}
 
 	func debugSetCredentialRead(_ read: @escaping (String) throws -> String?) { debugCredentialRead = read }
+	func debugSetCredentialRemove(_ remove: @escaping (String) throws -> Void) { debugCredentialRemove = remove }
 	func debugRefreshService() { refreshService() }
+	func debugViewDidAppear() { viewDidAppear() }
+	func debugRetryPendingCredentialDeletions() { retryPendingCredentialDeletions() }
+	func debugRememberPendingCredentialDeletion(_ id: String) { rememberPendingCredentialDeletion(id) }
+	func debugPendingCredentialDeletions() -> [String] { pendingCredentialDeletions() }
+	func debugServiceLabel(_ row: [String: Any]) -> String { serviceLabel(row) }
 	func debugSelectedPromptID() -> String? {
 		let index = prompts.indexOfSelectedItem
 		return promptRows.indices.contains(index) ? promptRows[index]["id"] as? String : nil
@@ -1459,4 +1566,29 @@ import Secrets
 		recoveryMessage(for: error)
 	}
 #endif
+}
+
+// MARK: - NSTextFieldDelegate
+
+// Swift forbids private protocol-conformance extensions; keep this isolated from the main declaration.
+extension ProcessingPreferencesViewController: NSTextFieldDelegate {
+
+	func controlTextDidChange(_ notification: Notification) {
+		if notification.object as? NSTextField === promptName { promptGeneration += 1; return }
+		serviceGeneration += 1
+		serviceRequestGeneration += 1
+		migrationReview.invalidate(); cancelMigrationPreview(); releaseMigrationReport()
+	}
+}
+
+// MARK: - NSTextViewDelegate
+
+extension ProcessingPreferencesViewController: NSTextViewDelegate {
+
+	func textDidChange(_ notification: Notification) {
+		if notification.object as? NSTextView === instructions {
+			promptGeneration += 1
+			resizeTextView(instructions, height: instructionsHeight, minimum: 160)
+		}
+	}
 }
