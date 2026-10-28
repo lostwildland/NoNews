@@ -195,14 +195,14 @@ public struct ArticleCounts: Sendable {
 	}
 
 	/// Returns aggregate article counts (total, unread, starred, statuses) for the given feeds.
-	public func fetchArticleCountsAsync(feedIDs: Set<String>) async -> ArticleCounts {
-		guard acceptsWork else { return ArticleCounts(totalCount: 0, unreadCount: 0, starredCount: 0, statusesCount: 0) }
+	public func fetchArticleCountsAsync(feedIDs: Set<String>) async throws -> ArticleCounts {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			articlesTable.fetchArticleCountsAsync(feedIDs) { articleCounts in
-				continuation.resume(returning: articleCounts)
+				continuation.resume(with: articleCounts)
 			}
 		}
 	}
@@ -220,14 +220,14 @@ public struct ArticleCounts: Sendable {
 	}
 
 	/// Returns a dictionary of feedID → latest article date for all feeds with articles.
-	public func fetchLastUpdateDates() async -> [String: Date] {
-		guard acceptsWork else { return [:] }
+	public func fetchLastUpdateDates() async throws -> [String: Date] {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			articlesTable.fetchLastUpdateDatesAsync { lastUpdateDates in
-				continuation.resume(returning: lastUpdateDates)
+				continuation.resume(with: lastUpdateDates)
 			}
 		}
 	}
@@ -489,13 +489,13 @@ public struct ArticleCounts: Sendable {
 	// MARK: - Statuses
 
 	/// Mark statuses for articleIDs. Returns the articleIDs whose status actually changed.
-	public func markAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async -> Set<String> {
-		guard acceptsWork else { return [] }
+	public func markAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws -> Set<String> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_mark(articleIDs: articleIDs, statusKey: statusKey, flag: flag) { changedArticleIDs in
-				continuation.resume(returning: changedArticleIDs)
+				continuation.resume(with: changedArticleIDs)
 			}
 		}
 	}
@@ -584,6 +584,7 @@ typealias UpdateArticlesCompletionBlock = @Sendable (ArticleChanges) -> Void
 typealias SingleUnreadCountCompletionBlock = @Sendable (Int) -> Void
 typealias ArticleSetResultBlock = @Sendable (Set<Article>) -> Void
 typealias ArticleIDsCompletionBlock = @Sendable (Set<String>) -> Void
+typealias ArticleIDsResultBlock = @Sendable (Result<Set<String>, Error>) -> Void
 
 private extension ArticlesDatabase {
 
@@ -602,7 +603,7 @@ private extension ArticlesDatabase {
 		articlesTable.fetchStarredAndUnreadCount(feedIDs, completion)
 	}
 
-	func _mark(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, completion: @escaping ArticleIDsCompletionBlock) {
+	func _mark(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, completion: @escaping ArticleIDsResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.mark(articleIDs, statusKey, flag, completion)
 	}

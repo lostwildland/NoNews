@@ -811,7 +811,7 @@ import Secrets
 		}
 		Self.logger.debug("FeedlyAccountDelegate: markArticles")
 
-		let changedArticleIDs = await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 		let syncStatuses = Set(changedArticleIDs.map { articleID in
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})

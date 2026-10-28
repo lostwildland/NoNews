@@ -39,7 +39,7 @@ import ArticlesDatabase
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
 
-	@Test func markRepairsStaleReadStatusRows() async {
+	@Test func markRepairsStaleReadStatusRows() async throws {
 		let articles = await seedTwoUnreadArticles()
 		for article in articles {
 			article.status.setBoolStatus(true, forKey: .read)
@@ -49,7 +49,7 @@ import ArticlesDatabase
 		// Marking repairs the rows even though memory already matches,
 		// and reports no changed articles.
 		let articleIDs = Set(articles.map { $0.articleID })
-		let changedArticleIDs = await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
+		let changedArticleIDs = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 		#expect(changedArticleIDs.isEmpty)
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
@@ -76,10 +76,10 @@ import ArticlesDatabase
 		#expect(await database.fetchStarredArticleIDsAsync().isEmpty)
 	}
 
-	@Test func statusRepairFixesStaleUnreadStatusRows() async {
+	@Test func statusRepairFixesStaleUnreadStatusRows() async throws {
 		let articles = await seedTwoUnreadArticles()
 		let articleIDs = Set(articles.map { $0.articleID })
-		_ = await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
+		_ = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 
 		// Reproduce a lost write in the other direction: unread in memory, read in the database.
@@ -105,15 +105,15 @@ import ArticlesDatabase
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
 
-	@Test func normalMarksStillReportChanges() async {
+	@Test func normalMarksStillReportChanges() async throws {
 		let articles = await seedTwoUnreadArticles()
 		let articleIDs = Set(articles.map { $0.articleID })
 
-		let markedRead = await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
+		let markedRead = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 		#expect(markedRead == articleIDs)
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 
-		let markedUnread = await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: false)
+		let markedUnread = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: false)
 		#expect(markedUnread == articleIDs)
 		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 	}

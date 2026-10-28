@@ -156,7 +156,7 @@ import Secrets
 	}
 
 	@MainActor func markArticles(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws {
-		_ = await account?.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		_ = try await account?.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 	}
 
 	func accountDidInitialize() {

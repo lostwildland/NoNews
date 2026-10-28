@@ -112,22 +112,22 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Counts Async
 
-	func fetchArticleCountsAsync(_ feedIDs: Set<String>, _ completion: @escaping @Sendable (ArticleCounts) -> Void) {
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(ArticleCounts(totalCount: 0, unreadCount: 0, starredCount: 0, statusesCount: 0)) } }) { database in
+	func fetchArticleCountsAsync(_ feedIDs: Set<String>, _ completion: @escaping @Sendable (Result<ArticleCounts, Error>) -> Void) {
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let counts = self.articleCounts(feedIDs: feedIDs, database: database)
 			DispatchQueue.main.async {
-				completion(counts)
+				completion(.success(counts))
 			}
 		}
 	}
 
 	// MARK: - Fetching Last Update Dates
 
-	func fetchLastUpdateDatesAsync(_ completion: @escaping @Sendable ([String: Date]) -> Void) {
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([:]) } }) { database in
+	func fetchLastUpdateDatesAsync(_ completion: @escaping @Sendable (Result<[String: Date], Error>) -> Void) {
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let lastUpdateDates = self.fetchLastUpdateDates(database)
 			DispatchQueue.main.async {
-				completion(lastUpdateDates)
+				completion(.success(lastUpdateDates))
 			}
 		}
 	}
@@ -500,11 +500,11 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		statusesTable.fetchArticleIDsForStatusesWithoutArticlesNewerThan(articleCutoffDate, completion)
 	}
 
-	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
+	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsResultBlock) {
+		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
 			DispatchQueue.main.async {
-				completion(changedArticleIDs)
+				completion(.success(changedArticleIDs))
 			}
 		}
 	}

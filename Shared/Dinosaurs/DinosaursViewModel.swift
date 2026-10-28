@@ -59,7 +59,15 @@ struct DinosaurRow: Identifiable {
 
 		var newRows = [DinosaurRow]()
 		for account in accounts {
-			let latestDates = await account.fetchLastUpdateDates()
+			let latestDates: [String: Date]
+			do {
+				latestDates = try await account.fetchLastUpdateDates()
+			} catch is CancellationError {
+				return
+			} catch {
+				Self.logger.error("Article date refresh failed: \(error.localizedDescription)")
+				return
+			}
 			for feed in account.flattenedFeeds() {
 				let latestDate = latestDates[feed.feedID]
 				guard let latestDate, latestDate < cutoffDate else {

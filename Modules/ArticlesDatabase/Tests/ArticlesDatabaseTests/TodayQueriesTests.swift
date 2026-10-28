@@ -28,52 +28,52 @@ import ArticlesDatabase
 		self.database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "test", retentionStyle: .feedBased)
 	}
 
-	@Test func todayUnreadCountAcrossFeeds() async {
-		await seedArticles()
+	@Test func todayUnreadCountAcrossFeeds() async throws {
+		try await seedArticles()
 		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA, feedB]) == 2)
 	}
 
-	@Test func todayUnreadCountForOneFeed() async {
-		await seedArticles()
+	@Test func todayUnreadCountForOneFeed() async throws {
+		try await seedArticles()
 		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA]) == 1)
 		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedB]) == 1)
 	}
 
-	@Test func todayTotalCountAcrossFeeds() async {
-		await seedArticles()
+	@Test func todayTotalCountAcrossFeeds() async throws {
+		try await seedArticles()
 		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedA, feedB]) == 4)
 	}
 
-	@Test func todayTotalCountForOneFeed() async {
-		await seedArticles()
+	@Test func todayTotalCountForOneFeed() async throws {
+		try await seedArticles()
 		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedA]) == 2)
 		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedB]) == 2)
 	}
 
-	@Test func todayArticlesAcrossFeeds() async {
-		await seedArticles()
+	@Test func todayArticlesAcrossFeeds() async throws {
+		try await seedArticles()
 		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB])
 		let expected = articleIDs(forUniqueIDs: ["a-recent", "a-nil", "b-recent", "b-nil"])
 		#expect(Set(articles.map { $0.articleID }) == expected)
 	}
 
-	@Test func todayArticlesForOneFeed() async {
-		await seedArticles()
+	@Test func todayArticlesForOneFeed() async throws {
+		try await seedArticles()
 		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA])
 		let expected = articleIDs(forUniqueIDs: ["a-recent", "a-nil"])
 		#expect(Set(articles.map { $0.articleID }) == expected)
 	}
 
-	@Test func todayArticlesWithLimit() async {
-		await seedArticles()
+	@Test func todayArticlesWithLimit() async throws {
+		try await seedArticles()
 		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB], limit: 3)
 		#expect(articles.count == 3)
 		let inWindow = articleIDs(forUniqueIDs: ["a-recent", "a-nil", "b-recent", "b-nil"])
 		#expect(Set(articles.map { $0.articleID }).isSubset(of: inWindow))
 	}
 
-	@Test func emptyFeedIDsReturnNothing() async {
-		await seedArticles()
+	@Test func emptyFeedIDsReturnNothing() async throws {
+		try await seedArticles()
 		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: []) == 0)
 		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: []) == 0)
 		#expect(await database.fetchTodayArticlesAsync(feedIDs: []).isEmpty)
@@ -87,11 +87,11 @@ private extension TodayQueriesTests {
 	// Per feed: one article published an hour ago, one 25 hours ago, and one with no
 	// datePublished (dateArrived is insert time, so it falls inside the window).
 	// Then a-recent and b-nil are marked read.
-	func seedArticles() async {
+	func seedArticles() async throws {
 		await seedFeed(feedA, prefix: "a")
 		await seedFeed(feedB, prefix: "b")
 		let readArticleIDs = articleIDs(forUniqueIDs: ["a-recent", "b-nil"])
-		let changed = await database.markAsync(articleIDs: readArticleIDs, statusKey: .read, flag: true)
+		let changed = try await database.markAsync(articleIDs: readArticleIDs, statusKey: .read, flag: true)
 		#expect(changed == readArticleIDs)
 	}
 

@@ -934,13 +934,13 @@ public enum FetchType {
 		database.fetchStarredArticlesCount(feedIDs: flattenedFeedsIDs)
 	}
 
-	public func fetchArticleCountsAsync() async -> ArticleCounts {
-		await database.fetchArticleCountsAsync(feedIDs: flattenedFeedsIDs)
+	public func fetchArticleCountsAsync() async throws -> ArticleCounts {
+		try await database.fetchArticleCountsAsync(feedIDs: flattenedFeedsIDs)
 	}
 
 	/// Returns a dictionary of feedID → latest article date for all feeds with articles.
-	public func fetchLastUpdateDates() async -> [String: Date] {
-		await database.fetchLastUpdateDates()
+	public func fetchLastUpdateDates() async throws -> [String: Date] {
+		try await database.fetchLastUpdateDates()
 	}
 
 	public func fetchUnreadCountForTodayAsync() async -> Int {
@@ -1030,12 +1030,13 @@ public enum FetchType {
 
 	/// Mark statuses for articleIDs. Returns the articleIDs whose status actually changed.
 	@discardableResult
-	func updateStatusesAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async -> Set<String> {
+	func updateStatusesAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws -> Set<String> {
+		guard acceptsFixtureWork else { throw CancellationError() }
 		guard !articleIDs.isEmpty else {
 			return Set<String>()
 		}
 
-		let changedArticleIDs = await database.markAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		let changedArticleIDs = try await database.markAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 		guard !changedArticleIDs.isEmpty else {
 			return Set<String>()
 		}

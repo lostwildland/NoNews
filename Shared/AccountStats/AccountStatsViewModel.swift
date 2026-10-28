@@ -9,6 +9,7 @@ import Foundation
 import Account
 import ArticlesDatabase
 import RSCore
+import os
 
 struct AccountStatsRowData {
 
@@ -47,6 +48,7 @@ struct AccountStatsTotals {
 }
 
 @MainActor final class AccountStatsViewModel {
+	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "AccountStatsViewModel")
 
 	private(set) var sortedAccountStats = [AccountStatsRowData]()
 	private(set) var totals = AccountStatsTotals(rows: [])
@@ -55,7 +57,15 @@ struct AccountStatsTotals {
 	func refresh() async {
 		var rows = [AccountStatsRowData]()
 		for account in AccountManager.shared.sortedAccounts {
-			let counts = await account.fetchArticleCountsAsync()
+			let counts: ArticleCounts
+			do {
+				counts = try await account.fetchArticleCountsAsync()
+			} catch is CancellationError {
+				return
+			} catch {
+				Self.logger.error("Account statistics refresh failed: \(error.localizedDescription)")
+				return
+			}
 			rows.append(AccountStatsRowData(
 				accountID: account.accountID,
 				name: account.nameForDisplay,

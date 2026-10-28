@@ -39,6 +39,58 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 	private enum FixtureError: Error, Equatable { case expected }
 	private final class NotificationCounter: Sendable { let count = Mutex(0) }
 
+	@Test func rejectedStatusWriteDoesNotNotifyOrQueueSync() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+		await delegate.waitForSyncInitializationForTesting()
+		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["stored"]))
+		let notifications = NotificationCounter()
+		let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		let queuedObserver = NotificationCenter.default.addObserver(forName: .AccountDidQueueArticleStatuses, object: account, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		account.database.beginClosing()
+		await #expect(throws: CancellationError.self) {
+			try await account.markArticles(articleIDs: ["stored"], statusKey: .read, flag: false)
+		}
+		#expect(notifications.count.withLock { $0 } == 0)
+		#expect(try await delegate.syncDatabase.selectPendingCount() == 0)
+		NotificationCenter.default.removeObserver(observer)
+		NotificationCenter.default.removeObserver(queuedObserver)
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func admittedStatusWritePersistsWhileCloseWaits() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let path = account.dataFolder
+		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["admitted-status"]))
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		account.startBackground {
+			startedSignal.yield(())
+			for await _ in release { break }
+			do {
+				let changed = try await account.database.markAsync(articleIDs: ["admitted-status"], statusKey: .starred, flag: true)
+				#expect(changed == ["admitted-status"])
+			} catch {
+				Issue.record("Admitted status write failed: \(error)")
+			}
+		}
+		for await _ in started { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		releaseSignal.finish()
+		#expect(await close.value)
+		#expect(try stringValue(in: path + "/DB.sqlite3", sql: "SELECT starred FROM statuses WHERE articleID = 'admitted-status'") == "1")
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func overlappingEmptyRefreshDoesNotReplaceAdmittedDownload() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)

@@ -493,7 +493,7 @@ import Secrets
 		guard let account else {
 			return
 		}
-		_ = await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		_ = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 		let syncStatuses = Set(articleIDs.map { articleID in
 			SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
 		})
