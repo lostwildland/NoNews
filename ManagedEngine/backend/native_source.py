@@ -258,6 +258,7 @@ def observe(db, body):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
         if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
+            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
             db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "conflict", now))
         state = "unresolved"
         item_id = existing["item_id"] if existing else None
@@ -280,10 +281,14 @@ def observe(db, body):
                 if conflict:
                     state = "conflict"
                     item_id = existing["item_id"] if existing else None
+        if existing and existing["identity_state"] == "conflict":
+            state = "conflict"
         if existing:
             if identity:
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
+            elif raw_identity_value:
+                db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "unresolved", now))
             prior_state = existing["identity_state"]
             if (not identity) and (prior_state in {"verified", "conflict"} or existing["raw_identity_value"]):
                 state = prior_state
@@ -315,7 +320,8 @@ def observe(db, body):
                 from . import configuration
                 service_value = configuration._record(db, "service", policy[2])
                 service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
-            if service_available and policy and state == "verified" and not was_unresolved and (existing_context is None or existing_context[2] == policy[8]) and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
+            historical_unresolved = db.execute("SELECT 1 FROM native_observation_identities WHERE observation_id=? AND evidence_state='unresolved' LIMIT 1", (observation_id,)).fetchone() is not None
+            if service_available and policy and state == "verified" and not was_unresolved and not historical_unresolved and (existing_context is None or existing_context[2] == policy[8]) and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
