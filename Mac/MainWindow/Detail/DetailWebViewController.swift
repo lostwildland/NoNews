@@ -63,6 +63,7 @@ final class DetailWebViewController: NSViewController {
 	}
 
 
+	private var articleTextSize = AppDefaults.articleTextSize
 	private var isArticleContentJavascriptEnabled = AppDefaults.isArticleContentJavascriptEnabled
 
 	private var webInspectorEnabled: Bool {
@@ -394,7 +395,8 @@ private extension DetailWebViewController {
 
 		let nativeBanner = nativeSourceBinding.map { binding in
 			let state = binding["identity_state"] as? String ?? "unresolved"
-			return "<aside class=\"nonews-native-source\" aria-label=\"Native source context\">Native source context: \(state)</aside>"
+			let label = ["verified": "Verified", "conflict": "Conflicting identity", "unresolved": "Unresolved"][state] ?? "Unresolved"
+			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)</aside>"
 		} ?? ""
 		let substitutions = [
 			"title": rendering.title,

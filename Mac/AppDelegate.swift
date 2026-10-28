@@ -167,6 +167,11 @@ let appName = "NetNewsWire"
 
 	func applicationDidFinishLaunching(_ note: Notification) {
 		ProcessingEngine.shared.start()
+		if let menu = debugMenuItem.submenu, menu.items.first(where: { $0.action == #selector(retryFailedNativeArticles(_:)) }) == nil {
+			let retryItem = NSMenuItem(title: "Retry Failed Native Articles", action: #selector(retryFailedNativeArticles(_:)), keyEquivalent: "")
+			retryItem.target = self
+			menu.addItem(retryItem)
+		}
 
 		WebViewConfiguration.resolveBrowserUserAgent()
 		Task {
