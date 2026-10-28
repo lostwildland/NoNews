@@ -98,7 +98,21 @@ def ensure_schema(db) -> None:
     if context_sql and "UNIQUE(item_id, observation_id)" in (context_sql[0] or ""):
         db.execute("ALTER TABLE native_processing_contexts RENAME TO native_processing_contexts_legacy")
         db.executescript(SCHEMA)
-        db.execute("INSERT INTO native_processing_contexts SELECT * FROM native_processing_contexts_legacy")
+        legacy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts_legacy)")}
+        target_columns = ["id", "item_id", "observation_id", "curator_prompt_id", "editor_prompt_id", "service_id", "media_type", "processing_mode", "threshold", "scoring_strategy", "body_strategy", "policy_revision", "created_at", "updated_at"]
+        expressions = []
+        for column in target_columns:
+            if column in legacy_columns:
+                expressions.append(column)
+            elif column == "processing_mode":
+                expressions.append("'disabled'")
+            elif column == "policy_revision":
+                expressions.append("0")
+            elif column in {"created_at", "updated_at"}:
+                expressions.append("''")
+            else:
+                expressions.append("NULL")
+        db.execute(f"INSERT INTO native_processing_contexts({','.join(target_columns)}) SELECT {','.join(expressions)} FROM native_processing_contexts_legacy")
         db.execute("DROP TABLE native_processing_contexts_legacy")
 
     columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts)")}
@@ -298,6 +312,8 @@ def replay(db, body):
     row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=? AND o.namespace=?", (context_id, namespace)).fetchone()
     if row is None:
         raise ValueError("Context not found")
+    if row[8] not in {"disabled", "normal", "important"} or row[12] is None:
+        raise ValueError("Current source policy is unavailable for replay")
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
     replay_context_id = uuid.uuid4().hex
     now = utcnow()
@@ -313,35 +329,42 @@ def context_results(db, method, body):
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
     if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=? AND c.item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, namespace, context_id)).fetchone() is None:
         raise ValueError("Context provenance mismatch")
-    if method == "POST":
-        result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
-        result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
-        if result_type not in {"curator", "draft", "material"}:
-            raise ValueError("Unsupported context result")
-        if result_type == "curator":
-            row = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result_id,)).fetchone()
-        elif result_type == "draft":
-            row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
-        else:
-            row = db.execute("SELECT item_id,provenance FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
-        context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
-        if row is None or context_item is None or row[0] != context_item[0]:
-            raise ValueError("Context result does not belong to item")
-        if result_type == "curator":
-            if not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None:
-                raise ValueError("Curator result does not match context prompt")
-        elif result_type == "draft":
-            if not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None:
-                raise ValueError("Editor result does not match context prompt")
-        else:
-            try:
-                provenance = json.loads(row[1]) if row[1] else {}
-            except (TypeError, json.JSONDecodeError):
-                provenance = {}
-            if not isinstance(provenance, dict) or provenance.get("contextID") != context_id:
-                raise ValueError("Material result provenance does not match context")
-        with transaction(db):
-            db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
+    if method == "GET":
+        for result_type, stage, table_key in (("curator", "curator", "run_id"), ("draft", "editor", "draft_id")):
+            rows = db.execute("SELECT json_extract(p.result_json, '$." + table_key + "') FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage=? AND p.result_json IS NOT NULL", (context_id, stage)).fetchall()
+            with transaction(db):
+                for result_row in rows:
+                    if result_row[0]:
+                        db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_row[0], utcnow()))
+        if method == "POST":
+            result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
+            result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
+            if result_type not in {"curator", "draft", "material"}:
+                raise ValueError("Unsupported context result")
+            if result_type == "curator":
+                row = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result_id,)).fetchone()
+            elif result_type == "draft":
+                row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
+            else:
+                row = db.execute("SELECT item_id,provenance FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
+            context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+            if row is None or context_item is None or row[0] != context_item[0]:
+                raise ValueError("Context result does not belong to item")
+            if result_type == "curator":
+                if not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None:
+                    raise ValueError("Curator result does not match context prompt")
+            elif result_type == "draft":
+                if not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None:
+                    raise ValueError("Editor result does not match context prompt")
+            else:
+                try:
+                    provenance = json.loads(row[1]) if row[1] else {}
+                except (TypeError, json.JSONDecodeError):
+                    provenance = {}
+                if not isinstance(provenance, dict) or provenance.get("contextID") != context_id:
+                    raise ValueError("Material result provenance does not match context")
+            with transaction(db):
+                db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
     return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
 
 def observation(db, identity, namespace=None):

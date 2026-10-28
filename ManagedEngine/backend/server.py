@@ -105,7 +105,8 @@ class Application:
             if path == '/api/native/observation':
                 if method == 'GET':
                     if body.get('id'):
-                        return native_source.observation(db.db, body.get('id'))
+                        namespace = native_source._namespace(body.get('namespace'))
+                        return native_source.observation(db.db, body.get('id'), namespace)
                     return native_source.observation_by_binding(db.db, body)
             if path == '/api/native/replay' and method == 'POST':
                 return native_source.replay(db.db, body)
