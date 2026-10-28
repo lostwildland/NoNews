@@ -164,6 +164,7 @@ let appName = "NetNewsWire"
 	}
 
 	func applicationDidFinishLaunching(_ note: Notification) {
+		ProcessingEngine.shared.start()
 
 		WebViewConfiguration.resolveBrowserUserAgent()
 		Task {
@@ -352,7 +353,20 @@ let appName = "NetNewsWire"
 		return true
 	}
 
+	func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+		switch ProcessingEngine.shared.state {
+		case .starting, .ready, .stopping:
+			ProcessingEngine.shared.stop {
+				Task { @MainActor in sender.reply(toApplicationShouldTerminate: true) }
+			}
+			return .terminateLater
+		case .stopped, .failed:
+			return .terminateNow
+		}
+	}
+
 	func applicationWillTerminate(_ notification: Notification) {
+		ProcessingEngine.shared.stop()
 		shuttingDown = true
 		saveState()
 

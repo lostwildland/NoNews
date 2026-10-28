@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
   "candidate": "920efefd61fb993a850241719a4d99e5691023b6",
-  "state": "Source-review gate clear at920efef: paired R34 connected-interface assessments cover6/6seams and match70/70ledgerblobs. Current full appropriate native plan/signed relocated bundle/visibleReady remain before API integration. T30 holds serialized Xcode resource.",
+  "state": "Accepted developer engine API and macOS lifecycle foundation at920efef/evidence567cc9e. R34 sixseam/70path sourcegate and current R35 runtime/nativecontrols pass. Known2149fixturediagnostics trackedT30; fullIO/release/device/sync/migration not accepted.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -636,14 +636,20 @@
     }
   ],
   "source_verification": {
-    "head": "19bce6b82f0426946424002c0c2d19c3bfa2d295",
-    "tests": 48,
-    "passed": 47,
+    "head": "920efefd61fb993a850241719a4d99e5691023b6",
+    "tests": 63,
+    "passed": 62,
     "skipped": 1,
     "failed": 0,
-    "seconds": 33.567,
-    "checker": "rootcoordinator",
-    "command": "python3 -W error::ResourceWarning -m unittest discover -s ManagedEngine/tests -q"
+    "checker": "owner; coordinator independently verifies native/harness/signature/embedded-source evidence",
+    "native_local_ci": {
+      "passed": 747,
+      "failed": 0,
+      "skipped": 0,
+      "disk_io_lines": 2149,
+      "not_cloud_ci": true
+    },
+    "installed_sandbox_tests": 11
   },
   "source_provenance_readback": {
     "checker": "root coordinator",
@@ -653,10 +659,12 @@
     "scope": "source file hashes listed by observed provenance; not a full extraction equivalence or runtime proof"
   },
   "native_observation": {
-    "artifact_source": "91fdf89b306c53c65b97df2662348e81db80ce5e",
-    "evidence": "assets/t02-r11-processing-ready.jpg",
-    "observed": "CUA Settings→Processing Ready and Stop",
-    "boundary": "Historical artifact only; current bundle pending"
+    "artifact_source": "920efefd61fb993a850241719a4d99e5691023b6",
+    "evidence": "assets/t02-r35-processing-ready.jpg",
+    "stopped": "assets/t02-r35-processing-stopped.jpg",
+    "restarted": "assets/t02-r35-processing-restarted.jpg",
+    "observed": "CUA actual Ready→Stopped→Ready through native controls",
+    "boundary": "Current isolated ad-hoc macOS artifact; no model/integration/personal/release acceptance"
   },
   "connected_reviews": {
     "standards": {
@@ -673,5 +681,6 @@
       "evidence": "t02-connected-review-r34.md",
       "runtime": "not run by reviewer"
     }
-  }
+  },
+  "acceptance_evidence": "t02-accepted-engine.md"
 }

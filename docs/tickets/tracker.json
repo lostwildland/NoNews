@@ -46,9 +46,11 @@
       "native_blockers": [],
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
-      "last_reported_head": "920efefd61fb993a850241719a4d99e5691023b6",
-      "implementation_state": "Source review gate clear: R32/R33/R34 paired assessments and70/70blobs. Original owner now validating current full source/controller/appropriate native CI plan and signed relocated bundle before API integration. Historical R11 Ready observed; current runtime pending.",
-      "review_evidence": "docs/acceptance/t02-connected-review-r34.md"
+      "last_reported_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
+      "implementation_state": "Accepted developer engine API/macOS lifecycle foundation and integrated by this merge. Sourcegate R32/R33/R34 clears both axes; current Python62pass/1optionalSkip, publiccontroller, CI747, installedharness11 and CUAReady→Stopped→Ready. Knownfixture2149diagnostics stayT30. Issueclosure follows verified integration push.",
+      "review_evidence": "docs/acceptance/t02-accepted-engine.md",
+      "accepted_implementation_head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "accepted_evidence_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae"
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
@@ -419,9 +421,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Checkpoint5b2c1a pushed. R7sourcea92a072:158focused/774full passes; coordinator read774/0fail/0skip/0SQLite diagnostics and verified historical normal artifact. Later R8 overlap/parse fixes syntax-only. R9 storage cancellation APIs/callers being corrected source-only; native resource assigned T02. Fresh reviews/fullT30 remain open.",
+      "implementation_state": "R9 source migration checkpoint596f744 includes guarded API/callback/caller cancellation; syntax-only. T02 native resource released; original T30 owner now granted behavioralred/typecheck/focused/full/native validation of R8/R9. Historical774passes at a92a072 do not validate this later source.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "5b2c1a918aaf5f9ed57b15cd92446ee8e70cd9a5",
+      "last_reported_head": "596f74423b81e21a92f473df37faa22d3fc740cb",
       "review_evidence": "docs/acceptance/t30-storage-review-r9.md"
     }
   },

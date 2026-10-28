@@ -1,14 +1,12 @@
-# T02 current source candidate
+# T02 accepted managed-engine foundation
 
-Original base: `c9ecfa14e884a7ce8895bb13eec3ea8711cbef90`. Current source HEAD: `920efefd61fb993a850241719a4d99e5691023b6`, clean and pushed on `t3/managed-io-engine`. The 70-path ledger reconciles the earlier complete group reviews with cooperative-history R31, its seven-path R32 correction and the eight-path R33 packaging delta. Both R32 and R33 axes report zero actionable P1/P2. [R34 connected-interface assessments](t02-connected-review-r34.md) now clear both source-review axes across all six requested seams, with all 70 blobs verified. Current runtime acceptance remains open; T02 is not integrated or accepted.
+Source `920efefd61fb993a850241719a4d99e5691023b6` and evidence `567cc9ece0bb34e330a650de56e21ef6832fbaae` are accepted for integration. [Acceptance record](t02-accepted-engine.md) maps every ticket criterion to source review, current tests, actual bundled runtime and native Ready → Stopped → Ready evidence.
 
-The owner’s full Python result at `20d62dd` is 62 total: 61 passed and one optional source comparison skipped. The later coordinator correction first reproduced seek/read resource retention and native capacity-code loss, then passed the public Application.handle regression and Swift-controller script after fixing them. Prepared-source/manifest, compilation and whitespace checks pass. A full appropriate native plan must cover the changed native controller; historical 753 native and 747 local-CI results remain attributed to their recorded sources. Actual cloud CI remains unknown.
+The complete 70-path source-review gate and six connected-interface seams clear both independent axes. Current-source results are 62 Python passes with one optional skip, public Swift-controller checks, 747 local CI-plan passes and 11 signed relocated-bundle tests. The coordinator independently read the native xcresult and harness output, verified normal identity/signature/embedded source, and exercised the native controls. The old R11-only capture limitation is superseded.
 
-After the user confirmed the Mac was unlocked, CUA successfully observed Settings → Processing **Ready** and **Stop** on the previously verified R11 isolated app, source `91fdf89`. The capture blocker is resolved for that historical artifact. [Screenshot and review evidence](t02-cooperative-review-r31-r33.md) record the exact route, signature/isolation checks and version boundary. A new signed relocated bundle and visible check for `920efef` are still required. T30 holds the serialized Xcode resource while its sole owner validates the next lifecycle correction.
+T02 acceptance is the developer engine API/macOS lifecycle foundation, not full IO parity or release readiness. The local native log still contains 2,149 known fixture disk-I/O diagnostic lines assigned to T30. Actual cloud CI, old ScriptingTests on this branch, release signing, Intel, iOS, CloudKit, personal cutover and remaining feature journeys retain their explicit unverified scopes. The overall goal remains active.
 
-The cooperative history protocol preserves complete records and source resolution while yielding bounded preparation continuations, retaining a coherent read transaction and cleaning resources on terminal paths. The reported complete 12 MB broad, 16 MB deep/scalar and memory checks retain the owner’s source-test boundary. Tracemalloc does not measure process RSS, and fixtures do not establish production readiness. R27/R28 schema corrections and T01 remain accepted.
-
-Draft PR: https://github.com/lostwildland/NoNews/pull/33 into `feature/nonews-io-parity`. No issue is auto-closed.
+The historical records below retain their original source/test boundaries. T03 must start from the committed integrated API, not an unreviewed worktree.
 
 ## Historical R11 installed-bundle readback
 

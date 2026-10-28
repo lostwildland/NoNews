@@ -10,7 +10,7 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01 accepted (2/31). T02 source920efef clears independent source review; its original owner now holds the serialized native resource for the current Python/controller/full appropriate CI plan, normal signed relocated bundle and visible Ready check before integration/T03. T30 checkpoint5b2c1a retains R7sourcea92a072 with independently read774passes/zero SQLite unlink diagnostics, while later R8overlap/parse fixes remain syntax-only. R9 paired storage review found success-shaped cancellation; its original owner is implementing explicit CancellationError/Result propagation and caller regressions source-only until native resource returns. Remaining provider/fixture/harness reviews and fullT30/migration/sync/UX remain open.
+T00/T01/T02 accepted (3/31): T02 source920efef/evidence567cc9e has clear paired source/connected reviews, current Python62pass/1optionalSkip, CI747, signed-bundle11 and coordinator CUAReady→Stopped→Ready. Commit/push this reviewed integration, close issue4 with source-specific evidence and start T03 on that integrated commit. T30 checkpoint596f744 cancellation/refresh migration is syntax-only; its original owner now has native resource for red/typecheck/green/full/build validation. T03 may implement source/tests but must coordinate heavy/native use after T30 release. All remaining IO feature/migration/sync/UX journeys stay open.
 
 ## Errors Encountered
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
