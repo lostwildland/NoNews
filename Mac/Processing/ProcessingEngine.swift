@@ -119,6 +119,12 @@ final class ProcessingEngine {
 			self.pollAcknowledgement(operation, receipt: identity)
 		}
 	}
+
+	func acknowledgeUnknownMutations() {
+		for identity in unconfirmedMutations {
+			forgetMutation(identity)
+		}
+	}
 	private func dropMutation(_ identity: String) {
 		UserDefaults.standard.set(unconfirmedMutations.filter { $0 != identity }, forKey: recoveryKey)
 	}
@@ -282,7 +288,7 @@ final class ProcessingEngine {
 		let mutation = tracked ? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased() : nil
 		if let mutation { message["mutationId"] = mutation }
 		if mutation != nil, unconfirmedMutations.count >= 32 {
-			completion(.failure(EngineError.unavailable))
+			completion(.failure(EngineError.recoveryRequired))
 			return
 		}
 		guard let bytes = try? JSONSerialization.data(withJSONObject: message), bytes.count < limit else {
@@ -483,5 +489,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy, outcomeUnknown(String), mutationNotSaved }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy, recoveryRequired, outcomeUnknown(String), mutationNotSaved }
 }

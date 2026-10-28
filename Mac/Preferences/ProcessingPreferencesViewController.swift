@@ -15,6 +15,7 @@ import Secrets
 	private let requestClient: ProcessingPreferencesRequesting
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
+	private let recoveryButton = NSButton(title: "Acknowledge Unknown Saves", target: nil, action: nil)
 	private let services = NSPopUpButton()
 	private let serviceName = NSTextField()
 	private let serviceType = NSPopUpButton()
@@ -93,7 +94,10 @@ import Secrets
 		statusLabel.maximumNumberOfLines = 3
 		actionButton.target = self
 		actionButton.action = #selector(changeState(_:))
-		for control in [heading, statusLabel, actionButton] {
+		recoveryButton.target = self
+		recoveryButton.action = #selector(acknowledgeUnknownSaves)
+		recoveryButton.isHidden = true
+		for control in [heading, statusLabel, actionButton, recoveryButton] {
 			control.translatesAutoresizingMaskIntoConstraints = false
 			view.addSubview(control)
 		}
@@ -118,6 +122,8 @@ import Secrets
 			statusLabel.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 12),
 			actionButton.leadingAnchor.constraint(equalTo: heading.leadingAnchor),
 			actionButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: 12),
+			recoveryButton.leadingAnchor.constraint(equalTo: actionButton.trailingAnchor, constant: 12),
+			recoveryButton.centerYAnchor.constraint(equalTo: actionButton.centerYAnchor),
 			tabs.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
 			tabs.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
 			tabs.topAnchor.constraint(equalTo: actionButton.bottomAnchor, constant: 12),
@@ -128,6 +134,12 @@ import Secrets
 		])
 		NotificationCenter.default.addObserver(self, selector: #selector(updateStatus), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
 		updateStatus()
+	}
+
+	@objc private func acknowledgeUnknownSaves() {
+		ProcessingEngine.shared.acknowledgeUnknownMutations()
+		recoveryButton.isHidden = true
+		feedback.stringValue = "Unknown save receipts acknowledged. Review the saved configuration before retrying."
 	}
 
 	private func button(_ title: String, _ action: Selector) -> NSButton {
@@ -252,6 +264,7 @@ import Secrets
 			statusLabel.stringValue = NSLocalizedString("Ready", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
 			actionButton.isEnabled = true
+			recoveryButton.isHidden = ProcessingEngine.shared.unconfirmedMutations.isEmpty
 			loadLists()
 			for identity in ProcessingEngine.shared.unconfirmedMutations where recoveringMutations.insert(identity).inserted {
 				ProcessingEngine.shared.recoverMutation(identity) { [weak self] result in
@@ -300,6 +313,9 @@ import Secrets
 					self?.feedback.stringValue = "The routing report is too large to retain."
 				} else if error as? ProcessingEngine.EngineError == .invalidConfiguration {
 					self?.feedback.stringValue = "Configuration is invalid or in use. Check the binding, directory, and source references."
+				} else if error as? ProcessingEngine.EngineError == .recoveryRequired {
+					self?.recoveryButton.isHidden = false
+					self?.feedback.stringValue = "Previous save receipts need review. Acknowledge them after checking the saved configuration."
 				} else { self?.feedback.stringValue = "Could not save or load configuration. Check the processing component and try again." }
 			}
 		}
