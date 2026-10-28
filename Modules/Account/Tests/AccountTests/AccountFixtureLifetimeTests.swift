@@ -918,6 +918,19 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		try await manager.deleteAccount(account)
 	}
 
+	@Test func newsBlurStatusOutboxUsesOnlyChangedArticleIDs() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .newsBlur)
+		let delegate = try #require(account.delegate as? NewsBlurAccountDelegate)
+		try await account.database.createStatusesIfNeededAsync(articleIDs: ["unchanged", "changed"])
+		_ = try await account.database.markAsync(articleIDs: ["changed"], statusKey: .read, flag: false)
+		try await delegate.markArticles(articleIDs: ["unchanged", "changed"], statusKey: .read, flag: true)
+		let queued = try await delegate.syncDatabase.selectForProcessing()
+		#expect(queued.count == 1 && queued.first?.articleID == "changed" && queued.first?.key == .read && queued.first?.flag == true)
+		#expect(await delegate.syncDatabase.close())
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func admittedCloudKitOperationsDrainAndRejectLateDispatch() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)

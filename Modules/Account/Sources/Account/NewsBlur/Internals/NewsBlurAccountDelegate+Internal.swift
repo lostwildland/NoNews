@@ -302,12 +302,12 @@ import os
 			return 0
 		}
 
+		let newsBlurUnreadStoryHashes = Set(hashes.map { $0.hash })
+		return try await syncDatabase.withStatusMutation { [self] in
 		let pendingStoryHashes: Set<String>
-		do { pendingStoryHashes = try await syncDatabase.selectPendingReadStatusArticleIDs() }
+		do { pendingStoryHashes = try await self.syncDatabase.selectPendingReadStatusArticleIDs() }
 		catch is CancellationError { throw CancellationError() }
 		catch { return 0 }
-
-		let newsBlurUnreadStoryHashes = Set(hashes.map { $0.hash })
 		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
@@ -321,18 +321,19 @@ import os
 		let markedRead = try await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
 
 		return markedUnread.count + markedRead.count
+		}
 	}
 
 	func syncStoryStarredState(account: Account, hashes: Set<NewsBlurStoryHash>?) async throws -> Int {
 		guard let hashes else {
 			return 0
 		}
+		let newsBlurStarredStoryHashes = Set(hashes.map { $0.hash })
+		return try await syncDatabase.withStatusMutation { [self] in
 		let pendingStoryHashes: Set<String>
-		do { pendingStoryHashes = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
+		do { pendingStoryHashes = try await self.syncDatabase.selectPendingStarredStatusArticleIDs() }
 		catch is CancellationError { throw CancellationError() }
 		catch { return 0 }
-
-		let newsBlurStarredStoryHashes = Set(hashes.map { $0.hash })
 		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
@@ -346,6 +347,7 @@ import os
 		let markedUnstarred = try await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
 
 		return markedStarred.count + markedUnstarred.count
+		}
 	}
 
 	@MainActor func createFeed(account: Account, newsBlurFeed: NewsBlurFeed, name: String?, container: Container) async throws -> Feed {

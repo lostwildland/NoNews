@@ -622,9 +622,13 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 
 			do {
 				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-			} catch {
-				_ = try? await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				throw error
+			} catch let queueError {
+				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
+					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+				}, recovered: { [self] in
+					if !syncStatuses.isEmpty { self.lastNoChangeSyncDate = nil; NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
+				})
 			}
 			if !syncStatuses.isEmpty {
 				lastNoChangeSyncDate = nil

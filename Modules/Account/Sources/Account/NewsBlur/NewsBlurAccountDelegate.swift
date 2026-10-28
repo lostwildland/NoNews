@@ -107,6 +107,10 @@ import Secrets
 
 	/// Sends queued local status changes upstream. Returns the count successfully sent.
 	@MainActor private func sendArticleStatusReturningCount(for account: Account) async throws -> Int {
+		try await syncDatabase.withStatusMutation { try await self.sendArticleStatusReturningCountLocked(for: account) }
+	}
+
+	@MainActor private func sendArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
 		Self.logger.info("NewsBlur: Sending story statuses")
 		defer {
 			Self.logger.info("NewsBlur: Finished sending article statuses")
@@ -181,6 +185,10 @@ import Secrets
 	/// Brings local read/starred statuses in line with the server. Returns the count
 	/// of articles whose local state actually changed.
 	@MainActor private func refreshArticleStatusReturningCount(for account: Account) async throws -> Int {
+		try await self.refreshArticleStatusReturningCountLocked(for: account)
+	}
+
+	@MainActor private func refreshArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
 		Self.logger.info("NewsBlur: Refreshing story statuses")
 		defer {
 			Self.logger.info("NewsBlur: Finished refreshing article statuses")
@@ -511,12 +519,15 @@ import Secrets
 			do {
 				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 			} catch let queueError {
-				do { _ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag) }
-				catch { try? await syncDatabase.insertStatusesOrThrow(syncStatuses); throw error }
-				throw queueError
+				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
+					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
+				}, recovered: { [self] in
+					if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
+				})
 			}
 			if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
-			if let count = try? await syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
+			if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
 		}
 	}
 

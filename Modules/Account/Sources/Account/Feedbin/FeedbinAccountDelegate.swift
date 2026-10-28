@@ -108,6 +108,10 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 
 	/// Sends queued local status changes upstream. Returns the count successfully sent.
 	private func sendArticleStatusReturningCount(for account: Account) async throws -> Int {
+		try await syncDatabase.withStatusMutation { try await self.sendArticleStatusReturningCountLocked(for: account) }
+	}
+
+	private func sendArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
 		Self.logger.info("Feedbin: Sending article statuses")
 		defer {
 			Self.logger.info("Feedbin: Finished sending article statuses")
@@ -169,6 +173,10 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 	/// Brings local read/starred statuses in line with the server. Returns the count
 	/// of articles whose local state actually changed.
 	private func refreshArticleStatusReturningCount(for account: Account) async throws -> Int {
+		try await self.refreshArticleStatusReturningCountLocked(for: account)
+	}
+
+	private func refreshArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
 		Self.logger.info("Feedbin: Refreshing article statuses")
 
 		return try await account.logActivity(kind: .refreshArticleStatuses) { () -> Int in
@@ -465,18 +473,17 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 			do {
 				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
 			} catch let queueError {
-				do {
+				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
 					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				} catch {
-					try? await syncDatabase.insertStatusesOrThrow(syncStatuses)
-					throw error
-				}
-				throw queueError
+				}, recovered: { [self] in
+					if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
+				})
 			}
 			if !syncStatuses.isEmpty {
 				NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
 			}
-			if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
+			if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 {
 				account.startBackground { [self] in try? await sendArticleStatus() }
 			}
 		}
@@ -1024,10 +1031,10 @@ extension FeedbinAccountDelegate {
 			return 0
 		}
 
-		let pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
-
 		let feedbinUnreadArticleIDs = Set(articleIDs.map { String($0) })
-		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
+		return try await syncDatabase.withStatusMutation { [self] in
+			let pendingArticleIDs = try await self.syncDatabase.selectPendingReadStatusArticleIDs()
+			let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
@@ -1039,7 +1046,8 @@ extension FeedbinAccountDelegate {
 		let deltaReadArticleIDs = currentUnreadArticleIDs.subtracting(feedbinUnreadArticleIDs).subtracting(pendingArticleIDs)
 		let markedRead = try await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
 
-		return markedUnread.count + markedRead.count
+			return markedUnread.count + markedRead.count
+		}
 	}
 
 }
@@ -1051,10 +1059,10 @@ private extension FeedbinAccountDelegate {
 			return 0
 		}
 
-		let pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
-
 		let feedbinStarredArticleIDs = Set(articleIDs.map { String($0) })
-		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
+		return try await syncDatabase.withStatusMutation { [self] in
+			let pendingArticleIDs = try await self.syncDatabase.selectPendingStarredStatusArticleIDs()
+			let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
@@ -1066,7 +1074,8 @@ private extension FeedbinAccountDelegate {
 		let deltaUnstarredArticleIDs = currentStarredArticleIDs.subtracting(feedbinStarredArticleIDs).subtracting(pendingArticleIDs)
 		let markedUnstarred = try await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
 
-		return markedStarred.count + markedUnstarred.count
+			return markedStarred.count + markedUnstarred.count
+		}
 	}
 
 	func deleteTagging(for account: Account, with feed: Feed, from container: Container?) async throws {

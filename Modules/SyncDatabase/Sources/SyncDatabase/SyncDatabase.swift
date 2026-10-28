@@ -112,6 +112,22 @@ public actor SyncDatabase {
 		try SyncStatusTable.insertStatuses(statuses, database: database)
 	}
 
+	public func recoverStatusMutationFailure(_ statuses: Set<SyncStatus>, queueError: Error, compensate: @escaping @MainActor @Sendable () async throws -> Void, recovered: @escaping @MainActor @Sendable () async -> Void) async throws -> Never {
+		do {
+			try await compensate()
+		} catch {
+			let compensationFailure = error.localizedDescription
+			do {
+				try insertStatusesOrThrow(statuses)
+			} catch {
+				throw StatusMutationRecoveryError(queueFailure: queueError.localizedDescription, compensationFailure: compensationFailure, outboxFailure: error.localizedDescription)
+			}
+			await recovered()
+			throw StatusMutationRecoveryError(queueFailure: queueError.localizedDescription, compensationFailure: compensationFailure, outboxFailure: nil)
+		}
+		throw queueError
+	}
+
 	public func selectForProcessing(limit: Int? = nil) throws -> Set<SyncStatus> {
 		guard acceptsWork else { throw CancellationError() }
 		return try SyncStatusTable.selectForProcessing(limit: limit, database: database)
@@ -136,8 +152,14 @@ public actor SyncDatabase {
 	/// status writers so pending rows cannot change between the check and commit.
 	public func withStatusMutation<T: Sendable>(_ operation: @escaping @MainActor @Sendable () async throws -> T) async rethrows -> T {
 		await statusMutationGate.acquire()
-		defer { Task { await statusMutationGate.release() } }
-		return try await operation()
+		do {
+			let result = try await operation()
+			await statusMutationGate.release()
+			return result
+		} catch {
+			await statusMutationGate.release()
+			throw error
+		}
 	}
 
 	@discardableResult nonisolated public func resetAllSelectedForProcessing() -> Bool {

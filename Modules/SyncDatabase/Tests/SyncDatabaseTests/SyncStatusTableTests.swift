@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 import SyncDatabase
+import Synchronization
 
 @Suite struct SyncStatusTableTests {
 
@@ -23,6 +24,53 @@ import SyncDatabase
 		#expect(await database.executeSQLForTesting("DROP TRIGGER fixture_insert; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
 		#expect(await database.insertStatuses([SyncStatus(articleID: "succeeded", key: .starred, flag: true)]))
 		#expect(try await database.selectForProcessing().contains { $0.articleID == "succeeded" })
+		#expect(await database.close())
+	}
+
+	@Test func failedCompensationRequeuesOutboxAndReportsRecovery() async throws {
+		let database = SyncDatabase(databasePath: ":memory:")
+		let statuses: Set<SyncStatus> = [SyncStatus(articleID: "retry", key: .read, flag: true)]
+		let recovered = Mutex(false)
+		await #expect(throws: StatusMutationRecoveryError.self) {
+			try await database.recoverStatusMutationFailure(statuses, queueError: SyncDatabaseError.sqliteError(operation: "queue", code: 19, message: "queue failed"), compensate: { throw CancellationError() }, recovered: { recovered.withLock { $0 = true } })
+		}
+		#expect(recovered.withLock { $0 })
+		#expect(try await database.selectPendingReadStatusArticleIDs().contains("retry"))
+		#expect(await database.close())
+	}
+
+	@Test func failedCompensationAndOutboxFallbackRemainObservable() async throws {
+		let database = SyncDatabase(databasePath: ":memory:")
+		let statuses: Set<SyncStatus> = [SyncStatus(articleID: "lost", key: .read, flag: true)]
+		#expect(await database.setStatusTableUnavailableForTesting(true))
+		await #expect(throws: StatusMutationRecoveryError.self) {
+			try await database.recoverStatusMutationFailure(statuses, queueError: SyncDatabaseError.sqliteError(operation: "queue", code: 19, message: "queue failed"), compensate: { throw CancellationError() }, recovered: {})
+		}
+		#expect(await database.setStatusTableUnavailableForTesting(false))
+		#expect(await database.close())
+	}
+
+	@Test func statusMutationGateSerializesConcurrentWriters() async {
+		let database = SyncDatabase(databasePath: ":memory:")
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let secondStarted = Mutex(false)
+		let first = Task {
+			await database.withStatusMutation {
+				startedSignal.yield(())
+				for await _ in release { break }
+			}
+		}
+		for await _ in started { break }
+		let second = Task {
+			await database.withStatusMutation { secondStarted.withLock { $0 = true } }
+		}
+		await Task.yield()
+		#expect(!secondStarted.withLock { $0 })
+		releaseSignal.finish()
+		await first.value
+		await second.value
+		#expect(secondStarted.withLock { $0 })
 		#expect(await database.close())
 	}
 
