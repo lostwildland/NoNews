@@ -313,7 +313,7 @@ def observe(db, body):
                 from . import configuration
                 service_value = configuration._record(db, "service", policy[2])
                 service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
-            if service_available and policy and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
+            if service_available and policy and state == "verified" and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
@@ -377,8 +377,8 @@ def complete_job(db, body):
         if row[1] != context_id or row[0] != claimed_generation or current_generation != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
             raise ValueError("Native completion was revoked or mismatched")
         run = db.execute("SELECT r.item_id,r.prompt_version_id FROM curator_runs r JOIN native_processing_contexts c ON c.id=? WHERE r.id=? AND r.status='succeeded' AND EXISTS (SELECT 1 FROM prompt_versions v WHERE v.id=r.prompt_version_id AND v.kit_id=c.curator_prompt_id AND v.role='curator')", (context_id, result["run_id"])).fetchone()
-        if run is None or run[0] != db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]:
-            raise ValueError("Curator result does not belong to native context")
+        if run is None or run[0] != context_item[0] or db.execute("SELECT 1 FROM pipeline_stage_runs WHERE job_id=? AND stage='curator' AND status IN ('pending','running')", (job_id,)).fetchone() is None:
+            raise ValueError("Curator result is not bound to native job")
         db.execute("INSERT OR REPLACE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) SELECT ?,item_id,?,?,?,? FROM native_processing_contexts WHERE id=?", (job_id, stage, "ready", json.dumps(result), utcnow(), context_id))
         db.execute("UPDATE processing_jobs SET status='succeeded',result_json=?,updated_at=? WHERE id=?", (json.dumps(result), utcnow(), job_id))
     return {"jobID": job_id, "contextID": context_id, "stage": stage, "status": "ready"}

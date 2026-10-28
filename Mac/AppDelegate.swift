@@ -166,6 +166,7 @@ let appName = "NetNewsWire"
 	}
 
 	func applicationDidFinishLaunching(_ note: Notification) {
+		_ = nativeInstallationNamespace()
 		ProcessingEngine.shared.start()
 		if let menu = debugMenuItem.submenu, menu.items.first(where: { $0.action == #selector(retryFailedNativeArticles(_:)) }) == nil {
 			let retryItem = NSMenuItem(title: "Retry Failed Native Articles", action: #selector(retryFailedNativeArticles(_:)), keyEquivalent: "")
@@ -403,18 +404,22 @@ let appName = "NetNewsWire"
 		updateDockBadge()
 	}
 
+	private func nativeInstallationNamespace() -> String {
+		let key = "NoNews.NativeSource.InstallationNamespace"
+		if let saved = UserDefaults.standard.string(forKey: key), !saved.isEmpty {
+			return saved
+		}
+		let generated = "mac-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+		UserDefaults.standard.set(generated, forKey: key)
+		return generated
+	}
+
+
 	@objc func accountDidDownloadArticles(_ note: Notification) {
 		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? Set<Article>) ?? [])
 			.union((note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>) ?? [])
 		guard !articles.isEmpty else { return }
-		let namespaceKey = "NoNews.NativeSource.InstallationNamespace"
-		let namespace: String = if let saved = UserDefaults.standard.string(forKey: namespaceKey), !saved.isEmpty {
-			saved
-		} else {
-			let generated = "mac-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
-			UserDefaults.standard.set(generated, forKey: namespaceKey)
-			generated
-		}
+		let namespace = nativeInstallationNamespace()
 		let bodies = articles.map { article -> [String: Any] in
 			var body: [String: Any] = ["namespace": namespace, "accountID": article.accountID, "feedID": article.feedID,
 				"articleID": article.articleID, "uniqueID": article.uniqueID, "title": article.title ?? "",
