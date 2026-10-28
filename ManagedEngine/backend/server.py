@@ -102,6 +102,8 @@ class Application:
             if path == '/api/native/observation':
                 if method == 'GET':
                     return native_source.observation(db.db, body.get('id'))
+            if path == '/api/native/context/results':
+                return native_source.context_results(db.db, method, body)
             if path == '/api/settings/feeds':
                 return native_source.feeds(db.db, method, body)
             if path == '/api/settings/processing/probe' and method == 'POST':

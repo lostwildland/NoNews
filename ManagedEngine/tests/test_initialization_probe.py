@@ -93,7 +93,7 @@ connection.close()
                 self.assertEqual(db.execute("SELECT count(*) FROM sqlite_master WHERE type='table'").fetchone()[0], 0)
             subprocess.run([sys.executable, '-c', 'import sys; sys.path.insert(0,sys.argv[1]); from backend.core import InformationDB; InformationDB(sys.argv[2]).close()', str(root), str(database)], check=True)
             with closing(sqlite3.connect(database)) as db, db:
-                self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('44',))
+                self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('46',))
 
 
     def test_concurrent_empty_initialization_and_unknown_history(self):

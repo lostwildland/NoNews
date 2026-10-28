@@ -214,7 +214,7 @@ class ConfigurationTest(unittest.TestCase):
             process.stdin.flush()
             overflow = json.loads(process.stdout.readline())
             self.assertEqual((overflow['id'], overflow['code']), (99, 'render_too_large'))
-            self.assertEqual(call('GET', '/api/status', {})['schemaVersion'], 44)
+            self.assertEqual(call('GET', '/api/status', {})['schemaVersion'], 46)
             call('PUT', '/api/config/prompts', {**template, 'text': '{{missing}}'})
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'POST', 'path': '/api/config/render',
                 'body': {'id': template['id'], 'media': 'news', 'values': {'title': 'Title', 'missing': 'invented'}}}) + '\n')
@@ -335,4 +335,4 @@ class ConfigurationTest(unittest.TestCase):
                 request(6, 'GET', '/api/status', {})])
             self.assertEqual(rejected['code'], 'invalid_configuration')
             self.assertEqual(readback['result'], reply)
-            self.assertEqual(status['result']['schemaVersion'], 44)
+            self.assertEqual(status['result']['schemaVersion'], 46)

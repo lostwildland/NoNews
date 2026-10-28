@@ -13,6 +13,7 @@ class NativeSourceTest(unittest.TestCase):
         self.db.row_factory = sqlite3.Row
         self.db.execute('PRAGMA foreign_keys=ON')
         self.db.executescript(core.SCHEMA)
+        self.db.execute("CREATE TABLE app_settings(key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)")
         self.db.executescript(native_source.SCHEMA)
 
     def tearDown(self):
@@ -42,7 +43,16 @@ class NativeSourceTest(unittest.TestCase):
         self.assertIsNone(row['item_id'])
         self.assertEqual(row['contexts'], [])
 
-    def test_verified_evidence_survives_identityless_delivery(self):
+    def test_untyped_url_is_retained_as_unresolved_evidence(self):
+        row = native_source.observe(self.db, {
+            'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
+            'title': 'Unconfigured', 'identityType': 'url', 'identityValue': 'https://example.com/story',
+        })
+        self.assertEqual(row['identity_state'], 'unresolved')
+        self.assertIsNone(row['item_id'])
+        self.assertEqual(row['identity_type'], 'url')
+        self.assertEqual(row['raw_identity_value'], 'https://example.com/story')
+
         body = {
             'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
             'title': 'Story', 'mediaType': 'news', 'identityType': 'url',
@@ -55,7 +65,17 @@ class NativeSourceTest(unittest.TestCase):
         self.assertEqual(len(repeated['identityEvidence']), 1)
         self.assertEqual(repeated['identityEvidence'][0]['raw_identity_value'], 'https://example.com/story')
 
-    def test_identity_must_match_media_type(self):
+    def test_ipv6_url_authority_remains_distinct(self):
+        first = native_source.observe(self.db, {
+            'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'one',
+            'mediaType': 'news', 'identityType': 'url', 'identityValue': 'https://[::1]:80/story',
+        })
+        second = native_source.observe(self.db, {
+            'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'two',
+            'mediaType': 'news', 'identityType': 'url', 'identityValue': 'https://[::1:80]/story',
+        })
+        self.assertNotEqual(first['item_id'], second['item_id'])
+
         with self.assertRaises(ValueError):
             native_source.observe(self.db, {
                 'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
@@ -63,6 +83,7 @@ class NativeSourceTest(unittest.TestCase):
             })
 
     def test_policy_is_pinned_into_new_processing_context(self):
+        self.db.execute("INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?)", ('nonews.prompt.curator', '{"role":"curator"}', 'now'))
         native_source.feeds(self.db, 'PUT', {'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'title': 'Named feed', 'curatorPromptID': 'curator', 'threshold': 7})
         row = native_source.observe(self.db, {
             'namespace': 'install-a', 'accountID': 'one', 'feedID': 'feed', 'articleID': 'article',
@@ -94,9 +115,10 @@ class NativeSourceTest(unittest.TestCase):
         self.assertEqual(changed['item_id'], original['item_id'])
 
     def test_policy_batch_update_is_explicit_and_revisioned(self):
+        self.db.execute("INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?)", ('nonews.prompt.curator', '{"role":"curator"}', 'now'))
         result = native_source.feeds(self.db, 'PUT', {
             'namespace': 'install-a', 'accountID': 'one', 'feedIDs': ['a', 'b'],
-            'mediaType': 'paper', 'processingMode': 'important', 'threshold': 9,
+            'mediaType': 'paper', 'processingMode': 'important', 'curatorPromptID': 'curator', 'threshold': 9,
         })
         self.assertEqual({item['feed_id'] for item in result['feeds']}, {'a', 'b'})
         self.assertEqual({item['processing_mode'] for item in result['feeds']}, {'important'})
@@ -119,7 +141,7 @@ class NativeSourceTest(unittest.TestCase):
             db.commit()
             db.close()
             with InformationDB(path) as migrated:
-                self.assertEqual(schema.version(migrated.db), 44)
+                self.assertEqual(schema.version(migrated.db), 46)
                 self.assertIsNotNone(migrated.db.execute("SELECT 1 FROM sqlite_master WHERE name='native_source_observations'").fetchone())
                 self.assertEqual(migrated.db.execute("SELECT title FROM feeds WHERE id='f'").fetchone()[0], 'Feed')
 

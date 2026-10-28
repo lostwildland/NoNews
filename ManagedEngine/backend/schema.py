@@ -31,7 +31,9 @@ from contextlib import closing
 # 42: native source observations, processing contexts and feed policies.
 # 43: complete native policy context snapshots and identity evidence validation.
 # 44: retain raw identity evidence and enforce media-qualified identity rules.
-SCHEMA_VERSION = 44
+# 45: durable native context result associations and unresolved raw evidence.
+# 46: native context results and raw observation identity columns.
+SCHEMA_VERSION = 46
 _VERSION_KEY = "schema_version"
 
 
@@ -64,7 +66,7 @@ def require_supported_database(db: sqlite3.Connection) -> None:
     current = version(db)
     if current > SCHEMA_VERSION:
         raise UnsupportedSchemaError('schema_newer')
-    if current not in {SCHEMA_VERSION - 3, SCHEMA_VERSION - 2, SCHEMA_VERSION - 1, SCHEMA_VERSION} and db.execute(
+    if current not in {SCHEMA_VERSION - 5, SCHEMA_VERSION - 4, SCHEMA_VERSION - 3, SCHEMA_VERSION - 2, SCHEMA_VERSION - 1, SCHEMA_VERSION} and db.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' LIMIT 1").fetchone():
         raise UnsupportedSchemaError('schema_migration_required')
 

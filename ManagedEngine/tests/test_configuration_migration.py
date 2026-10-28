@@ -215,7 +215,7 @@ class MigrationTest(unittest.TestCase):
                 if 'error' in response: break
                 time.sleep(.001)
             self.assertIn(response['code'], {'snapshot_expired', 'invalid_configuration'})
-        self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 44)
+        self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 46)
         self.assertEqual(call('PUT', '/api/settings/processing', {'processors': 2})['result']['processors'], 2)
 
     def test_scalar_capacity_covers_staging_preserves_snapshots_and_in_cap_values(self):
@@ -275,7 +275,7 @@ class MigrationTest(unittest.TestCase):
                     # The input JSON itself is 12 MiB; reject before a second expanded staging encoding.
                     self.assertLess(peak, 24 * 1024 * 1024)
                     print(f'Scalar refusal browse={browse}: Python allocation peak {peak} bytes')
-                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 44)
+                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 46)
                     self.assertEqual(app.handle('POST', '/api/config/migration/preview', {},
                         {'snapshotId': prior_id, 'section': 'models', 'index': 0, 'part': 0}), first)
                     with closing(sqlite3.connect(app.database)) as db:
@@ -324,7 +324,7 @@ class MigrationTest(unittest.TestCase):
                 response = call('POST', '/api/config/migration/preview',
                                 {'serviceId': service['id'], 'browse': browse})
                 self.assertEqual(response.get('code'), 'snapshot_capacity')
-                self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 44)
+                self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 46)
                 with closing(sqlite3.connect(database)) as db:
                     self.assertEqual(db.execute("SELECT count(*) FROM app_settings "
                                                 "WHERE key LIKE 'nonews.migration-snapshot.%.count'").fetchone()[0], 0)
@@ -372,7 +372,7 @@ class MigrationTest(unittest.TestCase):
                         return response
                     if response['result']['state'] == 'complete':
                         return response['result']['result']
-                    self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 44)
+                    self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 46)
                     self.assertEqual(call('GET', '/api/config/services', {'id': service['id']})['result']['id'], service['id'])
                     time.sleep(.01)
                 self.fail('Migration operation did not finish')
@@ -462,7 +462,7 @@ class MigrationTest(unittest.TestCase):
                 db.execute("UPDATE app_settings SET value='[{\"broken\":1},]' WHERE key='magpie_migration_evidence'")
             refusal = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})
             self.assertEqual(refusal['code'], 'invalid_configuration')
-            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 44)
+            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 46)
             self.assertEqual(call('POST', '/api/config/migration/preview', first['next'])['result'], retry)
             with closing(sqlite3.connect(database)) as db, db:
                 db.execute('UPDATE app_settings SET value=? WHERE key=?',
@@ -520,7 +520,7 @@ class MigrationTest(unittest.TestCase):
                 db.execute("CREATE TRIGGER fail_resume BEFORE UPDATE ON app_settings WHEN NEW.key='magpie_claims_paused' AND NEW.value='0' BEGIN SELECT RAISE(ABORT, 'injected'); END")
             failed = call('POST', '/api/config/migration/apply', {'serviceId': service['id'], 'cooperative': True})['result']
             self.assertEqual(finish('apply', failed)['error'], 'operation failed')
-            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 44)
+            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 46)
             with closing(sqlite3.connect(database)) as db, db:
                 self.assertEqual(db.execute("SELECT count(*) FROM app_settings WHERE key LIKE 'nonews.migration-evidence.%'").fetchone()[0], 0)
                 self.assertEqual(db.execute("SELECT count(*) FROM model_configs WHERE config_json LIKE '%target%'").fetchone()[0], 0)

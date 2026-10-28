@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS native_source_observations(
   identity_state TEXT NOT NULL CHECK(identity_state IN ('verified','unresolved','conflict')),
   identity_type TEXT NOT NULL DEFAULT '',
   identity_value TEXT NOT NULL DEFAULT '',
+  raw_identity_value TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE(namespace, account_id, feed_id, article_id)
@@ -63,6 +64,14 @@ CREATE TABLE IF NOT EXISTS native_processing_contexts(
   UNIQUE(item_id, observation_id)
 );
 CREATE INDEX IF NOT EXISTS native_context_item ON native_processing_contexts(item_id);
+CREATE TABLE IF NOT EXISTS native_context_results(
+  context_id TEXT NOT NULL REFERENCES native_processing_contexts(id),
+  result_type TEXT NOT NULL CHECK(result_type IN ('curator','draft','material')),
+  result_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(context_id, result_type, result_id)
+);
+CREATE INDEX IF NOT EXISTS native_context_results_lookup ON native_context_results(context_id, result_type, created_at DESC);
 CREATE TABLE IF NOT EXISTS native_feed_policies(
   namespace TEXT NOT NULL,
   account_id TEXT NOT NULL,
@@ -97,6 +106,8 @@ def ensure_schema(db) -> None:
     for name, declaration in additions.items():
         if name not in columns:
             db.execute(f"ALTER TABLE native_processing_contexts ADD COLUMN {name} {declaration}")
+    if "raw_identity_value" not in {row[1] for row in db.execute("PRAGMA table_info(native_source_observations)")}:
+        db.execute("ALTER TABLE native_source_observations ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     if "raw_identity_value" not in {row[1] for row in db.execute("PRAGMA table_info(native_observation_identities)")}:
         db.execute("ALTER TABLE native_observation_identities ADD COLUMN raw_identity_value TEXT NOT NULL DEFAULT ''")
     policy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_feed_policies)")}
@@ -134,7 +145,8 @@ def _verified_identity(body):
         port = parts.port
         if (parts.scheme, port) in {("http", 80), ("https", 443)}:
             port = None
-        netloc = host if port is None else f"{host}:{port}"
+        netloc_host = f"[{host}]" if ":" in host else host
+        netloc = netloc_host if port is None else f"{netloc_host}:{port}"
         value = urlunsplit((parts.scheme.casefold(), netloc, parts.path or "/", parts.query, ""))
     elif identity_type == "doi":
         if not re.fullmatch(r"10\.\d{4,9}/\S+", value, re.IGNORECASE):
@@ -201,12 +213,10 @@ def observe(db, body):
     if media_type and media_type not in MEDIA_TYPES:
         raise ValueError("Unsupported media type")
     identity = _verified_identity(body)
-    if identity and not media_type:
-        raise ValueError("Verified identity requires media type")
     if identity:
         identity_type = identity[0]
         compatible = {"url": MEDIA_TYPES, "doi": {"paper", "news"}, "arxiv": {"paper"}, "video": {"video"}}
-        if media_type not in compatible.get(identity_type, set()):
+        if media_type and media_type not in compatible.get(identity_type, set()):
             raise ValueError("Identity is incompatible with media type")
     observation_id = _observation_id(namespace, account_id, feed_id, article_id)
     now = utcnow()
@@ -214,40 +224,42 @@ def observe(db, body):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         item_id = existing["item_id"] if existing else None
         state = "unresolved"
-        identity_type = identity_value = ""
+        identity_type = identity_value = raw_identity_value = ""
         if identity:
             identity_type, identity_value, raw_identity_value = identity
-            prior_identity = (existing["identity_type"], existing["identity_value"]) if existing and existing["identity_type"] else None
-            if existing and existing["item_id"] and prior_identity and prior_identity != (identity_type, identity_value):
-                state = "conflict"
-                item_id = existing["item_id"]
-            else:
-                item_id, state = _item_for_identity(db, media_type, identity_type, identity_value, title, original_url, published)
-                if existing and existing["item_id"] and item_id != existing["item_id"]:
+            if media_type:
+                prior_identity = (existing["identity_type"], existing["identity_value"]) if existing and existing["identity_type"] else None
+                if existing and existing["item_id"] and prior_identity and prior_identity != (identity_type, identity_value):
                     state = "conflict"
                     item_id = existing["item_id"]
-            conflict = db.execute("SELECT item_id FROM native_source_observations WHERE namespace=? AND account_id=? AND feed_id=? AND article_id=? AND item_id IS NOT NULL AND item_id<>?",
-                                  (namespace, account_id, feed_id, article_id, item_id)).fetchone()
-            if conflict:
-                state = "conflict"
-                item_id = existing["item_id"] if existing else None
+                else:
+                    item_id, state = _item_for_identity(db, media_type, identity_type, identity_value, title, original_url, published)
+                    if existing and existing["item_id"] and item_id != existing["item_id"]:
+                        state = "conflict"
+                        item_id = existing["item_id"]
+                conflict = db.execute("SELECT item_id FROM native_source_observations WHERE namespace=? AND account_id=? AND feed_id=? AND article_id=? AND item_id IS NOT NULL AND item_id<>?",
+                                      (namespace, account_id, feed_id, article_id, item_id)).fetchone()
+                if conflict:
+                    state = "conflict"
+                    item_id = existing["item_id"] if existing else None
         if existing:
-            if identity:
+            if identity and media_type:
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
             prior_state = existing["identity_state"]
-            if not identity and prior_state in {"verified", "conflict"}:
+            if (not identity or not media_type) and prior_state in {"verified", "conflict"}:
                 state = prior_state
                 identity_type = existing["identity_type"]
                 identity_value = existing["identity_value"]
+                raw_identity_value = existing["raw_identity_value"]
                 item_id = existing["item_id"]
-            db.execute("UPDATE native_source_observations SET unique_id=?,feed_url=?,title=?,original_url=?,published_at=?,item_id=?,identity_state=?,identity_type=?,identity_value=?,updated_at=? WHERE id=?",
-                       (unique_id, feed_url, title, original_url, published, item_id, state, identity_type, identity_value, now, observation_id))
+            db.execute("UPDATE native_source_observations SET unique_id=?,feed_url=?,title=?,original_url=?,published_at=?,item_id=?,identity_state=?,identity_type=?,identity_value=?,raw_identity_value=?,updated_at=? WHERE id=?",
+                       (unique_id, feed_url, title, original_url, published, item_id, state, identity_type, identity_value, raw_identity_value, now, observation_id))
         else:
-            db.execute("INSERT INTO native_source_observations VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            db.execute("INSERT INTO native_source_observations(id,namespace,account_id,feed_id,article_id,unique_id,feed_url,title,original_url,published_at,item_id,identity_state,identity_type,identity_value,raw_identity_value,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (observation_id, namespace, account_id, feed_id, article_id, unique_id, feed_url, title, original_url,
-                        published, item_id, state, identity_type, identity_value, now, now))
-            if identity:
+                        published, item_id, state, identity_type, identity_value, raw_identity_value, now, now))
+            if identity and media_type:
                 db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
         if item_id:
@@ -259,6 +271,20 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
     return observation(db, observation_id)
+
+
+def context_results(db, method, body):
+    context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
+    if db.execute("SELECT 1 FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone() is None:
+        raise ValueError("Context not found")
+    if method == "POST":
+        result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
+        result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
+        if result_type not in {"curator", "draft", "material"}:
+            raise ValueError("Unsupported context result")
+        with transaction(db):
+            db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
+    return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
 
 
 def observation(db, identity):
@@ -304,6 +330,12 @@ def feeds(db, method, body):
         raise ValueError("Unsupported processing mode")
     if "threshold" in changes and (changes["threshold"] is not None and (not isinstance(changes["threshold"], (int, float)) or not 0 <= changes["threshold"] <= 10)):
         raise ValueError("Invalid threshold")
+    for key in ("curatorPromptID", "editorPromptID"):
+        if changes.get(key) and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.prompt." + changes[key],)).fetchone() is None:
+            raise ValueError("Prompt not found")
+    for key in ("scoringStrategy", "bodyStrategy"):
+        if changes.get(key) is not None and changes[key] not in {"", "default", "abstract", "full", "transcript", "captions"}:
+            raise ValueError("Unsupported material strategy")
     now = utcnow()
     affected = []
     with transaction(db):
@@ -316,6 +348,12 @@ def feeds(db, method, body):
                            "processing_mode": changes.get("processingMode", values["processing_mode"]), "curator_prompt_id": changes.get("curatorPromptID", values["curator_prompt_id"]),
                            "editor_prompt_id": changes.get("editorPromptID", values["editor_prompt_id"]), "service_id": changes.get("serviceID", values["service_id"]), "threshold": changes.get("threshold", values["threshold"]),
                            "scoring_strategy": changes.get("scoringStrategy", values["scoring_strategy"]), "body_strategy": changes.get("bodyStrategy", values["body_strategy"])})
+            if values["processing_mode"] in {"normal", "important"}:
+                if not values["media_type"] or not values["curator_prompt_id"]:
+                    raise ValueError("Enabled feed policy requires media and a Curator prompt")
+                for prompt_id in (values["curator_prompt_id"], values["editor_prompt_id"]):
+                    if prompt_id and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.prompt." + prompt_id,)).fetchone() is None:
+                        raise ValueError("Prompt not found")
             if prior and body.get("revision") is not None and body["revision"] != prior["revision"]:
                 raise ValueError("Feed policy changed during save")
             db.execute("INSERT INTO native_feed_policies(namespace,account_id,feed_id,title,media_type,processing_mode,curator_prompt_id,editor_prompt_id,service_id,threshold,scoring_strategy,body_strategy,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,service_id=excluded.service_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",

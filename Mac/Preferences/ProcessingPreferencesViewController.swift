@@ -1,5 +1,6 @@
 import AppKit
 import Secrets
+import Account
 
 @MainActor protocol ProcessingPreferencesRequesting {
 	func request(method: String, path: String, body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void)
@@ -135,6 +136,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	private let usedBy = NSTextField(wrappingLabelWithString: "Used by: none")
 	private let feedback = NSTextField(wrappingLabelWithString: "")
 	private let configurationTabs = NSTabView()
+	private let nativeSourceSummary = NSTextField(wrappingLabelWithString: "No native sources loaded.")
 	private var serviceRows: [[String: Any]] = []
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
@@ -218,11 +220,16 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		promptTab.label = "Prompts"
 		promptTab.view = promptForm()
 		tabs.addTabViewItem(promptTab)
+		let sourceTab = NSTabViewItem(identifier: "sources")
+		sourceTab.label = "Sources"
+		sourceTab.view = nativeSourceForm()
+		tabs.addTabViewItem(sourceTab)
 		view = ProcessingPreferencesRootView(heading: heading, status: statusLabel, action: actionButton,
 			recovery: recoveryButton, tabs: tabs, feedback: feedback)
 		configureAccessibilityAndKeyViewOrder()
 		NotificationCenter.default.addObserver(self, selector: #selector(updateStatus), name: ProcessingEngine.didChange, object: engine)
 		updateStatus()
+		loadNativeSourceSummary()
 	}
 
 	@objc private func acknowledgeUnknownSaves() {
@@ -245,6 +252,33 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		}
 	}
 
+	private func nativeSourceForm() -> NSView {
+		nativeSourceSummary.lineBreakMode = .byWordWrapping
+		nativeSourceSummary.maximumNumberOfLines = 0
+		nativeSourceSummary.setAccessibilityLabel("Native source policies")
+		let refresh = button("Refresh Sources", #selector(refreshNativeSources))
+		return NSStackView(views: [nativeSourceSummary, refresh])
+	}
+
+	@objc private func refreshNativeSources() { loadNativeSourceSummary() }
+
+	private func loadNativeSourceSummary() {
+		guard engine.state == .ready,
+			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
+		let accountID = AccountManager.shared.defaultAccount.accountID
+		request("GET", "/api/settings/feeds", ["namespace": namespace, "accountID": accountID], onFailure: { [weak self] in
+			self?.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
+		}) { [weak self] value in
+			let feeds = value["feeds"] as? [[String: Any]] ?? []
+			self?.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
+		}
+	}
+
+	func saveNativeSourcePolicy(_ body: [String: Any], completion: ((Result<[String: Any], Error>) -> Void)? = nil) {
+		requestClient.request(method: "PUT", path: "/api/settings/feeds", body: body, completion: { result in
+			completion?(result)
+		})
+	}
 	private func button(_ title: String, _ action: Selector) -> NSButton {
 		NSButton(title: title, target: self, action: action)
 	}

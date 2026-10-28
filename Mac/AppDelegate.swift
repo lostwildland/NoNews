@@ -39,6 +39,8 @@ let appName = "NetNewsWire"
 	private var refreshTimer: AccountRefreshTimer?
 	private var lastRefreshInterval = AppDefaults.refreshInterval
 
+	private var nativeArticleDrainActive = false
+
 	private var shuttingDown = false {
 		didSet {
 			if shuttingDown {
@@ -429,28 +431,43 @@ let appName = "NetNewsWire"
 			queued = saved
 		}
 		queued.append(contentsOf: bodies)
-		if queued.count > 256 { queued.removeFirst(queued.count - 256) }
 		saveNativeArticleQueue(queued)
 	}
 
 	private func drainNativeArticleQueue() {
-		guard ProcessingEngine.shared.state == .ready else { return }
+		guard !nativeArticleDrainActive, ProcessingEngine.shared.state == .ready else { return }
 		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
-			let data = text.data(using: .utf8), let queued = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], !queued.isEmpty else { return }
-		var remaining = queued
+			let data = text.data(using: .utf8), let saved = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], !saved.isEmpty else { return }
+		nativeArticleDrainActive = true
 		func sendNext() {
-			guard !remaining.isEmpty, ProcessingEngine.shared.state == .ready else { return }
-			ProcessingEngine.shared.observeNativeArticle(remaining[0]) { [weak self] result in
+			guard ProcessingEngine.shared.state == .ready else { nativeArticleDrainActive = false; return }
+			guard let currentText = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
+				let currentData = currentText.data(using: .utf8), let current = try? JSONSerialization.jsonObject(with: currentData) as? [[String: Any]],
+				let body = current.first else { nativeArticleDrainActive = false; return }
+			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
 				guard let self else { return }
-				if case .success = result {
-					remaining.removeFirst()
-					self.saveNativeArticleQueue(remaining)
-					sendNext()
+				if case .failure = result, ProcessingEngine.shared.state != .ready {
+					self.nativeArticleDrainActive = false
+					return
 				}
+				self.removeNativeArticleFromQueue(body)
+				sendNext()
 			}
 		}
 		sendNext()
 	}
+
+	private func removeNativeArticleFromQueue(_ body: [String: Any]) {
+		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), var queued = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		if let index = queued.firstIndex(where: { candidate in keys.allSatisfy { key in
+			candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!)
+		} }) {
+			queued.remove(at: index)
+			saveNativeArticleQueue(queued)
+		}
+	}
+
 
 	private func saveNativeArticleQueue(_ bodies: [[String: Any]]) {
 		guard let data = try? JSONSerialization.data(withJSONObject: bodies), let text = String(data: data, encoding: .utf8) else { return }
