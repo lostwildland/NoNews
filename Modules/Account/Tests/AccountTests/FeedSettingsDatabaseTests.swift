@@ -23,10 +23,20 @@ struct FeedSettingsDatabaseTests {
 		database.readSubmittedForTesting.withLock { $0 = { signal.yield(()) } }
 		let read = Task.detached { database.allRows()["fixture"]?.feedID == "fixture" }
 		for await _ in submitted { break }
-		database.beginClosing()
+		let closingFinished = DispatchSemaphore(value: 0)
+		let admission = Task.detached(priority: .userInitiated) { database.beginClosing(); closingFinished.signal() }
+		let closedAdmission = await withCheckedContinuation { continuation in
+			DispatchQueue.global(qos: .userInitiated).async { continuation.resume(returning: closingFinished.wait(timeout: .now() + 3) == .success) }
+		}
+		if closedAdmission {
+			#expect(!database.acceptsWork)
+			#expect(database.allRows().isEmpty && database.isEmpty)
+		}
+		release.signal()
+		await admission.value
+		#expect(closedAdmission)
 		#expect(!database.acceptsWork)
 		let close = Task { await database.close() }
-		release.signal()
 		#expect(await read.value)
 		#expect(await close.value)
 		#expect(database.allRows().isEmpty && database.isEmpty)

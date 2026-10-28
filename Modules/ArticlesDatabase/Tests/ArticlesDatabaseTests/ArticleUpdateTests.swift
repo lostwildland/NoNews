@@ -51,6 +51,36 @@ import ArticlesDatabase
 		#expect(fetched?.markdown == "two")
 	}
 
+	@Test func deferredCommitFailureLeavesArticleAndStatusUnchanged() async throws {
+		let initial = parsedItem(title: "Before", markdown: nil)
+		#expect((await database.updateAsync(parsedItems: [initial], feedID: feedID, deleteOlder: false)).error == nil)
+		let article = try #require(try await database.fetchArticlesAsync(feedID: feedID).first)
+		let beforeRead = article.status.read
+		#expect(database.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_article AFTER UPDATE ON articles BEGIN INSERT INTO fixture_child VALUES (1); END; CREATE TRIGGER fixture_status AFTER UPDATE ON statuses BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		await #expect(throws: (any Error).self) { _ = try await database.markAsync(articleIDs: [article.articleID], statusKey: .read, flag: !beforeRead) }
+		#expect(article.status.read == beforeRead)
+		let failed = await database.updateAsync(parsedItems: [parsedItem(title: "After", markdown: nil)], feedID: feedID, deleteOlder: false)
+		#expect(failed.error != nil)
+		#expect(try await database.fetchArticlesAsync(feedID: feedID).first?.title == "Before")
+		#expect(database.executeSQLForTesting("DROP TRIGGER fixture_article; DROP TRIGGER fixture_status; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		#expect(try await database.markAsync(articleIDs: [article.articleID], statusKey: .read, flag: !beforeRead) == [article.articleID])
+		#expect((await database.updateAsync(parsedItems: [parsedItem(title: "After", markdown: nil)], feedID: feedID, deleteOlder: false)).error == nil)
+		#expect(try await database.fetchArticlesAsync(feedID: feedID).first?.title == "After")
+		#expect(await database.close())
+	}
+
+	@Test func failedSearchIndexWriteRollsBackArticleAndCanRetry() async throws {
+		#expect(database.executeSQLForTesting("DROP TABLE search;"))
+		let item = parsedItem(title: "Fixture", markdown: nil)
+		let failed = await database.updateAsync(parsedItems: [item], feedID: feedID, deleteOlder: false)
+		#expect(failed.error != nil)
+		#expect(try await database.fetchArticlesAsync(feedID: feedID).isEmpty)
+		#expect(database.executeSQLForTesting("CREATE VIRTUAL TABLE search USING fts4(title, body);"))
+		let retry = await database.updateAsync(parsedItems: [item], feedID: feedID, deleteOlder: false)
+		#expect(retry.error == nil && retry.new?.count == 1)
+		#expect(await database.close())
+	}
+
 	@Test func clearedFieldStopsReportingAsUpdated() async throws {
 		let withTitle = parsedItem(title: "Title", markdown: nil)
 		_ = await database.updateAsync(parsedItems: [withTitle], feedID: feedID, deleteOlder: false)

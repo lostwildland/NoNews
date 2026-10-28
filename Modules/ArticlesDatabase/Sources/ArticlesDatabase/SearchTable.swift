@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import os
 import RSCore
 import RSDatabase
 import RSDatabaseObjC
@@ -81,6 +82,7 @@ final class ArticleSearchInfo: Hashable, Sendable {
 
 final class SearchTable: DatabaseTable, @unchecked Sendable {
 	let name = "search"
+	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "SearchTable")
 	private let queue: DatabaseQueue
 	weak var articlesTable: ArticlesTable?
 
@@ -92,36 +94,36 @@ final class SearchTable: DatabaseTable, @unchecked Sendable {
 		guard !articleIDs.isEmpty else {
 			return
 		}
-		queue.runInTransaction(onRejected: {}) { database in
-			self.ensureIndexedArticles(articleIDs, database)
+		queue.runInTransaction(completion: { (result: Result<Void, Error>) in
+			if case .failure(let error) = result, !(error is CancellationError) { Self.logger.error("Indexing failed: \(error.localizedDescription, privacy: .public)") }
+		}) { database in
+			try self.ensureIndexedArticles(articleIDs, database)
 		}
 	}
 
 	/// Add to, or update, the search index for articles with specified IDs.
-	func ensureIndexedArticles(_ articleIDs: Set<String>, _ database: FMDatabase) {
+	func ensureIndexedArticles(_ articleIDs: Set<String>, _ database: FMDatabase) throws {
 		guard let articlesTable = articlesTable else {
 			return
 		}
-		guard let articleSearchInfos = articlesTable.fetchArticleSearchInfos(articleIDs, in: database) else {
-			return
-		}
+		let articleSearchInfos = try articlesTable.fetchArticleSearchInfos(articleIDs, in: database)
 
 		let unindexedArticles = articleSearchInfos.filter { $0.searchRowID == nil }
-		performInitialIndexForArticles(unindexedArticles, database)
+		try performInitialIndexForArticles(unindexedArticles, database)
 
 		let indexedArticles = articleSearchInfos.filter { $0.searchRowID != nil }
-		updateIndexForArticles(indexedArticles, database)
+		try updateIndexForArticles(indexedArticles, database)
 	}
 
 	/// Index new articles.
-	func indexNewArticles(_ articles: Set<Article>, _ database: FMDatabase) {
+	func indexNewArticles(_ articles: Set<Article>, _ database: FMDatabase) throws {
 		let articleSearchInfos = Set(articles.map { ArticleSearchInfo(article: $0) })
-		performInitialIndexForArticles(articleSearchInfos, database)
+		try performInitialIndexForArticles(articleSearchInfos, database)
 	}
 
 	/// Index updated articles.
-	func indexUpdatedArticles(_ articles: Set<Article>, _ database: FMDatabase) {
-		ensureIndexedArticles(articles.articleIDs(), database)
+	func indexUpdatedArticles(_ articles: Set<Article>, _ database: FMDatabase) throws {
+		try ensureIndexedArticles(articles.articleIDs(), database)
 	}
 }
 
@@ -129,20 +131,20 @@ final class SearchTable: DatabaseTable, @unchecked Sendable {
 
 private extension SearchTable {
 
-	func performInitialIndexForArticles(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) {
+	func performInitialIndexForArticles(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) throws {
 		for article in articles {
-			performInitialIndex(article, database)
+			try performInitialIndex(article, database)
 		}
 	}
 
-	func performInitialIndex(_ article: ArticleSearchInfo, _ database: FMDatabase) {
-		let rowid = insert(article, database)
-		articlesTable?.updateRowsWithValue(rowid, valueKey: DatabaseKey.searchRowID, whereKey: DatabaseKey.articleID, matches: [article.articleID], database: database)
+	func performInitialIndex(_ article: ArticleSearchInfo, _ database: FMDatabase) throws {
+		let rowid = try insert(article, database)
+		guard let articlesTable, database.rs_updateRows(withValue: rowid, valueKey: DatabaseKey.searchRowID, whereKey: DatabaseKey.articleID, inValues: [article.articleID], tableName: articlesTable.name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
-	func insert(_ article: ArticleSearchInfo, _ database: FMDatabase) -> Int {
+	func insert(_ article: ArticleSearchInfo, _ database: FMDatabase) throws -> Int {
 		let rowDictionary: DatabaseDictionary = [DatabaseKey.body: article.bodyForIndex, DatabaseKey.title: article.titleForIndex]
-		insertRow(rowDictionary, insertType: .normal, in: database)
+		guard database.rs_insertRow(with: rowDictionary, insertType: .normal, tableName: name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 		return Int(database.lastInsertRowId())
 	}
 
@@ -164,25 +166,25 @@ private extension SearchTable {
 		}
 	}
 
-	func updateIndexForArticles(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) {
+	func updateIndexForArticles(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) throws {
 		if articles.isEmpty {
 			return
 		}
-		guard let searchInfos = fetchSearchInfos(articles, database) else {
+		guard let searchInfos = try fetchSearchInfos(articles, database) else {
 			// The articles that get here have a non-nil searchRowID, and we should have found rows in the search table for them.
 			// But we didn’t. Recover by doing an initial index.
-			performInitialIndexForArticles(articles, database)
+			try performInitialIndexForArticles(articles, database)
 			return
 		}
 		let groupedSearchInfos = Dictionary(grouping: searchInfos, by: { $0.rowID })
 		let searchInfosDictionary = groupedSearchInfos.mapValues { $0.first! }
 
 		for article in articles {
-			updateIndexForArticle(article, searchInfosDictionary, database)
+			try updateIndexForArticle(article, searchInfosDictionary, database)
 		}
 	}
 
-	private func updateIndexForArticle(_ article: ArticleSearchInfo, _ searchInfosDictionary: [Int: SearchInfo], _ database: FMDatabase) {
+	private func updateIndexForArticle(_ article: ArticleSearchInfo, _ searchInfosDictionary: [Int: SearchInfo], _ database: FMDatabase) throws {
 		guard let searchRowID = article.searchRowID else {
 			assertionFailure("Expected article.searchRowID, got nil")
 			return
@@ -190,7 +192,7 @@ private extension SearchTable {
 		guard let searchInfo: SearchInfo = searchInfosDictionary[searchRowID] else {
 			// Shouldn’t happen. The article has a searchRowID, but we didn’t find that row in the search table.
 			// Easy to recover from: just do an initial index, and all’s well.
-			performInitialIndex(article, database)
+			try performInitialIndex(article, database)
 			return
 		}
 
@@ -206,20 +208,23 @@ private extension SearchTable {
 		if article.bodyForIndex != searchInfo.body {
 			updateDictionary[DatabaseKey.body] = article.bodyForIndex
 		}
-		updateRowsWithDictionary(updateDictionary, whereKey: DatabaseKey.rowID, matches: searchInfo.rowID, database: database)
+		guard database.rs_updateRows(with: updateDictionary, whereKey: DatabaseKey.rowID, equalsValue: searchInfo.rowID, tableName: name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
-	private func fetchSearchInfos(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) -> Set<SearchInfo>? {
+	private func fetchSearchInfos(_ articles: Set<ArticleSearchInfo>, _ database: FMDatabase) throws -> Set<SearchInfo>? {
 		let searchRowIDs = articles.compactMap { $0.searchRowID }
 		guard !searchRowIDs.isEmpty else {
 			return nil
 		}
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(searchRowIDs.count))
 		let sql = "select rowid, title, body from \(name) where rowid in \(placeholders);"
-		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchRowIDs) else {
-			return nil
-		}
-		return resultSet.mapToSet { SearchInfo(row: $0) }
+		guard let resultSet = database.executeQuery(sql, withArgumentsIn: searchRowIDs) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
+		defer { resultSet.close() }
+		var result = Set<SearchInfo>()
+		var queryError: NSError?
+		while resultSet.nextWithError(&queryError) { result.insert(SearchInfo(row: resultSet)) }
+		if let queryError { throw queryError }
+		return result
 	}
 }
 

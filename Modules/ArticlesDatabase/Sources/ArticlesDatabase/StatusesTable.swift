@@ -32,12 +32,13 @@ final class StatusesTable: DatabaseTable, Sendable {
 	// MARK: - Creating/Updating
 
 	@discardableResult
-	func ensureStatusesForArticleIDs(_ articleIDs: Set<String>, _ read: Bool, _ database: FMDatabase) -> ([String: ArticleStatus], Set<String>) {
+	func ensureStatusesForArticleIDs(_ articleIDs: Set<String>, _ read: Bool, _ database: FMDatabase) throws -> ([String: ArticleStatus], Set<String>) {
 
 		#if DEBUG
+		var completed = false
 		// Check for missing statuses  — this asserts that all the passed-in articleIDs exist in the statuses table.
 		defer {
-			if let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) {
+			if completed, let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) {
 				let fetchedStatuses = resultSet.mapToSet(statusWithRow)
 				let fetchedArticleIDs = Set(fetchedStatuses.map { $0.articleID })
 				assert(fetchedArticleIDs == articleIDs)
@@ -48,25 +49,31 @@ final class StatusesTable: DatabaseTable, Sendable {
 		// Check cache.
 		let articleIDsMissingCachedStatus = articleIDsWithNoCachedStatus(articleIDs)
 		if articleIDsMissingCachedStatus.isEmpty {
+			#if DEBUG
+			completed = true
+			#endif
 			return (statusesDictionary(articleIDs), Set<String>())
 		}
 
 		// Check database.
-		fetchAndCacheStatusesForArticleIDs(articleIDsMissingCachedStatus, database)
+		try fetchAndCacheStatusesForArticleIDs(articleIDsMissingCachedStatus, database)
 
 		let articleIDsNeedingStatus = self.articleIDsWithNoCachedStatus(articleIDs)
 		if !articleIDsNeedingStatus.isEmpty {
 			// Create new statuses.
-			self.createAndSaveStatusesForArticleIDs(articleIDsNeedingStatus, read, database)
+			try self.createAndSaveStatusesForArticleIDs(articleIDsNeedingStatus, read, database)
 		}
 
+		#if DEBUG
+		completed = true
+		#endif
 		return (statusesDictionary(articleIDs), articleIDsNeedingStatus)
 	}
 
 	// MARK: - Marking
 
 	@discardableResult
-	func mark(_ statuses: Set<ArticleStatus>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) -> Set<ArticleStatus>? {
+	func mark(_ statuses: Set<ArticleStatus>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) throws -> Set<ArticleStatus>? {
 		// Sets flag in both memory and in database.
 
 		var updatedStatuses = Set<ArticleStatus>()
@@ -85,23 +92,38 @@ final class StatusesTable: DatabaseTable, Sendable {
 
 		// Update all requested articleIDs, not just the ones that changed in memory, just to be sure.
 		// (Doesn’t actually write to the database where it already matches.)
-		markArticleIDs(statuses.articleIDs(), statusKey, flag, database)
+		try markArticleIDs(statuses.articleIDs(), statusKey, flag, database)
 
 		return updatedStatuses.isEmpty ? nil : updatedStatuses
 	}
 
-	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) -> Set<String> {
-		let (statusesDictionary, newStatusIDs) = ensureStatusesForArticleIDs(articleIDs, flag, database)
+	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) throws -> Set<String> {
+		let (statusesDictionary, newStatusIDs) = try ensureStatusesForArticleIDs(articleIDs, flag, database)
 		let statuses = Set(statusesDictionary.values)
-		mark(statuses, statusKey, flag, database)
+		try mark(statuses, statusKey, flag, database)
 		return newStatusIDs
 	}
 
 	/// Mark statuses for articleIDs in both memory and database. Returns the articleIDs whose status actually changed.
-	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) -> Set<String> {
-		let (statusesDictionary, _) = ensureStatusesForArticleIDs(articleIDs, flag, database)
-		let updatedStatuses = mark(Set(statusesDictionary.values), statusKey, flag, database)
+	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) throws -> Set<String> {
+		let (statusesDictionary, _) = try ensureStatusesForArticleIDs(articleIDs, flag, database)
+		let updatedStatuses = try mark(Set(statusesDictionary.values), statusKey, flag, database)
 		return updatedStatuses?.articleIDs() ?? Set<String>()
+	}
+
+	struct Snapshot: Sendable {
+		let values: [String: ArticleStatus]
+		let flags: [String: (Bool, Bool)]
+	}
+	func snapshot() -> Snapshot {
+		let values = cache.snapshot()
+		return Snapshot(values: values, flags: values.mapValues { ($0.read, $0.starred) })
+	}
+	func restore(_ snapshot: Snapshot) {
+		for (id, status) in snapshot.values {
+			if let flags = snapshot.flags[id] { status.read = flags.0; status.starred = flags.1 }
+		}
+		cache.restore(snapshot.values)
 	}
 
 	// MARK: - Repairing
@@ -289,38 +311,44 @@ private extension StatusesTable {
 
 	// MARK: - Creating
 
-	func saveStatuses(_ statuses: Set<ArticleStatus>, _ database: FMDatabase) {
+	func saveStatuses(_ statuses: Set<ArticleStatus>, _ database: FMDatabase) throws {
 		let statusArray = statuses.map { $0.databaseDictionary() }
-		self.insertRows(statusArray, insertType: .orIgnore, in: database)
+		guard database.insertRows(statusArray, insertType: .orIgnore, tableName: name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
-	func createAndSaveStatusesForArticleIDs(_ articleIDs: Set<String>, _ read: Bool, _ database: FMDatabase) {
+	func createAndSaveStatusesForArticleIDs(_ articleIDs: Set<String>, _ read: Bool, _ database: FMDatabase) throws {
 		let now = Date()
 		let statuses = Set(articleIDs.map { ArticleStatus(articleID: $0, read: read, dateArrived: now) })
 		cache.addIfNotCached(statuses)
 
-		saveStatuses(statuses, database)
+		try saveStatuses(statuses, database)
 	}
 
-	func fetchAndCacheStatusesForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) {
+	func fetchAndCacheStatusesForArticleIDs(_ articleIDs: Set<String>, _ database: FMDatabase) throws {
 		guard let resultSet = self.selectRowsWhere(key: DatabaseKey.articleID, inValues: Array(articleIDs), in: database) else {
-			return
+			throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
 		}
 
-		let statuses = resultSet.mapToSet(self.statusWithRow)
+		var statuses = Set<ArticleStatus>()
+		var queryError: NSError?
+		while resultSet.nextWithError(&queryError) {
+			if let status = statusWithRow(resultSet) { statuses.insert(status) }
+		}
+		resultSet.close()
+		if let queryError { throw queryError }
 		self.cache.addIfNotCached(statuses)
 	}
 
 	// MARK: - Marking
 
-	func markArticleIDs(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) {
+	func markArticleIDs(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ database: FMDatabase) throws {
 		guard !articleIDs.isEmpty else {
 			return
 		}
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))
 		let sql = "update statuses set \(statusKey.rawValue)=? where articleID in \(placeholders) and \(statusKey.rawValue)!=?;"
 		let parameters: [Any] = [flag] + Array(articleIDs) + [flag]
-		database.executeUpdate(sql, withArgumentsIn: parameters)
+		guard database.executeUpdate(sql, withArgumentsIn: parameters) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
 }
@@ -349,6 +377,9 @@ private final class StatusCache: Sendable {
 			}
 		}
 	}
+
+	func snapshot() -> [String: ArticleStatus] { state.withLock { $0.dictionary } }
+	func restore(_ values: [String: ArticleStatus]) { state.withLock { $0.dictionary = values } }
 
 	var allStatuses: Set<ArticleStatus> {
 		state.withLock { Set($0.dictionary.values) }

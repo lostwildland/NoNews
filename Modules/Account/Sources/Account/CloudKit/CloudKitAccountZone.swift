@@ -29,7 +29,8 @@ enum CloudKitAccountZoneError: LocalizedError {
 	var delegate: CloudKitZoneDelegate?
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler?
 	#if DEBUG
-	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation) -> Void)?
+	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation, @escaping () -> Void) -> Void)?
+	var commitCheckpointForTesting: (() -> Void)?
 	#endif
 
 	struct CloudKitFeed {

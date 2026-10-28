@@ -1015,7 +1015,7 @@ private extension FeedlyAccountDelegate {
 			var pageCount = 0
 			repeat {
 				let page = try await account.logRefreshPage(kind: .fetchArticleIDs, message: { "\($0.ids.count) article IDs" }, { try await self.caller.getStreamIDs(for: resource, continuation: continuation, newerThan: newerThan, unreadOnly: nil) })
-				await account.createStatusesIfNeededAsync(articleIDs: Set(page.ids))
+				try await account.createStatusesIfNeededAsync(articleIDs: Set(page.ids))
 				collected.formUnion(page.ids)
 				continuation = page.continuation
 				pageCount += 1

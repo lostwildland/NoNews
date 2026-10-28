@@ -529,16 +529,15 @@ public struct ArticleCounts: Sendable {
 
 	/// Create statuses for specified articleIDs. For existing statuses, don’t do anything.
 	/// For newly-created statuses, mark them as read and not-starred.
-	@discardableResult public func createStatusesIfNeededAsync(articleIDs: Set<String>) async -> Bool {
-		guard acceptsWork else { return false }
+	public func createStatusesIfNeededAsync(articleIDs: Set<String>) async throws {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		await withCheckedContinuation { continuation in
-			_createStatusesIfNeeded(articleIDs: articleIDs) {
-				continuation.resume()
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+			_createStatusesIfNeeded(articleIDs: articleIDs) { result in
+				continuation.resume(with: result)
 			}
 		}
-		return true
 	}
 
 	// MARK: - Caches
@@ -629,7 +628,7 @@ private extension ArticlesDatabase {
 		articlesTable.markAndFetchNew(articleIDs, statusKey, flag, completion)
 	}
 
-	func _createStatusesIfNeeded(articleIDs: Set<String>, completion: @escaping DatabaseCompletionBlock) {
+	func _createStatusesIfNeeded(articleIDs: Set<String>, completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
 		articlesTable.createStatusesIfNeeded(articleIDs, completion)
 	}

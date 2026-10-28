@@ -1088,12 +1088,12 @@ public enum FetchType {
 	/// Make sure statuses exist. Any existing statuses won’t be touched.
 	/// All created statuses will be marked as read and not starred.
 	/// Sends a .StatusesDidChange notification.
-	func createStatusesIfNeededAsync(articleIDs: Set<String>) async {
-		guard acceptsFixtureWork else { return }
+	func createStatusesIfNeededAsync(articleIDs: Set<String>) async throws {
+		guard acceptsFixtureWork else { throw CancellationError() }
 		guard !articleIDs.isEmpty else {
 			return
 		}
-		guard await database.createStatusesIfNeededAsync(articleIDs: articleIDs) else { return }
+		try await database.createStatusesIfNeededAsync(articleIDs: articleIDs)
 		noteStatusesForArticleIDsDidChange(articleIDs)
 	}
 

@@ -48,6 +48,20 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		NotificationCenter.default.addObserver(self, selector: #selector(handleLowMemory(_:)), name: .lowMemory, object: nil)
 	}
 
+	private func transaction<T: Sendable>(_ work: @escaping @Sendable (FMDatabase) throws -> T, completion: @escaping @Sendable (Result<T, Error>) -> Void) {
+		let snapshot = Mutex<(StatusesTable.Snapshot, [String: Article])?>(nil)
+		queue.runInTransaction(completion: { (result: Result<T, Error>) in
+			if case .failure = result, let previous = snapshot.withLock({ $0 }) {
+				self.statusesTable.restore(previous.0)
+				self.articlesCache.withLock { $0 = previous.1 }
+			}
+			completion(result)
+		}) { database in
+			snapshot.withLock { $0 = (self.statusesTable.snapshot(), self.articlesCache.withLock { $0 }) }
+			return try work(database)
+		}
+	}
+
 	// MARK: - Fetching Articles for Feed
 
 	func fetchArticles(_ feedID: String) throws -> Set<Article> {
@@ -166,30 +180,34 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Articles for Indexer
 
-	func fetchArticleSearchInfos(_ articleIDs: Set<String>, in database: FMDatabase) -> Set<ArticleSearchInfo>? {
+	func fetchArticleSearchInfos(_ articleIDs: Set<String>, in database: FMDatabase) throws -> Set<ArticleSearchInfo> {
 		let parameters = articleIDs.map { $0 as AnyObject }
 		let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(articleIDs.count))
 		let query = "select articleID, title, contentHTML, contentText, summary, searchRowID, authors from articles where articleID in \(placeholders);"
 
-		if let resultSet = database.executeQuery(query, withArgumentsIn: parameters) {
-			return resultSet.mapToSet { (row) -> ArticleSearchInfo? in
-				let articleID = row.swiftString(forColumn: DatabaseKey.articleID)!
-				let title = row.swiftString(forColumn: DatabaseKey.title)
-				let contentHTML = row.swiftString(forColumn: DatabaseKey.contentHTML)
-				let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
-				let summary = row.swiftString(forColumn: DatabaseKey.summary)
-				let authorsNames = Self.authorsNames(from: row)
+		guard let resultSet = database.executeQuery(query, withArgumentsIn: parameters) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
+		defer { resultSet.close() }
+		var results = Set<ArticleSearchInfo>()
+		var queryError: NSError?
+		while resultSet.nextWithError(&queryError) {
+			let row = resultSet
+			guard let articleID = row.swiftString(forColumn: DatabaseKey.articleID) else { continue }
+			let title = row.swiftString(forColumn: DatabaseKey.title)
+			let contentHTML = row.swiftString(forColumn: DatabaseKey.contentHTML)
+			let contentText = row.swiftString(forColumn: DatabaseKey.contentText)
+			let summary = row.swiftString(forColumn: DatabaseKey.summary)
+			let authorsNames = Self.authorsNames(from: row)
 
-				let searchRowIDObject = row.object(forColumnName: DatabaseKey.searchRowID)
-				var searchRowID: Int?
-				if searchRowIDObject != nil && !(searchRowIDObject is NSNull) {
-					searchRowID = Int(row.longLongInt(forColumn: DatabaseKey.searchRowID))
-				}
-
-				return ArticleSearchInfo(articleID: articleID, title: title, contentHTML: contentHTML, contentText: contentText, summary: summary, authorsNames: authorsNames, searchRowID: searchRowID)
+			let searchRowIDObject = row.object(forColumnName: DatabaseKey.searchRowID)
+			var searchRowID: Int?
+			if searchRowIDObject != nil && !(searchRowIDObject is NSNull) {
+				searchRowID = Int(row.longLongInt(forColumn: DatabaseKey.searchRowID))
 			}
+
+			results.insert(ArticleSearchInfo(articleID: articleID, title: title, contentHTML: contentHTML, contentText: contentText, summary: summary, authorsNames: authorsNames, searchRowID: searchRowID))
 		}
-		return nil
+		if let queryError { throw queryError }
+		return results
 	}
 
 	private static func authorsNames(from row: FMResultSet) -> String? {
@@ -225,7 +243,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		// 8. Delete Articles in database no longer present in the feed.
 		// 9. Update search index.
 
-		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: CancellationError())) } }) { database in
+		self.transaction({ database -> ArticleChanges in
 
 			let articleIDs = parsedItems.articleIDs()
 
@@ -234,22 +252,21 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let oldArticleIDs = Set(parsedItems.filter { ($0.datePublished ?? .distantFuture) < cutoffDate }.map { $0.articleID })
 			let recentArticleIDs = articleIDs.subtracting(oldArticleIDs)
 
-			let (recentStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
-			let (oldStatusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(oldArticleIDs, true, database) // 1b
+			let (recentStatusesDictionary, _) = try self.statusesTable.ensureStatusesForArticleIDs(recentArticleIDs, false, database) // 1a
+			let (oldStatusesDictionary, _) = try self.statusesTable.ensureStatusesForArticleIDs(oldArticleIDs, true, database) // 1b
 			let statusesDictionary = recentStatusesDictionary.merging(oldStatusesDictionary) { current, _ in current }
 			assert(statusesDictionary.count == articleIDs.count)
 
 			let incomingArticles = Article.articlesWithParsedItems(parsedItems, feedID, self.accountID, statusesDictionary) // 2
 			if incomingArticles.isEmpty {
-				self.callUpdateArticlesCompletionBlock(nil, nil, nil, completion)
-				return
+				return ArticleChanges(new: nil, updated: nil, deleted: nil)
 			}
 
-			let fetchedArticles = self.fetchArticlesForFeedID(feedID, database) // 4
+			let fetchedArticles = try self.fetchArticlesForUpdate(database, whereClause: "articles.feedID = ?", parameters: [feedID]) // 4
 			let fetchedArticlesDictionary = fetchedArticles.dictionary()
 
-			let newArticles = self.findAndSaveNewArticles(incomingArticles, fetchedArticlesDictionary, database) // 5
-			let updatedArticles = self.findAndSaveUpdatedArticles(incomingArticles, fetchedArticlesDictionary, database) // 6
+			let newArticles = try self.findAndSaveNewArticles(incomingArticles, fetchedArticlesDictionary, database) // 5
+			let updatedArticles = try self.findAndSaveUpdatedArticles(incomingArticles, fetchedArticlesDictionary, database) // 6
 
 			// Articles to delete are 1) not starred and 2) older than 30 days and 3) no longer in feed.
 			let articlesToDelete: Set<Article>
@@ -262,7 +279,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 				articlesToDelete = Set<Article>()
 			}
 
-			self.callUpdateArticlesCompletionBlock(newArticles, updatedArticles, articlesToDelete, completion) // 7
+			// Completion is delivered after commit.
 
 			self.addArticlesToCache(newArticles)
 			self.addArticlesToCache(updatedArticles)
@@ -270,16 +287,24 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			// 8. Delete articles no longer in feed.
 			let articleIDsToDelete = articlesToDelete.articleIDs()
 			if !articleIDsToDelete.isEmpty {
-				self.removeArticles(articleIDsToDelete, database)
+				guard database.rs_deleteRowsWhereKey(DatabaseKey.articleID, inValues: Array(articleIDsToDelete), tableName: self.name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 				self.removeArticleIDsFromCache(articleIDsToDelete)
 			}
 
 			// 9. Update search index.
 			if let newArticles = newArticles {
-				self.searchTable.indexNewArticles(newArticles, database)
+				try self.searchTable.indexNewArticles(newArticles, database)
 			}
 			if let updatedArticles = updatedArticles {
-				self.searchTable.indexUpdatedArticles(updatedArticles, database)
+				try self.searchTable.indexUpdatedArticles(updatedArticles, database)
+			}
+			return ArticleChanges(new: newArticles, updated: updatedArticles, deleted: articlesToDelete)
+		}) { result in
+			DispatchQueue.main.async {
+				switch result {
+				case .success(let changes): completion(changes)
+				case .failure(let error): completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: error))
+				}
 			}
 		}
 	}
@@ -300,46 +325,53 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		// 7. Call back with new and updated Articles.
 		// 8. Update search index.
 
-		self.queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: CancellationError())) } }) { database in
+		self.transaction({ database -> ArticleChanges in
 
 			var articleIDs = Set<String>()
 			for (_, parsedItems) in feedIDsAndItems {
 				articleIDs.formUnion(parsedItems.articleIDs())
 			}
 
-			let (statusesDictionary, _) = self.statusesTable.ensureStatusesForArticleIDs(articleIDs, read, database) // 1
+			let (statusesDictionary, _) = try self.statusesTable.ensureStatusesForArticleIDs(articleIDs, read, database) // 1
 			assert(statusesDictionary.count == articleIDs.count)
 
 			let allIncomingArticles = Article.articlesWithFeedIDsAndItems(feedIDsAndItems, self.accountID, statusesDictionary) // 2
 			if allIncomingArticles.isEmpty {
-				self.callUpdateArticlesCompletionBlock(nil, nil, nil, completion)
-				return
+				return ArticleChanges(new: nil, updated: nil, deleted: nil)
 			}
 
 			let incomingArticles = self.filterIncomingArticles(allIncomingArticles) // 3
 			if incomingArticles.isEmpty {
-				self.callUpdateArticlesCompletionBlock(nil, nil, nil, completion)
-				return
+				return ArticleChanges(new: nil, updated: nil, deleted: nil)
 			}
 
 			let incomingArticleIDs = incomingArticles.articleIDs()
-			let fetchedArticles = self.fetchArticles(articleIDs: incomingArticleIDs, database) // 4
+			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(incomingArticleIDs.count))
+			let fetchedArticles = try self.fetchArticlesForUpdate(database, whereClause: "articleID in \(placeholders)", parameters: Array(incomingArticleIDs)) // 4
 			let fetchedArticlesDictionary = fetchedArticles.dictionary()
 
-			let newArticles = self.findAndSaveNewArticles(incomingArticles, fetchedArticlesDictionary, database) //
-			let updatedArticles = self.findAndSaveUpdatedArticles(incomingArticles, fetchedArticlesDictionary, database) // 6
+			let newArticles = try self.findAndSaveNewArticles(incomingArticles, fetchedArticlesDictionary, database) //
+			let updatedArticles = try self.findAndSaveUpdatedArticles(incomingArticles, fetchedArticlesDictionary, database) // 6
 
-			self.callUpdateArticlesCompletionBlock(newArticles, updatedArticles, nil, completion) // 7
+			// Completion is delivered after commit.
 
 			self.addArticlesToCache(newArticles)
 			self.addArticlesToCache(updatedArticles)
 
 			// 8. Update search index.
 			if let newArticles = newArticles {
-				self.searchTable.indexNewArticles(newArticles, database)
+				try self.searchTable.indexNewArticles(newArticles, database)
 			}
 			if let updatedArticles = updatedArticles {
-				self.searchTable.indexUpdatedArticles(updatedArticles, database)
+				try self.searchTable.indexUpdatedArticles(updatedArticles, database)
+			}
+			return ArticleChanges(new: newArticles, updated: updatedArticles, deleted: nil)
+		}) { result in
+			DispatchQueue.main.async {
+				switch result {
+				case .success(let changes): completion(changes)
+				case .failure(let error): completion(ArticleChanges(new: nil, updated: nil, deleted: nil, error: error))
+				}
 			}
 		}
 	}
@@ -510,34 +542,23 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsResultBlock) {
-		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
-			let changedArticleIDs = self.statusesTable.mark(articleIDs, statusKey, flag, database)
-			DispatchQueue.main.async {
-				completion(.success(changedArticleIDs))
-			}
+		transaction({ database in try self.statusesTable.mark(articleIDs, statusKey, flag, database) }) { result in
+			DispatchQueue.main.async { completion(result) }
 		}
 	}
 
 	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
-			let newStatusIDs = self.statusesTable.markAndFetchNew(articleIDs, statusKey, flag, database)
-			DispatchQueue.main.async {
-				completion(.success(newStatusIDs))
-			}
+		transaction({ database in try self.statusesTable.markAndFetchNew(articleIDs, statusKey, flag, database) }) { result in
+			DispatchQueue.main.async { completion(result) }
 		}
 	}
 
-	func createStatusesIfNeeded(_ articleIDs: Set<String>, _ completion: @escaping DatabaseCompletionBlock) {
-		guard !articleIDs.isEmpty else {
-			completion()
-			return
-		}
-
-		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion() } }) { database in
-			self.statusesTable.ensureStatusesForArticleIDs(articleIDs, true, database)
-			DispatchQueue.main.async {
-				completion()
-			}
+	func createStatusesIfNeeded(_ articleIDs: Set<String>, _ completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+		transaction({ database in
+			_ = try self.statusesTable.ensureStatusesForArticleIDs(articleIDs, true, database)
+			return ()
+		}) { result in
+			DispatchQueue.main.async { completion(result) }
 		}
 	}
 
@@ -554,7 +575,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			if articleIDs.isEmpty {
 				return
 			}
-			self.searchTable.ensureIndexedArticles(articleIDs, database)
+			do { try self.searchTable.ensureIndexedArticles(articleIDs, database) } catch { Self.logger.error("Indexing failed: \(error.localizedDescription, privacy: .public)"); return }
 
 			DispatchQueue.main.async {
 				self.indexUnindexedArticles()
@@ -974,6 +995,24 @@ nonisolated private extension ArticlesTable {
 
 	// MARK: - Saving Parsed Items
 
+	func fetchArticlesForUpdate(_ database: FMDatabase, whereClause: String, parameters: [Any]) throws -> Set<Article> {
+		guard let rows = database.executeQuery("select * from articles natural join statuses where \(whereClause);", withArgumentsIn: parameters) else {
+			throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
+		}
+		defer { rows.close() }
+		var articles = Set<Article>()
+		var queryError: NSError?
+		while rows.nextWithError(&queryError) {
+			guard let id = rows.swiftString(forColumn: DatabaseKey.articleID) else { continue }
+			if let cached = articlesCache.withLock({ $0[id] }) { articles.insert(cached); continue }
+			guard let status = statusesTable.statusWithRow(rows, articleID: id), let article = Article(accountID: accountID, row: rows, status: status) else { continue }
+			articlesCache.withLock { $0[id] = article }
+			articles.insert(article)
+		}
+		if let queryError { throw queryError }
+		return articles
+	}
+
 	func callUpdateArticlesCompletionBlock(_ newArticles: Set<Article>?, _ updatedArticles: Set<Article>?, _ deletedArticles: Set<Article>?, _ completion: @escaping UpdateArticlesCompletionBlock) {
 		let articleChanges = ArticleChanges(new: newArticles, updated: updatedArticles, deleted: deletedArticles)
 		DispatchQueue.main.async {
@@ -988,16 +1027,16 @@ nonisolated private extension ArticlesTable {
 		return newArticles.isEmpty ? nil : newArticles
 	}
 
-	func findAndSaveNewArticles(_ incomingArticles: Set<Article>, _ fetchedArticlesDictionary: [String: Article], _ database: FMDatabase) -> Set<Article>? { // 5
+	func findAndSaveNewArticles(_ incomingArticles: Set<Article>, _ fetchedArticlesDictionary: [String: Article], _ database: FMDatabase) throws -> Set<Article>? { // 5
 		guard let newArticles = findNewArticles(incomingArticles, fetchedArticlesDictionary) else {
 			return nil
 		}
-		self.saveNewArticles(newArticles, database)
+		try self.saveNewArticles(newArticles, database)
 		return newArticles
 	}
 
-	func saveNewArticles(_ articles: Set<Article>, _ database: FMDatabase) {
-		insertRows(articles.databaseDictionaries(), insertType: .orReplace, in: database)
+	func saveNewArticles(_ articles: Set<Article>, _ database: FMDatabase) throws {
+		guard database.insertRows(articles.databaseDictionaries(), insertType: .orReplace, tableName: name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
 	// MARK: - Updating Existing Articles
@@ -1015,27 +1054,27 @@ nonisolated private extension ArticlesTable {
 		return updatedArticles.isEmpty ? nil : updatedArticles
 	}
 
-	func findAndSaveUpdatedArticles(_ incomingArticles: Set<Article>, _ fetchedArticlesDictionary: [String: Article], _ database: FMDatabase) -> Set<Article>? { // 6
+	func findAndSaveUpdatedArticles(_ incomingArticles: Set<Article>, _ fetchedArticlesDictionary: [String: Article], _ database: FMDatabase) throws -> Set<Article>? { // 6
 		guard let updatedArticles = findUpdatedArticles(incomingArticles, fetchedArticlesDictionary) else {
 			return nil
 		}
-		saveUpdatedArticles(Set(updatedArticles), fetchedArticlesDictionary, database)
+		try saveUpdatedArticles(Set(updatedArticles), fetchedArticlesDictionary, database)
 		return updatedArticles
 	}
 
-	func saveUpdatedArticles(_ updatedArticles: Set<Article>, _ fetchedArticles: [String: Article], _ database: FMDatabase) {
+	func saveUpdatedArticles(_ updatedArticles: Set<Article>, _ fetchedArticles: [String: Article], _ database: FMDatabase) throws {
 		for updatedArticle in updatedArticles {
-			saveUpdatedArticle(updatedArticle, fetchedArticles, database)
+			try saveUpdatedArticle(updatedArticle, fetchedArticles, database)
 		}
 	}
 
-	func saveUpdatedArticle(_ updatedArticle: Article, _ fetchedArticles: [String: Article], _ database: FMDatabase) {
+	func saveUpdatedArticle(_ updatedArticle: Article, _ fetchedArticles: [String: Article], _ database: FMDatabase) throws {
 		// Only update exactly what has changed in the Article (if anything).
 		// Untested theory: this gets us better performance and less database fragmentation.
 
 		guard let fetchedArticle = fetchedArticles[updatedArticle.articleID] else {
 			assertionFailure("Expected to find matching fetched article.")
-			saveNewArticles(Set([updatedArticle]), database)
+			try saveNewArticles(Set([updatedArticle]), database)
 			return
 		}
 		guard let changesDictionary = updatedArticle.changesFrom(fetchedArticle), changesDictionary.count > 0 else {
@@ -1043,7 +1082,7 @@ nonisolated private extension ArticlesTable {
 			return
 		}
 
-		updateRowsWithDictionary(changesDictionary, whereKey: DatabaseKey.articleID, matches: updatedArticle.articleID, database: database)
+		guard database.rs_updateRows(with: changesDictionary, whereKey: DatabaseKey.articleID, equalsValue: updatedArticle.articleID, tableName: name) else { throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode())) }
 	}
 
 	func addArticlesToCache(_ articles: Set<Article>?) {

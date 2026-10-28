@@ -42,10 +42,14 @@ private struct CloudKitZoneCaptures<Success>: @unchecked Sendable {
 }
 
 private final class FetchPageState: @unchecked Sendable {
+	struct Checkpoint: @unchecked Sendable {
+		let token: CKServerChangeToken?
+		let moreComing: Bool
+	}
 	private let lock = NSLock()
 	private var records = [CKRecord]()
 	private var deleted = [CloudKitRecordKey]()
-	private var zoneResult: Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>?
+	private var zoneResult: Result<Checkpoint, Error>?
 	private var recordError: Error?
 
 	func add(_ result: Result<CKRecord, Error>) {
@@ -57,8 +61,8 @@ private final class FetchPageState: @unchecked Sendable {
 		}
 	}
 	func delete(_ id: CKRecord.ID, _ type: CKRecord.RecordType) { lock.withLock { deleted.append((type, id)) } }
-	func finishZone(_ result: Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>) { lock.withLock { zoneResult = result } }
-	func snapshot() -> ([CKRecord], [CloudKitRecordKey], Result<(serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool), Error>?, Error?) {
+	func finishZone(_ result: Result<Checkpoint, Error>) { lock.withLock { zoneResult = result } }
+	func snapshot() -> ([CKRecord], [CloudKitRecordKey], Result<Checkpoint, Error>?, Error?) {
 		lock.withLock { (records, deleted, zoneResult, recordError) }
 	}
 }
@@ -85,7 +89,8 @@ public typealias CloudKitZoneFetchPageHandler = @MainActor @Sendable (String, In
 	/// Called after each page of fetchChangesInZone completes.
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler? { get set }
 	#if DEBUG
-	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation) -> Void)? { get set }
+	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation, @escaping () -> Void) -> Void)? { get set }
+	var commitCheckpointForTesting: (() -> Void)? { get set }
 	#endif
 
 	/// Reset the change token used to determine what point in time we are doing changes fetches
@@ -785,7 +790,9 @@ public extension CloudKitZone {
 		op.qualityOfService = Self.qualityOfService
 		op.recordWasChangedBlock = { _, result in page.add(result) }
 		op.recordWithIDWasDeletedBlock = { id, type in page.delete(id, type) }
-		op.recordZoneFetchResultBlock = { _, result in page.finishZone(result) }
+		op.recordZoneFetchResultBlock = { _, result in
+			page.finishZone(result.map { FetchPageState.Checkpoint(token: $0.serverChangeToken, moreComing: $0.moreComing) })
+		}
 
         op.fetchRecordZoneChangesResultBlock = { [weak self] result in
 			let (changedRecords, deletedRecordKeys, zoneResult, recordError) = page.snapshot()
@@ -801,7 +808,7 @@ public extension CloudKitZone {
 				let zoneError: Error?
 				if case .failure(let error)? = zoneResult { zoneError = error } else { zoneError = nil }
 				let zonePage = try? zoneResult?.get()
-				let savedChangeToken = zonePage?.serverChangeToken
+				let savedChangeToken = zonePage?.token
 				let moreComing = zonePage?.moreComing ?? false
 
 				switch zoneError.map({ Result<Void, Error>.failure($0) }) ?? result {
@@ -810,7 +817,12 @@ public extension CloudKitZone {
 					Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 					do {
 						try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
+							#if DEBUG
+							if let commitCheckpointForTesting = self.commitCheckpointForTesting { commitCheckpointForTesting() }
+							else { self.changeToken = savedChangeToken }
+							#else
 							self.changeToken = savedChangeToken
+							#endif
 						}
 						self.fetchChangesPageHandler?(self.zoneID.zoneName, changedRecords.count, deletedRecordKeys.count, moreComing)
 						if moreComing {
@@ -830,7 +842,12 @@ public extension CloudKitZone {
 						Self.logger.debug("CloudKitZone: fetchChangesInZone \(self.zoneID.zoneName, privacy: .public) success changedRecords count \(changedRecords.count) deletedRecordKeys count \(deletedRecordKeys.count) changeToken \(savedChangeToken)")
 						do {
 							try await self.applyFetchedPage(changed: changedRecords, deleted: deletedRecordKeys, work: work) {
+								#if DEBUG
+								if let commitCheckpointForTesting = self.commitCheckpointForTesting { commitCheckpointForTesting() }
+								else { self.changeToken = savedChangeToken }
+								#else
 								self.changeToken = savedChangeToken
+								#endif
 							}
 							self.fetchChangesPageHandler?(self.zoneID.zoneName, changedRecords.count, deletedRecordKeys.count, moreComing)
 							if moreComing {
@@ -872,7 +889,10 @@ public extension CloudKitZone {
 		}
 
 		#if DEBUG
-		if let fetchOperationForTesting { fetchOperationForTesting(op); return }
+		if let fetchOperationForTesting {
+			fetchOperationForTesting(op) { page.finishZone(.success(FetchPageState.Checkpoint(token: nil, moreComing: false))) }
+			return
+		}
 		#endif
 		database?.add(op)
     }

@@ -40,7 +40,8 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 
 private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 	let calls = Mutex(0)
-	func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws { calls.withLock { $0 += 1 } }
+	let changedCount = Mutex(0)
+	func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws { calls.withLock { $0 += 1 }; changedCount.withLock { $0 += changed.count } }
 }
 
 @Suite(.isolatedWebserviceResponses, .serialized) @MainActor struct AccountFixtureLifetimeTests {
@@ -52,7 +53,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let account = manager.createAccount(type: .feedbin)
 		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
 		await delegate.waitForSyncInitializationForTesting()
-		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["stored"]))
+		try await account.database.createStatusesIfNeededAsync(articleIDs: ["stored"])
 		let notifications = NotificationCounter()
 		let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
 			notifications.count.withLock { $0 += 1 }
@@ -88,7 +89,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let account = manager.createAccount(type: .feedbin)
 		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
 		await delegate.waitForSyncInitializationForTesting()
-		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["42"]))
+		try await account.database.createStatusesIfNeededAsync(articleIDs: ["42"])
 		_ = try await account.database.markAndFetchNewAsync(articleIDs: ["42"], statusKey: .read, flag: false)
 		let notifications = NotificationCounter()
 		let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
@@ -112,7 +113,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 			let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
 			await delegate.waitForSyncInitializationForTesting()
 			await account.waitForFixtureBackgroundWorkForTesting()
-			#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["42"]))
+			try await account.database.createStatusesIfNeededAsync(articleIDs: ["42"])
 			_ = try await account.database.markAndFetchNewAsync(articleIDs: ["42"], statusKey: .read, flag: false)
 			let notifications = NotificationCounter()
 			let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
@@ -145,7 +146,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)
 		let path = account.dataFolder
-		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["admitted-status"]))
+		try await account.database.createStatusesIfNeededAsync(articleIDs: ["admitted-status"])
 		let (started, startedSignal) = AsyncStream<Void>.makeStream()
 		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
 		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
@@ -651,17 +652,65 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
 		let observer = FetchPageObserver()
 		zone.delegate = observer
-		defer { zone.fetchOperationForTesting = nil }
+		var commits = 0
+		zone.commitCheckpointForTesting = { commits += 1 }
+		defer { zone.fetchOperationForTesting = nil; zone.commitCheckpointForTesting = nil }
 		for individual in [true, false] {
-			zone.fetchOperationForTesting = { op in
+			zone.fetchOperationForTesting = { op, successfulCheckpoint in
 				let id = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
-				if individual { op.recordWasChangedBlock?(id, .failure(FixtureError.expected)) }
+				if individual {
+					op.recordWasChangedBlock?(id, .success(CKRecord(recordType: "Fixture", recordID: id)))
+					op.recordWasChangedBlock?(id, .failure(FixtureError.expected))
+					successfulCheckpoint()
+				}
 				else { op.recordZoneFetchResultBlock?(zone.zoneID, .failure(FixtureError.expected)) }
 				op.fetchRecordZoneChangesResultBlock?(.success(()))
 			}
 			await #expect(throws: FixtureError.self) { try await zone.fetchChangesInZone() }
-			#expect(observer.calls.withLock { $0 } == 0)
+			#expect(observer.calls.withLock { $0 } == 0 && commits == 0)
 		}
+		zone.fetchOperationForTesting = { op, successfulCheckpoint in
+			let id = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
+			op.recordWasChangedBlock?(id, .success(CKRecord(recordType: "Fixture", recordID: id)))
+			successfulCheckpoint()
+			op.fetchRecordZoneChangesResultBlock?(.success(()))
+		}
+		try await zone.fetchChangesInZone()
+		#expect(observer.calls.withLock { $0 } == 1 && observer.changedCount.withLock { $0 } == 1 && commits == 1)
+	}
+
+	@Test func cloudKitFetchRecordFailureKeepsPageRetryableUntilRecovery() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		let id = CKRecord.ID(recordName: "a:fixture", zoneID: zone.zoneID)
+		let record = CKRecord(recordType: "Article", recordID: id)
+		record["webFeedURL"] = "fixture-feed" as CKRecordValue
+		record["uniqueID"] = "fixture-item" as CKRecordValue
+		record["title"] = "Saved after retry" as CKRecordValue
+		var commits = 0
+		zone.commitCheckpointForTesting = { commits += 1 }
+		zone.fetchOperationForTesting = { op, checkpoint in
+			op.recordWasChangedBlock?(id, .success(record))
+			op.recordWasChangedBlock?(id, .failure(FixtureError.expected))
+			checkpoint()
+			op.fetchRecordZoneChangesResultBlock?(.success(()))
+		}
+		await #expect(throws: FixtureError.self) { try await zone.fetchChangesInZone() }
+		#expect(commits == 0)
+		#expect(try await account.database.fetchArticlesAsync(feedID: "fixture-feed").isEmpty)
+		zone.fetchOperationForTesting = { op, checkpoint in
+			op.recordWasChangedBlock?(id, .success(record))
+			checkpoint()
+			op.fetchRecordZoneChangesResultBlock?(.success(()))
+		}
+		try await zone.fetchChangesInZone()
+		#expect(commits == 1)
+		#expect(try await account.database.fetchArticlesAsync(feedID: "fixture-feed").first?.title == "Saved after retry")
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
 	}
 
 	@Test func cloudKitFailedArticleDeletePreservesPendingStatusAndPage() async throws {
@@ -691,7 +740,7 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
 		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
 		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
-		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["fixture"]))
+		try await account.database.createStatusesIfNeededAsync(articleIDs: ["fixture"])
 		#expect(account.database.executeSQLForTesting("PRAGMA foreign_keys=ON; INSERT INTO articles (articleID, feedID, uniqueID) VALUES ('fixture','feed','unique'); CREATE TABLE fixture_child (articleID TEXT REFERENCES articles(articleID) DEFERRABLE INITIALLY DEFERRED); INSERT INTO fixture_child VALUES ('fixture');"))
 		#expect(await sync.insertStatuses([SyncStatus(articleID: "fixture", key: .read, flag: true, selected: true)]))
 		let recordID = CKRecord.ID(recordName: "s:fixture", zoneID: zone.zoneID)
@@ -705,6 +754,45 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		#expect(try await account.database.fetchArticlesAsync(articleIDs: ["fixture"]).count == 1)
 		#expect(account.database.executeSQLForTesting("DELETE FROM fixture_child; DROP TABLE fixture_child;"))
 		#expect(await account.database.deleteAsync(articleIDs: ["fixture"]))
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
+	@Test func cloudKitFailedStatusAndArticleCommitsDoNotAcknowledgePage() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		let articleID = Article.calculatedArticleID(feedID: "fixture-feed", uniqueID: "fixture-item")
+		let articleRecord = CKRecord(recordType: "Article", recordID: CKRecord.ID(recordName: "a:fixture", zoneID: zone.zoneID))
+		articleRecord["webFeedURL"] = "fixture-feed" as CKRecordValue
+		articleRecord["uniqueID"] = "fixture-item" as CKRecordValue
+		articleRecord["title"] = "Before" as CKRecordValue
+		let parsed = try #require(makeParsedItem(articleRecord))
+		#expect((await account.updateAsync(feedID: "fixture-feed", parsedItems: [parsed], deleteOlder: false)).error == nil)
+		let retained = try #require(try await account.database.fetchArticlesAsync(articleIDs: [articleID]).first)
+		let oldRead = retained.status.read
+		#expect(await sync.insertStatuses([SyncStatus(articleID: "other", key: .read, flag: true, selected: true)]))
+		let notifications = NotificationCounter()
+		let statusObserver = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in notifications.count.withLock { $0 += 1 } }
+		let articleObserver = NotificationCenter.default.addObserver(forName: .AccountDidDownloadArticles, object: account, queue: nil) { _ in notifications.count.withLock { $0 += 1 } }
+		defer { NotificationCenter.default.removeObserver(statusObserver); NotificationCenter.default.removeObserver(articleObserver) }
+		#expect(account.database.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_status AFTER UPDATE ON statuses BEGIN INSERT INTO fixture_child VALUES (1); END; CREATE TRIGGER fixture_article AFTER UPDATE ON articles BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		let statusRecord = CKRecord(recordType: "ArticleStatus", recordID: CKRecord.ID(recordName: "s:\(articleID)", zoneID: zone.zoneID))
+		statusRecord["read"] = (oldRead ? "0" : "1") as CKRecordValue
+		var commits = 0
+		do { try await zone.applyFetchedPage(changed: [statusRecord], deleted: [], work: nil) { commits += 1 }; Issue.record("Failed status commit acknowledged") } catch { }
+		#expect(commits == 0 && retained.status.read == oldRead && notifications.count.withLock { $0 } == 0)
+		#expect(try await sync.selectPendingReadStatusArticleIDs().contains("other"))
+		articleRecord["title"] = "After" as CKRecordValue
+		do { try await zone.applyFetchedPage(changed: [articleRecord], deleted: [], work: nil) { commits += 1 }; Issue.record("Failed article commit acknowledged") } catch { }
+		#expect(commits == 0 && notifications.count.withLock { $0 } == 0)
+		#expect(try await account.database.fetchArticlesAsync(articleIDs: [articleID]).first?.title == "Before")
+		#expect(account.database.executeSQLForTesting("DROP TRIGGER fixture_status; DROP TRIGGER fixture_article; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		try await zone.applyFetchedPage(changed: [statusRecord, articleRecord], deleted: [], work: nil) { commits += 1 }
+		#expect(commits == 1 && retained.status.read != oldRead)
+		#expect(try await account.database.fetchArticlesAsync(articleIDs: [articleID]).first?.title == "After")
 		#expect(await sync.close())
 		try await manager.deleteAccount(account)
 	}
@@ -1316,9 +1404,9 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		await #expect(throws: CancellationError.self) {
 			_ = try await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
 		}
-		let created = await account.database.createStatusesIfNeededAsync(articleIDs: ["rejected"])
+		await #expect(throws: CancellationError.self) { try await account.database.createStatusesIfNeededAsync(articleIDs: ["rejected"]) }
 		let deleted = await account.database.deleteAsync(articleIDs: ["admitted"])
-		#expect(!created && !deleted)
+		#expect(!deleted)
 		#expect(FileManager.default.fileExists(atPath: path))
 		releaseSignal.yield(())
 		let closed = await close.value

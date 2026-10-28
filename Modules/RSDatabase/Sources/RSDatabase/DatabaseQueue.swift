@@ -115,6 +115,33 @@ public final class DatabaseQueue: Sendable {
 		return accepted
 	}
 
+	@discardableResult public func runInTransaction<T: Sendable>(completion: @escaping @Sendable (Result<T, Error>) -> Void, _ work: @escaping @Sendable (FMDatabase) throws -> T) -> Bool {
+		let accepted = closing.withLock { closing in
+			guard !closing else { return false }
+			serialDispatchQueue.async {
+				let result: Result<T, Error> = autoreleasepool {
+					guard self.database.beginTransaction() else { return .failure(self.database.lastError() ?? NSError(domain: "FMDatabase", code: Int(self.database.lastErrorCode()))) }
+					do {
+						let value = try work(self.database)
+						guard self.database.commit() else {
+							let error = self.database.lastError() ?? NSError(domain: "FMDatabase", code: Int(self.database.lastErrorCode()))
+							self.database.rollback()
+							return .failure(error)
+						}
+						return .success(value)
+					} catch {
+						self.database.rollback()
+						return .failure(error)
+					}
+				}
+				completion(result)
+			}
+			return true
+		}
+		if !accepted { completion(.failure(CancellationError())) }
+		return accepted
+	}
+
 	/// Run all the lines that start with "create".
 	/// Use this to create tables, indexes, etc.
 	@discardableResult public func runCreateStatements(_ statements: String) -> Bool {
@@ -161,12 +188,14 @@ private extension DatabaseQueue {
 		dispatchPrecondition(condition: .onQueue(serialDispatchQueue))
 
 		autoreleasepool {
-			if useTransaction {
-				database.beginTransaction()
+			if useTransaction && !database.beginTransaction() {
+				Self.logger.error("Could not begin transaction: \(self.database.lastErrorMessage() ?? "unknown", privacy: .public)")
+				return
 			}
 			databaseBlock(database)
-			if useTransaction {
-				database.commit()
+			if useTransaction && !database.commit() {
+				Self.logger.error("Could not commit transaction: \(self.database.lastErrorMessage() ?? "unknown", privacy: .public)")
+				database.rollback()
 			}
 		}
 	}

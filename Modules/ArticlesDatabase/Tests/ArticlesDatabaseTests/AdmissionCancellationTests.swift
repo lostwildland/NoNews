@@ -80,7 +80,7 @@ import Articles
 		let empty = try await database.fetchArticleCountsAsync(feedIDs: [])
 		#expect(empty.totalCount == 0 && empty.statusesCount == 0)
 		#expect(try await database.fetchLastUpdateDates().isEmpty)
-		#expect(await database.createStatusesIfNeededAsync(articleIDs: ["stored"]))
+		try await database.createStatusesIfNeededAsync(articleIDs: ["stored"])
 		let populated = try await database.fetchArticleCountsAsync(feedIDs: [])
 		#expect(populated.statusesCount == 1)
 		database.beginClosing()
@@ -90,6 +90,17 @@ import Articles
 		await #expect(throws: CancellationError.self) {
 			_ = try await database.fetchLastUpdateDates()
 		}
+		#expect(await database.close())
+	}
+
+	@Test func failedStatusCreationRollsBackAndCanRetry() async throws {
+		let database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "creation-fixture", retentionStyle: .feedBased)
+		#expect(database.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_status AFTER INSERT ON statuses BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		await #expect(throws: (any Error).self) { try await database.createStatusesIfNeededAsync(articleIDs: ["stored"]) }
+		#expect((try await database.fetchArticleCountsAsync(feedIDs: [])).statusesCount == 0)
+		#expect(database.executeSQLForTesting("DROP TRIGGER fixture_status; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		try await database.createStatusesIfNeededAsync(articleIDs: ["stored"])
+		#expect((try await database.fetchArticleCountsAsync(feedIDs: [])).statusesCount == 1)
 		#expect(await database.close())
 	}
 
@@ -111,7 +122,7 @@ import Articles
 
 	@Test func unchangedStatusIsSuccessfulButClosedWriteIsCancelled() async throws {
 		let database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "status-fixture", retentionStyle: .feedBased)
-		#expect(await database.createStatusesIfNeededAsync(articleIDs: ["stored"]))
+		try await database.createStatusesIfNeededAsync(articleIDs: ["stored"])
 		let unchanged = try await database.markAsync(articleIDs: ["stored"], statusKey: .read, flag: true)
 		#expect(unchanged.isEmpty)
 		database.beginClosing()
@@ -136,7 +147,7 @@ import Articles
 		#expect(try await database.fetchArticlesAsync(feedID: "feed").isEmpty)
 		#expect(try await database.fetchUnreadArticleIDsAsync().isEmpty)
 		#expect(try await database.fetchUnreadCountAsync(feedID: "feed") == 0)
-		#expect(await database.createStatusesIfNeededAsync(articleIDs: ["stored"]))
+		try await database.createStatusesIfNeededAsync(articleIDs: ["stored"])
 		_ = try await database.markAndFetchNewAsync(articleIDs: ["stored"], statusKey: .starred, flag: true)
 		#expect(try await database.fetchStarredArticleIDsAsync() == ["stored"])
 		database.beginClosing()
