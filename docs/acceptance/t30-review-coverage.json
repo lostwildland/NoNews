@@ -2,7 +2,7 @@
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
   "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
   "source": "e46b1b4d03b55204f2c379c26444266168c9776d",
-  "state": "Consolidated source e46b1b4 pinned/pushed; source-only corrections to R11/R12 plus focused SQL fix c13. Original owner granted combined red/green/full/build/iOS validation, no current full-plan proof. Remaining scope reviews and correction reviews pending; full T30 open.",
+  "state": "Ledger remains pinned toe46b1b4; current owner has later committed timeline/widget fixes and unfinished status/CloudKit/provider edits. Do not count the newer source as covered. R13consumer findings; R14CloudKit/R15provider findings and incomplete connected-seam coverage remain. Fresh correction, fixture/harness and final connected reviews pending; full T30 open.",
   "groups": {
     "consumers": 22,
     "account-core": 7,
@@ -19,7 +19,10 @@
     "normal_build": "Root independently verified deep strict signature and isolated bundle identifier; not app runtime proof.",
     "ios_build": "Root read BUILD SUCCEEDED in final generic simulator build log; no simulator runtime.",
     "sql_focused_source": "c13cea11f89034dbd5cf5d6055c5b7a1680d3252",
-    "sql_focused": "Coordinator independently read191passed/0failed/0skipped in focused xcresult10-44-35; e46 not covered."
+    "sql_focused": "Coordinator independently read191passed/0failed/0skipped in focused xcresult10-44-35; e46 not covered.",
+    "later_full_native_plan_source": "5013c9128e619003c635c2e941a9c1cc31e85099",
+    "later_full_native_tests": 791,
+    "later_native_result": "Coordinator independently read791passed/0failed/0skipped in11-07-52xcresult. Exported action has1206outputs/10697lines, zero disk-I/O/vnode matches. No later normal build or unfinished-fix proof."
   },
   "files": [
     {
@@ -27,48 +30,48 @@
       "previous_path": null,
       "group": "consumers",
       "blob": "31b45fe2159c6fb7783c284fd4c898afa7de3d62",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Mac/MainWindow/Sidebar/SidebarViewController.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "0d32cf197c589875170f3c6e007c821822693972",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Mac/MainWindow/Timeline/TimelineViewController+ContextualMenus.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "b1bcf4da7c6ac450cda88f320cfe45da8d366c36",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Mac/MainWindow/Timeline/TimelineViewController.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "b19e68decbc141f4559cb85a6342da2c8f890eed",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Mac/Scripting/Feed+Scriptability.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "b9563b1ec69f1721a975322781764a4dba90cd08",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Mac/Scripting/Folder+Scriptability.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "1fa255111e397e3bcad1714d8193fc15e7603cb1",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Modules/Account/Sources/Account/Account.swift",
@@ -101,24 +104,24 @@
       "previous_path": null,
       "group": "consumers",
       "blob": "18a35606b81f25b3cc819d4d21d9db5cbbc7ae13",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Modules/Account/Sources/Account/ArticleFetcher.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "59a3d89d5aa429c51cb75e0eedecac0e5e52a61e",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
       "previous_path": null,
       "group": "account-delegates",
       "blob": "8761d6b04b4f90d7639fabc9510d52d1d4f2dcd2",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+      "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending.",
       "prior_review": {
         "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -130,16 +133,16 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "20ef47f74ae66347995eb9ffce5f76e784fc2dee",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+      "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending."
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitSendStatusOperation.swift",
       "previous_path": null,
       "group": "account-delegates",
       "blob": "92230c5bca0d8435d8ccf78acf27c7eaa53ff9a6",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+      "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending."
     },
     {
       "path": "Modules/Account/Sources/Account/Container.swift",
@@ -198,8 +201,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "6b0fcd3efb08eff0eae5272f3e1e4b9ddfc70434",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -211,8 +214,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "e5bc32f0d3fe220fe84936df1281e29d95e82509",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -237,8 +240,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -250,8 +253,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "2ede00cfa99d0a832c5759ed542111eb994f50d6",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "30f4714f7d7eac6e70d9c8a484ca710c9672a922",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -263,8 +266,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "a82e171af7b3a5afaef4093be2aaaf1b9d6d1b20",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "a82e171af7b3a5afaef4093be2aaaf1b9d6d1b20",
         "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
@@ -276,8 +279,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "0c741ea00f0d4807570b20f7286b0df93e4997b0",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -289,8 +292,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "f850f32ae0ca7ca024cd60aff87f6d66c017df1b",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -315,8 +318,8 @@
       "previous_path": null,
       "group": "account-delegates",
       "blob": "9a0b41b58d4e8c04ac209fda01311d0b47e52e24",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
       "prior_review": {
         "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
         "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
@@ -328,8 +331,8 @@
       "previous_path": null,
       "group": "consumers",
       "blob": "873e42b8147329f9222de68667a14c7b57423b1e",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
@@ -743,80 +746,80 @@
       "previous_path": null,
       "group": "consumers",
       "blob": "51d7ae5480f7591852ecc18df183bfd7234f566c",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/Activity/ActivityManager.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "6eaaf42368ad8a11444df785f94e7bdbaaa855db",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/Dinosaurs/DinosaursViewModel.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "2e8634ebd87fc729114b7b8a4c23302c51afc63e",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/SmartFeeds/SmartFeed.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "a476e6c32d156881c14213cb3778a58ee03f3cb6",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/SmartFeeds/SmartFeedDelegate.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "f972868f288cbc301ba734e7e4bc1240a3a91847",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/SmartFeeds/StarredFeedDelegate.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "b796a141fff3c6ff96d620416e964a96b8fa7f0f",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/SmartFeeds/TodayFeedDelegate.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "59e0b2b656a8945e80369bec078e24c5f77b0650",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/SmartFeeds/UnreadFeed.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "1935d489899cd32e91b426a5500a3df725ee0fff",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/Timeline/FetchRequestOperation.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "4f98a3355da72fb71e780ef774246858dd86d094",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Shared/Widget/WidgetDataEncoder.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "4f6f48242b498745a845e9c48d3936314653176c",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
@@ -966,26 +969,31 @@
       "previous_path": null,
       "group": "consumers",
       "blob": "aef4caa681391bd9c1e632ae1f783b6241682aad",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "iOS/MainTimeline/MainTimelineViewController.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "704f7f292c47a64eff52a36b6ef9d55afb0f6b8b",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     },
     {
       "path": "iOS/SceneCoordinator.swift",
       "previous_path": null,
       "group": "consumers",
       "blob": "1f471439524dbe554ac5bd35f9ce89d152bdc26c",
-      "standards": "Pending fresh bounded review at current pin",
-      "spec": "Pending fresh bounded review at current pin"
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
     }
   ],
-  "current_branch_head": "e46b1b4d03b55204f2c379c26444266168c9776d",
-  "native_resource": "T30 original owner R18 reserved/granted for consolidated validation; T03 source-only."
+  "current_branch_head": "8cd3f5702b1e9fc07129755343eb759b7a298f55",
+  "native_resource": "T30 original owner R19 retains serialized native resource. Focused correction batches first; final full/build after known findings stabilize. T03 source/lightweight checks only.",
+  "review_reports": {
+    "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
+    "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
+    "provider_r15": "docs/acceptance/t30-provider-review-r15.md"
+  }
 }

@@ -25,11 +25,11 @@ The [script entry-point coverage](../research/io-script-ticket-coverage.md) adds
 | B8 | 先判断 Video 值不值得深入 | [T10](https://github.com/lostwildland/NoNews/issues/12) | not implemented in NoNews | source inventory only; native verification pending |
 | B9 | 配图可读、可追溯和修复 | [T19](https://github.com/lostwildland/NoNews/issues/21) | not implemented in NoNews | source inventory only; native verification pending |
 | C1 | 看评分、理由和局限 | [T05](https://github.com/lostwildland/NoNews/issues/7), [T06](https://github.com/lostwildland/NoNews/issues/8) | not implemented in NoNews | source inventory only; native verification pending |
-| C2 | 按兴趣处理不同来源 | [T03](https://github.com/lostwildland/NoNews/issues/5) | not implemented in NoNews | source inventory only; native verification pending |
+| C2 | 按兴趣处理不同来源 | [T03](https://github.com/lostwildland/NoNews/issues/5) | configuration source in progress; acceptance pending | [current correction review](t03-preview-binding-review-r3.md); native/runner binding verification pending |
 | C3 | 分类和回看主题 | [T23](https://github.com/lostwildland/NoNews/issues/25) | not implemented in NoNews | source inventory only; native verification pending |
 | C4 | 从材料得到可阅读的加工稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |
 | C5 | 明确重评或重写、比较多稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |
-| C6 | 配置与追溯 AI，而非盲信“成功” | [T03](https://github.com/lostwildland/NoNews/issues/5) | not implemented in NoNews | source inventory only; native verification pending |
+| C6 | 配置与追溯 AI，而非盲信“成功” | [T03](https://github.com/lostwildland/NoNews/issues/5) | durable configuration source in progress; acceptance pending | [R3 findings and evidence limits](t03-preview-binding-review-r3.md); Keychain/package/UI verification pending |
 | OUTPUT-PREFERENCES | 保留中文标题／排版工作流，并让新用户选择输出语言与格式 | T03/T06/T11/T12/T16/T17/T27 | not implemented in NoNews | [source-derived output preference contract](../specs/native-output-preferences.md); original history immutable; no runtime evidence |
 | D1 | 分层阅读而不混淆证据 | [T12](https://github.com/lostwildland/NoNews/issues/14) | not implemented in NoNews | source inventory only; native verification pending |
 | D2 | 阅读论文复杂排版 | [T12](https://github.com/lostwildland/NoNews/issues/14) | not implemented in NoNews | source inventory only; native verification pending |

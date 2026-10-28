@@ -79,19 +79,23 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Current review pin4075a7d: root independently ran4configuration/migrationstdio tests7.268s allpass, systemPython+syntheticloopback only. Paired backend R1sevenpaths complete:Standards4findings(worstP1)/Spec4(worstP1). Originalowner resumed substantial7distinct safety corrections source-only, preserving completeT03/native/Keychain/package/UI gates.",
+      "implementation_state": "Durable configuration and migration corrections at5154f96 remain unaccepted. R3 correction review requests3SpecP2s: complete coherent bounded report readback beyond16MiB, truthful post-apply readback failure, distinct same-name gateway identity. Same implementation owner resumed in existing checkout; T30 holds native resource. Root independently ran6configuration/migration/stdio passes plus1optional skip at5154f96 and executed the pure Swift review-state check; preferences/Keychain/declared-runtime/package/UI/runner checks remain pending.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "4075a7d85870d89872e179aa277050ccbef8b850",
+      "last_reported_head": "5154f964e012a19fedf33159e221c3af3f29ebe8",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
-      "review_evidence": "docs/acceptance/t03-configuration-backend-review-r1.md",
+      "review_evidence": "docs/acceptance/t03-preview-binding-review-r3.md",
       "script_source_audit": {
         "inventory": "docs/research/io-script-entrypoints.json",
         "scope": "docs/research/io-script-ticket-coverage.md",
         "bound_entries": 2,
         "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
-      }
+      },
+      "prior_review_evidence": [
+        "docs/acceptance/t03-configuration-backend-review-r1.md",
+        "docs/acceptance/t03-configuration-correction-review-r2.md"
+      ]
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -559,11 +563,16 @@
         "28",
         "29"
       ],
-      "implementation_state": "SQL c13 now propagates preparation+cached-step errors; root independently read191focusedpass/0fail/0skip. R11 networkscope and R12 Account/OPML coordinator corrections e46 committed/pushed, parse-only. Original owner source boundary handoff complete; combined public red/green/full/build/iOS validation granted, no current full artifact acceptance. No new worktrees/cleanup. Fresh correction and other scope reviews pending.",
+      "implementation_state": "Original owner resumed after provider failure, preserving22modified files and1untracked status-command test. Timeline and widget corrections committed afb4365/8cd3f57; status/CloudKit/provider corrections remain in progress. Root independently verified791full passes at5013c91 with zero disk-I/O/vnode lines; not proof for later fixes. R13consumer findings and R14CloudKit/R15provider findings plus incomplete connected review remain open. T30 retains serialized native resource; no new worktree or cleanup.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "e46b1b4d03b55204f2c379c26444266168c9776d",
-      "review_evidence": "docs/acceptance/t30-account-core-review-r12.md",
-      "review_coverage": "docs/acceptance/t30-review-coverage.json"
+      "last_reported_head": "8cd3f5702b1e9fc07129755343eb759b7a298f55",
+      "review_evidence": "docs/acceptance/t30-consumer-review-r13.md",
+      "review_coverage": "docs/acceptance/t30-review-coverage.json",
+      "additional_review_evidence": [
+        "docs/acceptance/t30-cloudkit-review-r14.md",
+        "docs/acceptance/t30-provider-review-r15.md",
+        "docs/acceptance/t30-account-core-review-r12.md"
+      ]
     }
   },
   "spec": {
