@@ -43,6 +43,10 @@ final class DetailWebViewController: NSViewController {
 		DetailWindowState(isShowingExtractedArticle: isShowingExtractedArticle, windowScrollY: windowScrollY ?? 0)
 	}
 
+	private var nativeContextResults: [[String: Any]] = [] {
+		didSet { if isViewLoaded { reloadHTML() } }
+	}
+
 	private var nativeSourceBinding: [String: Any]? {
 		didSet { if isViewLoaded { reloadHTML() } }
 	}
@@ -63,7 +67,11 @@ final class DetailWebViewController: NSViewController {
 	}
 
 
-	private var articleTextSize = AppDefaults.articleTextSize
+	func setNativeContextResults(_ results: [[String: Any]]) {
+		nativeContextResults = results
+	}
+
+
 	private var isArticleContentJavascriptEnabled = AppDefaults.isArticleContentJavascriptEnabled
 
 	private var webInspectorEnabled: Bool {
@@ -396,10 +404,11 @@ private extension DetailWebViewController {
 		let nativeContexts = nativeSourceBinding?["contexts"] as? [[String: Any]] ?? []
 		let nativeContextID = (nativeSourceBinding?["context_id"] as? String) ?? (nativeContexts.count == 1 ? (nativeContexts.first?["id"] as? String) : nil)
 		let nativeContextLabel = nativeContextID.map { " Native context: \($0.prefix(8))" } ?? (nativeContexts.count > 1 ? " Contexts: " + nativeContexts.compactMap { $0["id"] as? String }.map { String($0.prefix(8)) }.joined(separator: ", ") : "")
+		let nativeResultLabel = nativeContextResults.isEmpty ? "" : " Results: \(nativeContextResults.count)"
 		let nativeBanner = nativeSourceBinding.map { binding in
 			let state = binding["identity_state"] as? String ?? "unresolved"
 			let label = ["verified": "Verified", "conflict": "Conflicting identity", "unresolved": "Unresolved"][state] ?? "Unresolved"
-			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)\(nativeContextLabel)</aside>"
+			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)\(nativeContextLabel)\(nativeResultLabel)</aside>"
 		} ?? ""
 		let substitutions = [
 			"title": rendering.title,

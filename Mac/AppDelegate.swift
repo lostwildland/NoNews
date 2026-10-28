@@ -486,7 +486,12 @@ let appName = "NetNewsWire"
 	@IBAction func retryFailedNativeArticles(_ sender: Any? = nil) {
 		guard let failed = UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]], !failed.isEmpty else { return }
 		var queued = (UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles").flatMap { $0.data(using: .utf8) }.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] }) ?? []
-		queued.append(contentsOf: failed.map { entry in entry.filter { $0.key != "failure" && $0.key != "failedAt" } })
+		let retries = failed.map { entry in entry.filter { $0.key != "failure" && $0.key != "failedAt" } }
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		for retry in retries {
+			queued.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && retry[key] != nil && String(describing: candidate[key]!) == String(describing: retry[key]!) } }
+			queued.append(retry)
+		}
 		saveNativeArticleQueue(queued)
 		UserDefaults.standard.removeObject(forKey: "NoNews.NativeSource.FailedArticles")
 		drainNativeArticleQueue()
