@@ -1,4 +1,4 @@
-"""Measure synthetic public preview and full page traversal in a fresh process."""
+"""Measure synthetic public Apply and full report traversal in a fresh process."""
 import base64
 from contextlib import closing
 import gc
@@ -46,8 +46,11 @@ def main():
                     ((f'fixture-{index:05}-' + 'x' * 8_000, 'curator', '{"provider":"old","model":"model"}', 'now') for index in range(count)))
             gc.collect()
             tracemalloc.start()
+            app.handle('POST', '/api/config/migration/pause', {}, {})
+            receipt = app.handle('POST', '/api/config/migration/apply', {}, {'serviceId': service['id']})
+            assert receipt['status'] == 'applied'
             page = app.handle('POST', '/api/config/migration/preview', {},
-                              {'serviceId': service['id'], 'editorServices': {'fixture-job': service['id']}})
+                              {'serviceId': service['id']})
             total, pages = 0, 0
             while 'chunk' in page:
                 total += len(base64.b64decode(page['chunk']))

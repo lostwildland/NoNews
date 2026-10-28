@@ -93,6 +93,49 @@ class MigrationTest(unittest.TestCase):
             self.assertEqual(report['models'][0]['kit'], 'large-0000-' + suffix)
             self.assertEqual(report['models'][-1]['kit'], 'large-2199-' + suffix)
             self.assertEqual(report['evidence'], [{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}])
+            legacy = json.dumps(report['evidence'])
+            self.assertTrue(call('POST', '/api/config/migration/pause', {})['result']['paused'])
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("CREATE TRIGGER fail_resume BEFORE UPDATE ON app_settings WHEN NEW.key='magpie_claims_paused' AND NEW.value='0' BEGIN SELECT RAISE(ABORT, 'injected'); END")
+            self.assertEqual(call('POST', '/api/config/migration/apply', {'serviceId': service['id']})['error'], 'operation failed')
+            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
+            with closing(sqlite3.connect(database)) as db, db:
+                self.assertEqual(db.execute("SELECT count(*) FROM app_settings WHERE key LIKE 'nonews.migration-evidence.%'").fetchone()[0], 0)
+                self.assertEqual(db.execute("SELECT count(*) FROM model_configs WHERE config_json LIKE '%target%'").fetchone()[0], 0)
+                self.assertEqual(db.execute("SELECT value FROM app_settings WHERE key='magpie_claims_paused'").fetchone()[0], '1')
+                db.execute('DROP TRIGGER fail_resume')
+            applied = call('POST', '/api/config/migration/apply', {'serviceId': service['id']})['result']
+            self.assertEqual(applied['status'], 'applied')
+            self.assertLess(len(json.dumps(applied)), 1024)
+            with closing(sqlite3.connect(database)) as db:
+                self.assertEqual(db.execute("SELECT value FROM app_settings WHERE key='magpie_migration_evidence'").fetchone()[0], legacy)
+            process.stdin.close()
+            process.stdout.close()
+            self.assertEqual(process.wait(timeout=30), 0)
+            process = start()
+            after = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})['result']
+            chunks = [base64.b64decode(after['chunk'])]
+            cursor = after['next']
+            while cursor is not None:
+                page = call('POST', '/api/config/migration/preview', cursor)['result']
+                chunks.append(base64.b64decode(page['chunk']))
+                cursor = page['next']
+            after_report = json.loads(b''.join(chunks))
+            self.assertEqual(after_report['lastApply'], applied)
+            self.assertEqual(after_report['evidence'][:2], report['evidence'])
+            self.assertEqual([row['kit'] for row in after_report['evidence'][2:]],
+                             [row['kit'] for row in after_report['models']])
+            self.assertEqual(len(after_report['evidence']), 2203)
+            call('POST', '/api/config/migration/pause', {})
+            self.assertEqual(call('POST', '/api/config/migration/apply', {'serviceId': service['id']})['result']['status'], 'applied')
+            after_again = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})['result']
+            chunks = [base64.b64decode(after_again['chunk'])]
+            cursor = after_again['next']
+            while cursor is not None:
+                page = call('POST', '/api/config/migration/preview', cursor)['result']
+                chunks.append(base64.b64decode(page['chunk']))
+                cursor = page['next']
+            self.assertEqual(json.loads(b''.join(chunks))['evidence'], after_report['evidence'])
             process.stdin.close()
             process.stdout.close()
             self.assertEqual(process.wait(timeout=30), 0)

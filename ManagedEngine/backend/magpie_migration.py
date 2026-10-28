@@ -27,6 +27,12 @@ class EvidenceRows:
         self.db = db
 
     def __iter__(self):
+        yield from self.legacy()
+        for row in self.db.execute("SELECT value FROM app_settings WHERE key>=? AND key<? ORDER BY rowid",
+                                   ('nonews.migration-evidence.', 'nonews.migration-evidence/')):
+            yield json.loads(row[0])
+
+    def legacy(self):
         row = self.db.execute("SELECT rowid FROM app_settings WHERE key='magpie_migration_evidence'").fetchone()
         if row is None:
             return
@@ -214,7 +220,8 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
             'pending': StagedRows(db, 'migration_preview_pending') if staged else pending,
             'running': db.execute("SELECT count(*) FROM processing_jobs WHERE status='running'").fetchone()[0],
             'paused': settings._read(db, 'magpie_claims_paused') == '1',
-            'evidence': EvidenceRows(db) if staged else json.loads(settings._read(db, 'magpie_migration_evidence') or '[]')}
+            'evidence': EvidenceRows(db) if staged else list(EvidenceRows(db)),
+            'lastApply': json.loads(settings._read(db, 'nonews.migration-last-apply') or 'null')}
 
 
 def report_page(db, body):
@@ -367,13 +374,14 @@ def command(db, action, body):
             return snapshot_report(db, report)
     if action != 'apply':
         raise configuration.ConfigurationError('Invalid migration action')
+    db.execute('PRAGMA temp_store=FILE')
     with transaction(db):
         connection = configuration._record(db, 'service', body.get('serviceId'))
         if connection['stale'] or connection['type'] != 'magpie':
             raise configuration.ConfigurationError('Magpie directory is stale')
         if settings._read(db, 'magpie_claims_paused') != '1':
             raise configuration.ConfigurationError('Pause claims before migration')
-        report = preview(db, connection['targets'], choices, connection['id'], editor_services)
+        report = preview(db, connection['targets'], choices, connection['id'], editor_services, staged=True)
         if editor_services:
             receipt = json.loads(settings._read(db, 'nonews.migration-editor-review') or '{}')
             supplied = body.get('reviewToken')
@@ -381,8 +389,11 @@ def command(db, action, body):
             if not isinstance(supplied, str) or not isinstance(receipt.get('token'), str) or not hmac.compare_digest(supplied, receipt['token']) or receipt.get('digest') != digest:
                 raise configuration.ConfigurationError('Review pinned Editor associations again')
         if report['running']:
-            return {'status': 'waiting', 'running': report['running'], 'paused': True}
-        evidence = json.loads(settings._read(db, 'magpie_migration_evidence') or '[]')
+            result = {'status': 'waiting', 'running': report['running'], 'paused': True, 'serviceId': connection['id']}
+            save(db, 'nonews.migration-last-apply', json.dumps(result))
+            return result
+        for _ in report['evidence']:
+            pass
         for row in report['models']:
             if row['target']:
                 identity, prior_binding = association(db, 'migration-binding', f"{row['kit']}/{row['role']}")
@@ -392,18 +403,17 @@ def command(db, action, body):
                 db.execute('UPDATE model_configs SET config_json=?,updated_at=? WHERE kit_id=? AND role=?',
                            (json.dumps({'target': row['target']}), utcnow(), row['kit'], row['role']))
             if row['target'] and (row['old'] != {'target': row['target']} or prior_binding != binding):
-                evidence.append({**row, 'serviceId': connection['id'], 'endpoint': connection['endpoint'], 'checkedAt': connection['checkedAt']})
+                evidence = {**row, 'serviceId': connection['id'], 'endpoint': connection['endpoint'], 'checkedAt': connection['checkedAt']}
+                save(db, 'nonews.migration-evidence.' + uuid.uuid4().hex, json.dumps(evidence))
             if row['target']:
                 configuration._store(db, 'migration-binding', binding)
-        save(db, 'magpie_migration_evidence', json.dumps(evidence))
         save(db, 'magpie_migration_active', '1')
-        pending = {job['id']: job for job in report['pending']}
-        mapped = {(row['kit'], row['role']): row['target'] for row in report['models']}
-        for job in db.execute("SELECT * FROM processing_jobs WHERE status='pending'").fetchall():
+        for job in db.execute("SELECT processing_jobs.*, migration_preview_pending.payload AS preview_payload FROM processing_jobs JOIN migration_preview_pending ON processing_jobs.id=migration_preview_pending.job_id WHERE processing_jobs.status='pending'"):
             if not roles(job['stage']):
                 continue
-            blocked = pending[job['id']]['blocked']
-            if job['editor_target'] and pending[job['id']]['kit'] is not None and job['id'] in editor_services:
+            pending = json.loads(job['preview_payload'])
+            blocked = pending['blocked']
+            if job['editor_target'] and pending['kit'] is not None and job['id'] in editor_services:
                 identity, existing = association(db, 'migration-job', job['id'])
                 if existing is None:
                     selected = configuration._record(db, 'service', editor_services[job['id']])
@@ -411,11 +421,12 @@ def command(db, action, body):
                         'serviceId': selected['id'], 'target': job['editor_target'], 'endpoint': selected['endpoint']})
             db.execute('UPDATE processing_jobs SET magpie_block_reason=? WHERE id=?',
                        ('Magpie mapping required: ' + ', '.join(blocked) if blocked else None, job['id']))
-            for checkpoint in db.execute("SELECT stage,result_json FROM pipeline_stage_runs WHERE job_id=? AND item_id=? AND status!='ready' AND stage IN ('curator','editor')", (job['id'], job['item_id'])).fetchall():
+            for checkpoint in db.execute("SELECT stage,result_json FROM pipeline_stage_runs WHERE job_id=? AND item_id=? AND status!='ready' AND stage IN ('curator','editor')", (job['id'], job['item_id'])):
                 if checkpoint['stage'] == 'editor' and job['editor_target']:
                     continue
                 kit, refusal = job_kit(db, job)
-                target = None if refusal else mapped.get((kit, checkpoint['stage']))
+                mapping = db.execute('SELECT target FROM migration_preview_models WHERE kit=? AND role=?', (kit, checkpoint['stage'])).fetchone() if not refusal else None
+                target = mapping[0] if mapping else None
                 if target:
                     context = json.loads(checkpoint['result_json'] or '{}')
                     old = {key: context.pop(key) for key in ('provider', 'model', 'thinking_effort', 'fallback') if key in context}
@@ -425,4 +436,6 @@ def command(db, action, body):
                     db.execute('UPDATE pipeline_stage_runs SET result_json=? WHERE job_id=? AND item_id=? AND stage=? AND status!=\'ready\'',
                                (json.dumps(context), job['id'], job['item_id'], checkpoint['stage']))
         save(db, 'magpie_claims_paused', '0')
-        return {'status': 'applied', 'running': 0, 'paused': False}
+        result = {'status': 'applied', 'running': 0, 'paused': False, 'serviceId': connection['id']}
+        save(db, 'nonews.migration-last-apply', json.dumps(result))
+        return result
