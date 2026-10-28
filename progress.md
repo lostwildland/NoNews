@@ -1,5 +1,10 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — T30 e44 correction and T03 final source
+
+- T30 correction `e44f338` fixes the release-only DEBUG reference, FTS `sqlite3_step` error propagation, CloudKit outbox insertion/deletion result handling, selection BEGIN/COMMIT rollback, and serializes CloudKit status mutation checks. Formal acceptance test passed 827 top-level tests with zero failures/skips (300 dynamic runs); the new SyncStatus transaction regression passed. Fresh paired R21 review is pending; iOS, final artifact, live CloudKit, production deletion and UI remain open.
+- T03 final source `3a31ee2` adds actual AppKit controller ordering/identity regressions, Save-as-Copy capture checks, Apply acknowledgement preservation, strict Swift 6 checks, declared-runtime transport/restart journeys and final payload manifest verification. Fresh paired review is running; full app/UI/VoiceOver/keyboard, Keychain, signed bundle and T11 continuity remain open.
+
 ## 2026-10-28 — Connected transaction handoff and remaining Save P1
 
 - Root independently reran the exact T03 `6e9dac9` source fixture with system Python: 15 tests, 14 passed and 1 optional reference skip in 49.748s, including definitive queued-save outcomes, restart recovery, cancellation cleanup, oversized-frame continuity and payload-source checks. This validates the source service boundary only; native/controller, payload refresh, Keychain, UI/HIG and packaged-app acceptance remain open.

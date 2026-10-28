@@ -1,8 +1,8 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "51d169e477d96bf103c5dd98a673786a50bd363c",
-  "source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
-  "state": "106 paths at connected R17 source49d80d/evidence51d169e. R18 found2SpecP1 risks; R19 Standards found1SpecP1 in SyncStatusTable.insertStatuses. Coordinator9ab2069 helper correction remains source-only until owner compiles/runs its new insert path.",
+  "candidate": "e44f338",
+  "source": "e44f338",
+  "state": "Current source e44f338 passes the 827-test macOS plan. The earlier106-path ledger remains pinned to R17; the seven-path b33a201...e44f338 correction is pending fresh R21 paired review and ledger refresh.",
   "groups": {
     "consumers": 27,
     "account-core": 7,

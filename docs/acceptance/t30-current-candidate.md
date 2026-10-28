@@ -1,10 +1,10 @@
 # T30 native fixture and cancellation candidate
 
-Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current connected R17 source `49d80d051e9f199f290191bc4d2b986bee1e9d26`, evidence HEAD `51d169e477d96bf103c5dd98a673786a50bd363c`, followed by coordinator shared-helper correction `9ab2069afc779bb8a1cdf6b858c40e45164db017`. The [coverage ledger](t30-review-coverage.json) pins106 logical changed paths. Root verified that only the ticket evidence document differs between source and evidence commits; code/test blobs match. R19 found a new P1 in SyncStatusTable.insertStatuses; the original owner is correcting it. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current source is `e44f338`, after the reviewed R17 source/evidence pair, shared-helper correction `9ab2069`, and correction `b33a201`. The [coverage ledger](t30-review-coverage.json) still pins the earlier106-path connected candidate; the new seven-path `b33a201...e44f338` delta is tracked separately until fresh R21 review completes. This candidate remains the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
 
 ## Current evidence
 
-Root independently read the15:57:10 xcresult:217 passed, zero failures/skips,217 total. The owner reports real deferred-COMMIT status/article rollback through CloudKit, status-creation/search-index failure propagation, cache restoration, exact per-record error incomplete-page red and actual callback recovery with a synthetic checkpoint, and bounded admission-lock red/green. This is not a real CloudKit server token, full-page atomicity or live-sync result. The earlier test priority warning was absent from the owner's final log; sandbox contacts-service connection errors were observed. Root has not independently rerun these schedules or established a current-source full-plan diagnostic gate.
+The current-source acceptance plan at `e44f338` passed 827 top-level tests with zero failures/skips; the result is `Test-NetNewsWire-2026.10.28_17-49-19-+0800.xcresult`, with 300 dynamic parameter runs and one existing generic main-thread warning. The focused SyncDatabase transaction regression passed within that plan. This is macOS fixture evidence only: no real CloudKit server token, live sync, final artifact, iOS runtime or production deletion is established.
 
 Source/native ownership is released. The complete65be895...51d169e connected correction changes19 paths (671 additions/229 deletions); R18 found two P1 data-integrity risks and the shared-helper correction adds an unreviewed four-path delta. Fresh R19 rechecks are required before further acceptance. T03 has the standalone native/component grant after its P1 source is ready; no simultaneous full/native run is authorized.
 
@@ -15,6 +15,8 @@ Root independently read the12:40:25 xcresult summary:203 passed, zero failures/s
 The historical full-plan result remains791 passes at5013c91. Its independently exported action had zero disk-I/O/vnode-unlink matches. It predates the current consumer/provider/CloudKit fixes. No current-source full Mac plan, normal signed artifact or final generic iOS build is established by that result. Final heavy runs remain deferred until known review findings stabilize.
 
 ## Review frontier
+
+Fresh R20 source review of `b33a201` found one release-compile P1 plus FTS iteration, CloudKit caller, and selection-transaction P2s. The seven-path correction is now at `e44f338`; paired R21 Standards/Spec rechecks are running and must clear it before acceptance.
 
 The interrupted R16 runs produced no verdict. Fresh [paired R17 reviews](t30-page-delete-review-r17.md) covered all eight changed-hunk sets at65be895: Standards reported no material Standards finding and separately one Spec P1; Spec reported two P1s (transaction durability and dropped individual record errors). These source-derived findings require correction and behavioral proof. Root's one-line receive-error result correction has parsing proof only; the additional admission-lock assessment remains open. Other review scopes below remain open.
 
