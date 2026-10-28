@@ -14,6 +14,89 @@ from threading import Thread
 
 
 class MigrationTest(unittest.TestCase):
+    def test_report_over_16_mib_survives_restart_and_concurrent_changes(self):
+        class Directory(BaseHTTPRequestHandler):
+            def do_GET(self):
+                data = b'{"data":[{"id":"old/model"}]}'
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(data)
+            def log_message(self, *_): pass
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Directory)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join)
+        self.addCleanup(server.shutdown)
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'e' * 32
+        with tempfile.TemporaryDirectory() as root:
+            def start():
+                process = subprocess.Popen([sys.executable, str(script), root], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                    text=True, env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+                def cleanup():
+                    if process.stdin and not process.stdin.closed:
+                        process.stdin.close()
+                    if process.stdout and not process.stdout.closed:
+                        process.stdout.close()
+                    process.wait(timeout=30)
+                self.addCleanup(cleanup)
+                process.stdin.write(json.dumps({'token': token}) + '\n')
+                process.stdin.flush()
+                self.assertEqual(json.loads(process.stdout.readline()), {'status': 'ready'})
+                return process
+            process = start()
+            def call(method, path, body):
+                process.stdin.write(json.dumps({'id': 1, 'token': token, 'method': method, 'path': path, 'body': body}) + '\n')
+                process.stdin.flush()
+                return json.loads(process.stdout.readline())
+            service = call('PUT', '/api/config/services', {'name': 'Gateway', 'type': 'magpie',
+                'endpoint': f'http://127.0.0.1:{server.server_port}'})['result']
+            call('POST', '/api/config/refresh', {'id': service['id']})
+            database = Path(root) / 'information.sqlite'
+            suffix = 'x' * 8_000
+            with closing(sqlite3.connect(database)) as db, db:
+                db.executemany('INSERT INTO model_configs VALUES (?, ?, ?, ?)',
+                    ((f'large-{index:04}-' + suffix, 'curator', '{"provider":"old","model":"model"}', 'now') for index in range(2_200)))
+                db.execute('INSERT INTO app_settings VALUES (?,?,?)', ('magpie_migration_evidence',
+                    json.dumps([{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}]), 'now'))
+            first = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})
+            self.assertIn('result', first)
+            first = first['result']
+            self.assertIsNotNone(first['next'])
+            retry = call('POST', '/api/config/migration/preview', first['next'])['result']
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("INSERT INTO model_configs VALUES ('later','curator','{\"provider\":\"old\",\"model\":\"model\"}','now')")
+                db.execute("UPDATE app_settings SET value='[{\"broken\":1},]' WHERE key='magpie_migration_evidence'")
+            refusal = call('POST', '/api/config/migration/preview', {'serviceId': service['id']})
+            self.assertEqual(refusal['code'], 'invalid_configuration')
+            self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
+            self.assertEqual(call('POST', '/api/config/migration/preview', first['next'])['result'], retry)
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute('UPDATE app_settings SET value=? WHERE key=?',
+                    (json.dumps([{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}]), 'magpie_migration_evidence'))
+            process.stdin.close()
+            process.stdout.close()
+            self.assertEqual(process.wait(timeout=30), 0)
+            process = start()
+            self.assertEqual(call('POST', '/api/config/migration/preview', first['next'])['result'], retry)
+            chunks = [base64.b64decode(first['chunk'])]
+            cursor = first['next']
+            while cursor is not None:
+                page = call('POST', '/api/config/migration/preview', cursor)['result']
+                chunks.append(base64.b64decode(page['chunk']))
+                cursor = page['next']
+            encoded = b''.join(chunks)
+            self.assertGreater(len(encoded), 16 * 1024 * 1024)
+            report = json.loads(encoded)
+            self.assertEqual(len(report['models']), 2_200)
+            self.assertEqual(report['models'][0]['kit'], 'large-0000-' + suffix)
+            self.assertEqual(report['models'][-1]['kit'], 'large-2199-' + suffix)
+            self.assertEqual(report['evidence'], [{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}])
+            process.stdin.close()
+            process.stdout.close()
+            self.assertEqual(process.wait(timeout=30), 0)
+
     def test_pause_wait_apply_preserves_completed_and_pinned_editor(self):
         class Directory(BaseHTTPRequestHandler):
             def do_GET(self):

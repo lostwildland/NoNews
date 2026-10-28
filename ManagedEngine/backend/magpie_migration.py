@@ -8,17 +8,82 @@ import hmac
 
 from . import configuration, settings
 from .core import transaction, utcnow
+from .job_stream import text_chunks
 
-SNAPSHOT_CAPACITY = 16 * 1024 * 1024
 SNAPSHOT_KEEP = 2
+
+
+class StagedRows:
+    def __init__(self, db, table):
+        self.db, self.table = db, table
+
+    def __iter__(self):
+        for row in self.db.execute(f'SELECT payload FROM {self.table} ORDER BY sequence'):
+            yield json.loads(row[0])
+
+
+class EvidenceRows:
+    def __init__(self, db):
+        self.db = db
+
+    def __iter__(self):
+        row = self.db.execute("SELECT rowid FROM app_settings WHERE key='magpie_migration_evidence'").fetchone()
+        if row is None:
+            return
+        with self.db.blobopen('app_settings', 'value', row[0], readonly=True) as blob:
+            if len(blob) == 0:
+                return
+        phase, depth, quoted, escaped, item = 'start', 0, False, False, []
+        for chunk in text_chunks(self.db, 'app_settings', 'value', row[0]):
+            for char in chunk:
+                if phase == 'start':
+                    if char in ' \t\r\n':
+                        continue
+                    if char != '[':
+                        raise configuration.ConfigurationError('Invalid migration evidence')
+                    phase = 'first'
+                    continue
+                if phase == 'done':
+                    if char not in ' \t\r\n':
+                        raise configuration.ConfigurationError('Invalid migration evidence')
+                    continue
+                if phase in {'first', 'next'} and not item and char in ' \t\r\n':
+                    continue
+                if not quoted and depth == 0 and char in ',]':
+                    raw = ''.join(item).strip(' \t\r\n')
+                    if raw:
+                        try:
+                            yield json.loads(raw)
+                        except ValueError as error:
+                            raise configuration.ConfigurationError('Invalid migration evidence') from error
+                    elif phase != 'first' or char != ']':
+                        raise configuration.ConfigurationError('Invalid migration evidence')
+                    item = []
+                    phase = 'next' if char == ',' else 'done'
+                    continue
+                item.append(char)
+                if quoted:
+                    if escaped:
+                        escaped = False
+                    elif char == '\\':
+                        escaped = True
+                    elif char == '"':
+                        quoted = False
+                elif char == '"':
+                    quoted = True
+                elif char in '[{':
+                    depth += 1
+                elif char in ']}':
+                    depth -= 1
+                    if depth < 0:
+                        raise configuration.ConfigurationError('Invalid migration evidence')
+                phase = 'value'
+        if phase != 'done':
+            raise configuration.ConfigurationError('Invalid migration evidence')
 
 
 class SnapshotExpired(ValueError):
     code = 'snapshot_expired'
-
-
-class SnapshotCapacity(ValueError):
-    code = 'snapshot_capacity'
 
 
 def save(db, key, value):
@@ -71,8 +136,12 @@ def job_kit(db, job):
     return kit or media[0], None
 
 
-def preview(db, catalog, choices, service_id, editor_services):
-    rows = []
+def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
+    if staged:
+        db.execute('CREATE TEMP TABLE migration_preview_models(sequence INTEGER PRIMARY KEY, kit TEXT, role TEXT, target TEXT, payload TEXT)')
+        db.execute('CREATE INDEX migration_preview_lookup ON migration_preview_models(kit,role)')
+        db.execute('CREATE TEMP TABLE migration_preview_pending(sequence INTEGER PRIMARY KEY, job_id TEXT, payload TEXT)')
+    rows = [] if not staged else None
     for row in db.execute('SELECT kit_id,role,config_json FROM model_configs ORDER BY kit_id,role'):
         raw = json.loads(row['config_json'])
         if not isinstance(raw, dict):
@@ -92,21 +161,29 @@ def preview(db, catalog, choices, service_id, editor_services):
             target, basis = (key if key in catalog else None), 'exact provider/model'
         reason = 'Unsupported legacy fields require review' if unsupported else None if target in catalog else 'No explicit or exact provider/model mapping'
         _, binding = association(db, 'migration-binding', role_key)
-        rows.append({'kit': row['kit_id'], 'role': row['role'], 'old': old, 'target': target if not reason else None,
-                     'basis': basis,
-                     'serviceId': binding['serviceId'] if binding else None,
-                     'blocked': reason})
-    by_role = {(row['kit'], row['role']): row for row in rows}
-    pending = []
-    seen_editor_jobs = set()
+        value = {'kit': row['kit_id'], 'role': row['role'], 'old': old, 'target': target if not reason else None,
+                 'basis': basis, 'serviceId': binding['serviceId'] if binding else None, 'blocked': reason}
+        if staged:
+            db.execute('INSERT INTO migration_preview_models(kit,role,target,payload) VALUES (?,?,?,?)',
+                       (value['kit'], value['role'], value['target'], json.dumps(value, ensure_ascii=True, separators=(',', ':'))))
+        else:
+            rows.append(value)
+    by_role = {(row['kit'], row['role']): row for row in rows} if not staged else None
+    pending = [] if not staged else None
+    unseen_editor_jobs = set(editor_services)
     for job in db.execute("SELECT * FROM processing_jobs WHERE status='pending'"):
         kit, refusal = job_kit(db, job) if roles(job['stage']) else (None, None)
+        def mapped(role):
+            if staged:
+                row = db.execute('SELECT target FROM migration_preview_models WHERE kit=? AND role=?', (kit, role)).fetchone()
+                return row[0] if row else None
+            return by_role.get((kit, role), {}).get('target')
         blocked = [refusal] if refusal else [f'{kit}/{role}' for role in roles(job['stage'])
-                   if not (role == 'editor' and job['editor_target']) and not by_role.get((kit, role), {}).get('target')]
+                   if not (role == 'editor' and job['editor_target']) and not mapped(role)]
         _, binding = association(db, 'migration-job', job['id'])
         proposed = editor_services.get(job['id'])
         if job['editor_target']:
-            seen_editor_jobs.add(job['id'])
+            unseen_editor_jobs.discard(job['id'])
             if proposed is not None:
                 chosen = configuration._record(db, 'service', proposed)
                 if chosen['type'] != 'magpie':
@@ -122,16 +199,22 @@ def preview(db, catalog, choices, service_id, editor_services):
                     blocked.append('Existing Editor gateway is unavailable or changed')
             elif not binding and proposed is None:
                 blocked.append('Editor service association required')
-        pending.append({'id': job['id'], 'kit': kit, 'stage': job['stage'], 'blocked': blocked,
-                        'editorTarget': job['editor_target'], 'editorServiceId': binding.get('serviceId') if binding else None,
-                        'proposedEditorServiceId': (proposed or (binding.get('serviceId') if binding else service_id)) if job['editor_target'] else None,
-                        'editorAssociationExplicit': bool(binding or proposed)})
-    if set(editor_services) - seen_editor_jobs:
+        value = {'id': job['id'], 'kit': kit, 'stage': job['stage'], 'blocked': blocked,
+                 'editorTarget': job['editor_target'], 'editorServiceId': binding.get('serviceId') if binding else None,
+                 'proposedEditorServiceId': (proposed or (binding.get('serviceId') if binding else service_id)) if job['editor_target'] else None,
+                 'editorAssociationExplicit': bool(binding or proposed)}
+        if staged:
+            db.execute('INSERT INTO migration_preview_pending(job_id,payload) VALUES (?,?)',
+                       (value['id'], json.dumps(value, ensure_ascii=True, separators=(',', ':'))))
+        else:
+            pending.append(value)
+    if unseen_editor_jobs:
         raise configuration.ConfigurationError('Pinned Editor job is unavailable')
-    return {'models': rows, 'pending': pending,
+    return {'models': StagedRows(db, 'migration_preview_models') if staged else rows,
+            'pending': StagedRows(db, 'migration_preview_pending') if staged else pending,
             'running': db.execute("SELECT count(*) FROM processing_jobs WHERE status='running'").fetchone()[0],
             'paused': settings._read(db, 'magpie_claims_paused') == '1',
-            'evidence': json.loads(settings._read(db, 'magpie_migration_evidence') or '[]')}
+            'evidence': EvidenceRows(db) if staged else json.loads(settings._read(db, 'magpie_migration_evidence') or '[]')}
 
 
 def report_page(db, body):
@@ -170,25 +253,50 @@ def snapshot_report(db, report):
     identity = uuid.uuid4().hex
     prefix = f'nonews.migration-snapshot.{identity}.'
     count = 0
+    def pieces():
+        yield '{'
+        for index, (key, value) in enumerate(report.items()):
+            if index:
+                yield ','
+            yield json.dumps(key, ensure_ascii=True) + ':'
+            if key in {'models', 'pending', 'evidence'}:
+                yield '['
+                for position, item in enumerate(value):
+                    if position:
+                        yield ','
+                    yield from encoder.iterencode(item)
+                yield ']'
+            else:
+                yield from encoder.iterencode(value)
+        yield '}'
     with transaction(db):
-        for piece in encoder.iterencode(report):
-            if count * 48_000 + len(data) + len(piece) > SNAPSHOT_CAPACITY:
-                raise SnapshotCapacity('Migration report exceeds snapshot capacity')
-            data.extend(piece.encode('ascii'))
-            while len(data) >= 48_000:
-                save(db, prefix + str(count), base64.b64encode(data[:48_000]).decode('ascii'))
-                del data[:48_000]
-                count += 1
+        for piece in pieces():
+            for start in range(0, len(piece), 16_000):
+                part = piece[start:start + 16_000].encode('ascii')
+                while part:
+                    length = min(48_000 - len(data), len(part))
+                    data.extend(part[:length])
+                    part = part[length:]
+                    if len(data) == 48_000:
+                        save(db, prefix + str(count), base64.b64encode(data).decode('ascii'))
+                        data.clear()
+                        count += 1
         if count == 0:
-            return report
+            return json.loads(data)
         if data:
             save(db, prefix + str(count), base64.b64encode(data).decode('ascii'))
             count += 1
         save(db, prefix + 'count', str(count))
+        kept = 0
         roots = db.execute("SELECT key FROM app_settings WHERE key>=? AND key<? AND key LIKE '%.count' ORDER BY rowid DESC",
-                           ('nonews.migration-snapshot.', 'nonews.migration-snapshot/')).fetchall()
-        valid = [row[0] for row in roots if re.fullmatch(r'nonews\.migration-snapshot\.[0-9a-f]{32}\.count', row[0])]
-        for key in valid[SNAPSHOT_KEEP:]:
+                           ('nonews.migration-snapshot.', 'nonews.migration-snapshot/'))
+        for row in roots:
+            key = row[0]
+            if not re.fullmatch(r'nonews\.migration-snapshot\.[0-9a-f]{32}\.count', key):
+                continue
+            kept += 1
+            if kept <= SNAPSHOT_KEEP:
+                continue
             old_prefix = key[:-5]
             db.execute('DELETE FROM app_settings WHERE key=? OR (key>=? AND key<?)',
                        (key, old_prefix + '0', old_prefix + ':'))
@@ -197,12 +305,35 @@ def snapshot_report(db, report):
 
 def editor_review_digest(db, connection, choices, editor_services, report):
     services = {identity: configuration._record(db, 'service', identity)['endpoint'] for identity in editor_services.values()}
-    jobs = [{key: row[key] for key in ('id', 'kit', 'blocked', 'editorTarget', 'editorServiceId', 'proposedEditorServiceId')}
-            for row in report['pending'] if row['editorTarget']]
+    if isinstance(report['pending'], StagedRows):
+        pending = (json.loads(row[0]) for row in db.execute('SELECT payload FROM migration_preview_pending ORDER BY job_id'))
+    else:
+        pending = iter(sorted(report['pending'], key=lambda row: row['id']))
+    jobs = ({key: row[key] for key in ('id', 'kit', 'blocked', 'editorTarget', 'editorServiceId', 'proposedEditorServiceId')}
+            for row in pending if row['editorTarget'])
     payload = {'serviceId': connection['id'], 'endpoint': connection['endpoint'], 'checkedAt': connection['checkedAt'],
                'targets': connection['targets'], 'choices': choices, 'models': report['models'],
-               'editorServices': editor_services, 'services': services, 'jobs': sorted(jobs, key=lambda row: row['id'])}
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
+               'editorServices': editor_services, 'services': services, 'jobs': jobs}
+    encoder = json.JSONEncoder(sort_keys=True, separators=(',', ':'), ensure_ascii=True)
+    digest = hashlib.sha256()
+    digest.update(b'{')
+    for index, key in enumerate(sorted(payload)):
+        if index:
+            digest.update(b',')
+        digest.update(json.dumps(key, ensure_ascii=True).encode('ascii') + b':')
+        if key in {'models', 'jobs'}:
+            digest.update(b'[')
+            for position, item in enumerate(payload[key]):
+                if position:
+                    digest.update(b',')
+                for piece in encoder.iterencode(item):
+                    digest.update(piece.encode('ascii'))
+            digest.update(b']')
+        else:
+            for piece in encoder.iterencode(payload[key]):
+                digest.update(piece.encode('ascii'))
+    digest.update(b'}')
+    return digest.hexdigest()
 
 
 def command(db, action, body):
@@ -222,11 +353,12 @@ def command(db, action, body):
             not isinstance(key, str) or not isinstance(value, str) for key, value in editor_services.items()):
         raise configuration.ConfigurationError('A current Magpie directory and valid choices are required')
     if action == 'preview':
+        db.execute('PRAGMA temp_store=FILE')
         with transaction(db):
             connection = configuration._record(db, 'service', body.get('serviceId'))
             if connection['stale'] or connection['type'] != 'magpie':
                 raise configuration.ConfigurationError('Magpie directory is stale')
-            report = preview(db, connection['targets'], choices, connection['id'], editor_services)
+            report = preview(db, connection['targets'], choices, connection['id'], editor_services, staged=True)
             receipt = {'token': uuid.uuid4().hex,
                        'digest': editor_review_digest(db, connection, choices, editor_services, report)} if editor_services else {}
             save(db, 'nonews.migration-editor-review', json.dumps(receipt))
