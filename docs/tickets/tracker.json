@@ -34,7 +34,13 @@
       "followup_base": "2e3edb06c79e73664f1e62958346a72134fdc820",
       "followup_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
       "accepted_followup_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
-      "followup_integration_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c"
+      "followup_integration_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 39,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "02": {
       "url": "https://github.com/lostwildland/NoNews/issues/4",
@@ -54,7 +60,13 @@
       "integration_head": "e3c6b152214ff4897d5c122c86fed0846c540736",
       "resolution_comment": "https://github.com/lostwildland/NoNews/issues/4#issuecomment-6458171742",
       "pull_request": "https://github.com/lostwildland/NoNews/pull/33",
-      "pull_request_state": "merged"
+      "pull_request_state": "merged",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "03": {
       "url": "https://github.com/lostwildland/NoNews/issues/5",
@@ -67,13 +79,19 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Original Terra high owner started fullT03. First source checkpoint raises bounded transport and tests authenticated200000byte input only; no prompt persistence/response/UI claim. Owner continued actual durable configuration/prompt workflows. Native/heavy resource reservedT30.",
+      "implementation_state": "Original owner recovered/pushed durableconfiguration, nativepane and Magpie migration source; local/remote4075a7dmatch/clean. Focused systemPython fixture checks passed with optionalskip, nativeclient fixture typechecked but unexecuted; preferences/Keychain/declaredruntime/UI/fullbinding and reviews remainpending. No newworktree/nativegrant.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "7a204a1f92212ea49d022f4b93cc34f56d824ee1",
+      "last_reported_head": "4075a7d85870d89872e179aa277050ccbef8b850",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
-      "review_evidence": "docs/acceptance/t03-native-processing-configuration.md (worker worktree; not accepted)"
+      "review_evidence": "docs/acceptance/t03-native-processing-configuration.md (worker worktree; not accepted)",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -84,7 +102,13 @@
       "native_parent": true,
       "native_blockers": [
         "03"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 15,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "05": {
       "url": "https://github.com/lostwildland/NoNews/issues/7",
@@ -95,7 +119,13 @@
       "native_parent": true,
       "native_blockers": [
         "04"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 12,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "06": {
       "url": "https://github.com/lostwildland/NoNews/issues/8",
@@ -106,7 +136,13 @@
       "native_parent": true,
       "native_blockers": [
         "04"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "07": {
       "url": "https://github.com/lostwildland/NoNews/issues/9",
@@ -117,7 +153,13 @@
       "native_parent": true,
       "native_blockers": [
         "06"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 12,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "08": {
       "url": "https://github.com/lostwildland/NoNews/issues/10",
@@ -165,7 +207,13 @@
         "08",
         "09",
         "10"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 3,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "12": {
       "url": "https://github.com/lostwildland/NoNews/issues/14",
@@ -177,7 +225,13 @@
       "native_blockers": [
         "11",
         "07"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "13": {
       "url": "https://github.com/lostwildland/NoNews/issues/15",
@@ -200,7 +254,13 @@
       "native_blockers": [
         "12",
         "13"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "15": {
       "url": "https://github.com/lostwildland/NoNews/issues/17",
@@ -225,7 +285,13 @@
       "native_blockers": [
         "11",
         "13"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 15,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "17": {
       "url": "https://github.com/lostwildland/NoNews/issues/19",
@@ -237,7 +303,13 @@
       "native_blockers": [
         "07",
         "16"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 69,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "18": {
       "url": "https://github.com/lostwildland/NoNews/issues/20",
@@ -249,7 +321,13 @@
       "native_blockers": [
         "11",
         "17"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 11,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "19": {
       "url": "https://github.com/lostwildland/NoNews/issues/21",
@@ -260,7 +338,13 @@
       "native_parent": true,
       "native_blockers": [
         "11"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 5,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "20": {
       "url": "https://github.com/lostwildland/NoNews/issues/22",
@@ -272,7 +356,13 @@
       "native_blockers": [
         "02",
         "11"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 9,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "21": {
       "url": "https://github.com/lostwildland/NoNews/issues/23",
@@ -285,7 +375,13 @@
         "01",
         "13",
         "19"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 56,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "22": {
       "url": "https://github.com/lostwildland/NoNews/issues/24",
@@ -297,7 +393,13 @@
       "native_blockers": [
         "04",
         "21"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 83,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "23": {
       "url": "https://github.com/lostwildland/NoNews/issues/25",
@@ -309,7 +411,13 @@
       "native_blockers": [
         "04",
         "13"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "24": {
       "url": "https://github.com/lostwildland/NoNews/issues/26",
@@ -365,7 +473,13 @@
         "22",
         "23",
         "25"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 80,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "28": {
       "url": "https://github.com/lostwildland/NoNews/issues/30",
@@ -382,7 +496,13 @@
         "20",
         "21",
         "23"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 4,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "29": {
       "url": "https://github.com/lostwildland/NoNews/issues/31",
@@ -399,7 +519,13 @@
         "20",
         "25",
         "28"
-      ]
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
     },
     "30": {
       "url": "https://github.com/lostwildland/NoNews/issues/32",
@@ -433,10 +559,11 @@
         "28",
         "29"
       ],
-      "implementation_state": "R9 source migration checkpoint596f744 syntax-only; original owner now granted behavioralred/typecheck/focused/overlap/full/build nativevalidation. Historical774passes at a92a072 remain separate; fresh reviews/fullT30 open.",
+      "implementation_state": "Source0684856/evidence8f392da validated:189focused/786fullMac,zero diskIO/vnode; normalbuild/deepsignature and genericiOSSimulatorbuild. Root independently read actionlog/signature/iOSsuccess. Fresh84path review pending; paired10pathArticlesDatabase R10 found1inheritedSQLfailureP2, coordinator correction+regression parse-only; no integration or fullT30 acceptance. Coordinator correctiona28f3f0 committed/pushed, parse-only; original native evidence not upgraded. R11queues/network10paths Standards1Downloader testscopeP2/Spec0. Freshfree28GiB/no competingXcode permitted originalowner nativeSQLvalidation, sourceboundaries retained.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "596f74423b81e21a92f473df37faa22d3fc740cb",
-      "review_evidence": "docs/acceptance/t30-storage-review-r9.md"
+      "last_reported_head": "a28f3f05ca3dc848314d7a92c4781a80ef4b4039",
+      "review_evidence": "docs/acceptance/t30-article-storage-review-r10.md",
+      "review_coverage": "docs/acceptance/t30-review-coverage.json"
     }
   },
   "spec": {

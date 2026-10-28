@@ -1,0 +1,11 @@
+# T30 queue and network review R11
+
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; pin `8f392da024de869d3055609eaca111baa4cd7eb8`. Both reviewers checked all ten assigned changed-hunk sets, both new database tests in full, and the queue, Account close/retry, sync reset and local download/parse seams. The ten blobs also match subsequent `a28f3f0`; its separate article-query correction was excluded.
+
+Standards: one source-derived P2. `Downloader.shared` installs `TestingURLProtocol` under unit tests but does not stamp requests with the current test ID. Scoped responses may therefore be missed and concurrent tests may share synthetic responses/counts. The coordinator confirmed the missing header and the existing pattern in `URLSession+Webservice.swift`. The singleton's response cache and in-flight callback coalescing also use URL alone, so a correction must inspect the same-URL cross-scope case rather than assume a header alone establishes isolation. No behavioral reproduction or fix is claimed yet. The current native owner was told to keep this separate from the running article-query validation.
+
+The Standards reviewer also noted that short admission mutexes depart from the older threading guidance preferring lock-free isolated work. This is recorded for the owner's final connected assessment, not classified as another established P2 or permission to refactor the architecture. Review must distinguish the state/queue-submission critical section from executing SQL, parsing or user callbacks under a lock. No separate material Fowler smell was found.
+
+Spec: zero actionable P1/P2 in the traced lifetime scope. Admission orders queued work before close, failed SQLite close retains the handle for retry, Account drains accepted work before network suspension, and rejected callbacks have explicit completion paths. Provider-specific deferred network/error/rollback chains and exhaustive consumer call sites remain separate work. Neither review ran tests/builds/apps or established all interleavings.
+
+Assigned paths: Account `FeedSettingsDatabase`; Images `ImageMetadataDatabase`; RSDatabase `DatabaseQueue`, `DatabaseWork`, `FMDatabase.m`, `DatabaseCloseTests`, `DatabaseQueueShutdownTests`; RSWeb `DownloadSession`, `Downloader`; SyncDatabase `SyncDatabase`. This is a ten-path source verdict, not full T30 acceptance.

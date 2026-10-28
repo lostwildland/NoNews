@@ -10,9 +10,11 @@ Owner: root orchestrator. Goal: docs/goal-contract.md. Start: NNW d9ec7df; IO cu
 - [ ] Full personal migration, sync and live journey acceptance; reconcile matrix and final cleanup.
 
 ## Next Step
-T00/T01/T02 accepted (3/31): T02 source920efef/evidence567cc9e has clear paired source/connected reviews, current Python62pass/1optionalSkip, CI747, signed-bundle11 and coordinator CUAReady→Stopped→Ready. Integration e3c6b15 is pushed, PR33 merged and issue4 closed with resolution6458171742; T03 is claimed and starts from this accepted API. T30 checkpoint596f744 cancellation/refresh migration is syntax-only; its original owner now has native resource for red/typecheck/green/full/build validation. T03 may implement source/tests but must coordinate heavy/native use after T30 release. All remaining IO feature/migration/sync/UX journeys stay open.
+T00/T01/T02 accepted (3/31). T03 original owner recovered and pushed configuration/native/migration checkpoints4075a7d; native preferences/Keychain/package/UI checks remain open. T30 source0684856/evidence8f392da has786 Mac passes, generic iOS Simulator build and normal signature proof. Article-storage R10 found an inherited SQL-failure P2, corrected source-only at a28f3f0; its original owner now has the serialized native resource to reproduce/validate that correction. Queue/network R11 found a separate test-scope isolation P2, still unresolved. Other84-path review groups remain pending. Disk independently changed from5.4 to28GiB free without root cleanup; no simultaneous builds, new worktrees or broad cleanup in this phase. Reuse existing outputs, retain source/evidence boundaries and recheck capacity. All remaining IO feature/migration/sync/UX journeys stay open.
 
 ## Errors Encountered
+- T03 ordinal2 provider turn failed; actual worktree retains a719dd3 plus uncommitted configuration/native/migration work. Same owner resumed, without discarding edits or guessing a disk-related cause.
+- Script-inventory recheck found two changed source hashes; regenerated the inventory and independently reread all106 entries before publication.
 - Initial schema search used backend/db.py (absent); actual schema entry is backend/schema.py, version 41.
 - Prior ADR/journey incorrectly accepted Draft preview and required reading before integrations; corrected before implementation.
 - Installed gh rejects combined --slurp/--jq; native subissue readback uses a single per_page=100 response instead.

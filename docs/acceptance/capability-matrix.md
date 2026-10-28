@@ -6,6 +6,8 @@ The [command-to-ticket audit](../research/io-command-ticket-coverage.md) classif
 
 The [maintenance/helper follow-up](../research/io-maintenance-port-surfaces.md) expands E2/E3/F7 into the six evidence families below. It samples source entry points beyond HTTP; it does not claim exhaustive script or live-installation coverage. Source implementation and NoNews acceptance remain separate.
 
+The [script entry-point coverage](../research/io-script-ticket-coverage.md) adds a complete 106-entry filename/hash inventory under the observed `scripts/` tree, including aliases and untracked source helpers. Its ticket assignments are audit obligations, not proof that every file is active or ported. Owning tickets and final T30 must record each retained behavior or justified compatibility/supporting disposition; the 41-family baseline is not a cap on capability coverage.
+
 | ID | Existing capability | Owning tickets | Status | Evidence |
 | --- | --- | --- | --- | --- |
 | A1 | 接入持续更新的订阅 | [T02](https://github.com/lostwildland/NoNews/issues/4), [T04](https://github.com/lostwildland/NoNews/issues/6) | not implemented in NoNews | source inventory only; native verification pending |

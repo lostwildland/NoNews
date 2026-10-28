@@ -1,0 +1,11 @@
+# T30 article storage review R10
+
+Base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; reviewed candidate `8f392da024de869d3055609eaca111baa4cd7eb8`. Both reviewers verified the ten `Modules/ArticlesDatabase` path blobs, the nonempty original-base diff, commit log and whitespace. They read every changed hunk and the new cancellation test file in full, tracing queue admission, direct Account reads/writes and Feedbin reconciliation. Other consumers, providers and initialization/migration completions remain separate review work.
+
+Standards: one P2. `StatusesTable.fetchArticleIDsAsync` reported SQL query failure as successful empty unread/starred IDs. Feedbin reconciliation subtracts those IDs from remote state, so a database failure could produce a false reconciliation delta. This predates the cancellation repair and was explicitly left unchanged in its evidence; it remains a material data-integrity risk. The finding is source-derived, not reproduced by the reviewer. No separate material smell was reported.
+
+Spec: zero actionable P1/P2 within the cancellation/lifetime scope. The reviewer explicitly excluded SQL-failure safety from that conclusion. It is not a finding that all storage errors or all connected callers are safe.
+
+The coordinator committed and pushed correction `a28f3f05ca3dc848314d7a92c4781a80ef4b4039`, including a synthetic queue/table regression, after both reviews completed. The shared unread/starred query now captures the actual FMDatabase error on the database queue and completes with failure. Existing throwing Account and Feedbin callers propagate that failure before calculating differences. The regression contrasts successful empty queries with a missing-table SQL failure for both unread and starred IDs. Swift frontend parsing and whitespace checks passed; no behavioral red/green, typecheck, full plan or final-source build has run for this correction. Those gates and a fresh correction review remain pending. The prior 786-test/build evidence applies to `0684856`, not this new source.
+
+The current ledger covers 84 paths in seven groups. This ten-path verdict is a bounded review, not fixture-slice integration, personal migration or full T30 acceptance.

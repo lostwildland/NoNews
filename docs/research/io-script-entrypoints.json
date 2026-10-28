@@ -1,0 +1,2138 @@
+{
+  "reference_head": "e9ba73f0b44a781ea68c0670114f9281f66f5cd3",
+  "source_boundary": "Dirty source checkout; per-file hashes identify bytes. No reference module or script was imported/executed. No private installation data, configuration, credentials or browser sessions were accessed.",
+  "scope": "Every non-hidden, non-bytecode file below scripts, without following directory symlinks. Source aliases, generated/vendor resources, dependency manifests and host templates are explicit entries.",
+  "entry_count": 106,
+  "source_kind_counts": {
+    ".php": 4,
+    ".py": 83,
+    ".plist": 3,
+    ".sh": 3,
+    ".js": 7,
+    ".cjs": 3,
+    "license": 1,
+    ".json": 1,
+    "source-alias": 1
+  },
+  "role_counts": {
+    "host-projection": 4,
+    "migration-component": 42,
+    "catalog-scope": 11,
+    "output-maintenance": 2,
+    "image-assets": 5,
+    "diagnostic": 1,
+    "bootstrap": 6,
+    "cleanup": 7,
+    "body-ownership": 4,
+    "operation-recovery": 3,
+    "acquisition-helper": 3,
+    "generated-helper": 1,
+    "external-helper": 7,
+    "helper-build": 1,
+    "vendor-dependency": 3,
+    "metadata-recovery": 1,
+    "note-reconciliation": 2,
+    "classification": 1,
+    "material-validation": 1,
+    "build-asset": 1
+  },
+  "role_meanings": {
+    "external-helper": "Preserve the configured authenticated Obsidian/Zotero action and its exact intent, target, identity and receipt semantics.",
+    "helper-build": "Build the retained helper; this is not a separate user capability.",
+    "generated-helper": "Account for the generated executable helper together with its source and build dependency.",
+    "vendor-dependency": "Account for the dependency and license used by a retained helper; no separate user action is implied.",
+    "bootstrap": "Replace personal host deployment with app-managed or explicitly configured lifecycle/setup while preserving the supported outcome.",
+    "acquisition-helper": "Preserve configured publisher/news acquisition, authentication continuity and material/error outcomes without copying private sessions into public source.",
+    "diagnostic": "Account for useful acquisition diagnostics; source presence is not a live provider check.",
+    "host-projection": "Preserve source/catalog/reader outcomes through native NNW and migration, adapting literal FreshRSS installation coupling.",
+    "build-asset": "Preserve renderer/filter behavior through the native implementation; no extra script button is required.",
+    "material-validation": "Preserve material/fidelity diagnostics and required integrity rules, with personal language preferences remaining configurable.",
+    "catalog-scope": "Preserve bounded passive catalog discovery/import/archive and verified scope changes separately from AI processing.",
+    "metadata-recovery": "Preserve official exact-identity abstract/category recovery, distinct from body acquisition and scoring.",
+    "classification": "Preserve bounded topic/taxonomy changes and verification while making personal choices configurable.",
+    "image-assets": "Preserve image ownership/catalog/authorization/readback scope; component wiring and remote bytes require separate evidence.",
+    "output-maintenance": "Preserve explicit historical formatting/lint maintenance without silent rewriting or imposing imported language preferences on new prompts.",
+    "note-reconciliation": "Preserve guarded note/bibliography updates and exact parent/version/ownership, without replacing current authored work.",
+    "cleanup": "Preserve reviewed scope, independent backup, eligibility, receipts and bounded recoverable outcomes; no automatic cleanup or purge.",
+    "body-ownership": "Preserve explicit body/Raw authority, backed-up repair/reset/reconciliation and exact rollback boundaries.",
+    "operation-recovery": "Preserve contradictory/partial/completed operation distinctions and conditional release without implicit rerun.",
+    "migration-component": "Account for the planner, identity, adapter, staged writer, backup, receipt or compatibility component in verified migration; preserve its actual source gates."
+  },
+  "http_dispatch": {
+    "source_sha256": "c0ef0cddb50f2caa186d2634c2c630be6d25239b8278159525ed333267bc9647",
+    "fragment_count": 54,
+    "unmapped": []
+  },
+  "evidence_boundary": "File/metadata inventory and candidate ticket bindings only. This does not establish that every file is an active user feature, audit behavior, implement a port, or prove production use. Owning tickets must inspect callers/contracts and account for retained outcomes. A main/argparse probe does not establish activation.",
+  "entries": [
+    {
+      "path": "scripts/align-literature-received.php",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "27"
+      ],
+      "role": "host-projection",
+      "tracked_in_reference": true,
+      "source_kind": ".php",
+      "sha256": "0c5a588780e5dd6350b94d89bdc774d0475f24a693fbb422de3641c736e0db1a"
+    },
+    {
+      "path": "scripts/align_literature_received.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "b00d195dfd9978963dc7813be39bdcf5a289fc12fc99d162639febf8b27e61fd"
+    },
+    {
+      "path": "scripts/apply-literature-scope.php",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "27"
+      ],
+      "role": "host-projection",
+      "tracked_in_reference": true,
+      "source_kind": ".php",
+      "sha256": "aa2012a4ab17d15718d943ad1d5b36982dbeadf8b3653722974263758cbb145e"
+    },
+    {
+      "path": "scripts/archive_empty_literature_placeholders.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--archive",
+        "--item",
+        "--batch",
+        "--report",
+        "--apply",
+        "--restore"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "07efaaed4afbde1fd31b1ef4c468f29707193b048808d65ae85bf8046d21af2a"
+    },
+    {
+      "path": "scripts/archive_paper_sources.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--db",
+        "--root",
+        "--output",
+        "--plan",
+        "--expected-plan-sha256",
+        "--artifact-root",
+        "--receipt"
+      ],
+      "argparse_subcommands": [
+        "plan",
+        "apply",
+        "consolidate-plan",
+        "consolidate-apply"
+      ],
+      "python_main_probe": true,
+      "sha256": "3686f489e3a97423110cbf182a34dac191847dd4342048f260928a584a6d6097"
+    },
+    {
+      "path": "scripts/backfill_journal_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "5211b1c3d5c384410da023519e2345cdcc9394974ca10b730b9d666b5f623da0"
+    },
+    {
+      "path": "scripts/backfill_news_draft_block_shape.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "03",
+        "11",
+        "27"
+      ],
+      "role": "output-maintenance",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "dcb281bd6dcdd63fe40ff040559712cc97309be3dc1d6e3c3a4e18b7877907ba"
+    },
+    {
+      "path": "scripts/backfill_source_images.py",
+      "primary_ticket": "19",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "image-assets",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "05a330f84f7053e63a0a30a8e54ab206d23d7eaac7a838dcb134d5d3bd702a30"
+    },
+    {
+      "path": "scripts/backup_literature_redesign.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--preflight",
+        "--backup",
+        "--restore-verify",
+        "--discover",
+        "--print-receipt-anchor",
+        "--manifest",
+        "--approval",
+        "--allow-unapproved-manifest",
+        "--source-config",
+        "--source-config-out",
+        "--destination",
+        "--run-id",
+        "--backup-dir",
+        "--tasknote",
+        "--expected-run-id",
+        "--restore-dir",
+        "--report",
+        "--json",
+        "--reserve-bytes",
+        "--overhead-ratio",
+        "--tmp-dir",
+        "--integrity",
+        "--fingerprint-databases",
+        "--db-drift-policy",
+        "--probe-write",
+        "--require-quiet-interval",
+        "--include-kind",
+        "--include-action",
+        "--max-files",
+        "--allow-scope-override-backup",
+        "--allow-same-device",
+        "--restore-samples-per-kind",
+        "--restore-all-files",
+        "--discovery-container",
+        "--discovery-mount",
+        "--discovery-user-db",
+        "--discovery-volume-root",
+        "--discovery-io-db",
+        "--discovery-zotero-db",
+        "--discovery-allowed-root",
+        "--discovery-writers-stopped"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "9e9d40e0e2f492c35b3ed9cb81edb460d44ff6347d5c574d98f663e9245595c8"
+    },
+    {
+      "path": "scripts/build_literature_maintenance.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "9315cc987d3c716de4af58b8970289b2471f4d540ca8e56e04490adc9404b959"
+    },
+    {
+      "path": "scripts/check-news-sites.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "05"
+      ],
+      "role": "diagnostic",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--mode",
+        "--port",
+        "--pause",
+        "--manual-wait",
+        "--timeout",
+        "--only"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "bb5e7ef2eca134f75b6186bcb76c14288a2ed0ccf0e9b01b22f6a772b37f6198"
+    },
+    {
+      "path": "scripts/com.information-os.bridge.plist",
+      "primary_ticket": "20",
+      "supporting_tickets": [
+        "02",
+        "17",
+        "18"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".plist",
+      "sha256": "e73718b5460acd24d47a21b4e5956d39d2c10bf6af9edcb88181732fad8d2eb1"
+    },
+    {
+      "path": "scripts/com.information-os.browser.plist",
+      "primary_ticket": "28",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "20"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".plist",
+      "sha256": "7e8c65d3798910b925bd6bdf68b0c8a34a9bb3af16f408cfe167d2f10ede9c2f"
+    },
+    {
+      "path": "scripts/com.information-os.paywall-extension.plist",
+      "primary_ticket": "28",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "20"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".plist",
+      "sha256": "44982a9798920792f71906066126d4e7f2e464efdb4a04963ef32cfad5ff7e62"
+    },
+    {
+      "path": "scripts/consolidate-freshrss-literature.php",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "27"
+      ],
+      "role": "host-projection",
+      "tracked_in_reference": true,
+      "source_kind": ".php",
+      "sha256": "9675d2a5e5a96621e02ad7a35c121b831daf990a0026d589c34641c98973cdc4"
+    },
+    {
+      "path": "scripts/consolidate_literature.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "0679f041e3284adc30ead8b51a9828693b76e7fab0c6586e7322946377c34def"
+    },
+    {
+      "path": "scripts/discover_arxiv_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "a1e4a893075e12bc84052ad3e3da10ae6cea82e77a5e2616f61198a10b4eb173"
+    },
+    {
+      "path": "scripts/discover_conference_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "858d515bfd99e40d5b2aa19e1bac6881a2ce40c110495547a77475f58bf9c6f4"
+    },
+    {
+      "path": "scripts/import_journal_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "90f30aa32bda5d10f4de7cb474a18973964b30eecc186593b54f4800cb4ce27a"
+    },
+    {
+      "path": "scripts/import_literature_history.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "cc11795a3ebc40b30b165a4e867702bd7997fe40a258535898d4499cf05ddb74"
+    },
+    {
+      "path": "scripts/import_scoped_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "eb4c0cf973a22d49ae34ddecf341abd852654307dbb5699a45e8911bfc2f7684"
+    },
+    {
+      "path": "scripts/inventory_literature_assets.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "c2879525970e2f0660a7f60238055720e75d120e5b5ddc67c2ba0a9c5b564803"
+    },
+    {
+      "path": "scripts/lint_existing_editorial_text.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "03",
+        "11",
+        "27"
+      ],
+      "role": "output-maintenance",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--db",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "112f5b0f5a1d68230f36a7c574408bac9caa52f9d36a355524c6f567b9eb8d8f"
+    },
+    {
+      "path": "scripts/literature_backfill_retained_drafts.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--media",
+        "--io-db",
+        "--vault-root",
+        "--index",
+        "--report-dir",
+        "--apply",
+        "--raw-root",
+        "--artifacts-root",
+        "--approval",
+        "--backup-receipt",
+        "--restore-report",
+        "--tasknote",
+        "--writer",
+        "--freshrss-db",
+        "--verify-samples",
+        "--limit"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "56ddba3a845051690cc701765240d675297d42e3dc6ba5b7e313f0354656e749"
+    },
+    {
+      "path": "scripts/literature_batch_remainder.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--chunk",
+        "--workers-dir",
+        "--out",
+        "--io-db",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "48c9e38a3d2d2b9f7cd8c7fadd4042a9985d9161174ae91329ed2b2f2eb7b9b5"
+    },
+    {
+      "path": "scripts/literature_batch_runner.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--batch",
+        "--out",
+        "--manifest",
+        "--approval",
+        "--backup-dir",
+        "--restore-report",
+        "--tasknote",
+        "--raw-root",
+        "--vault-root",
+        "--allowed-root",
+        "--io-db",
+        "--artifacts-root",
+        "--canonical-manifest-hash",
+        "--expect-manifest-hash",
+        "--expect-assets-sha256",
+        "--raw-receipt-dir",
+        "--group-receipt-dir",
+        "--note-receipt-root",
+        "--io-draft-receipt-root",
+        "--zotero-db",
+        "--apply",
+        "--verify",
+        "--stop-after"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "b0bce3efeffa348cdb555e578f118a8dc4a0b03c91b47742ad8cdbca5f83aa48"
+    },
+    {
+      "path": "scripts/literature_batch_worker.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--chunk",
+        "--out",
+        "--manifest",
+        "--approval",
+        "--backup-dir",
+        "--restore-report",
+        "--tasknote",
+        "--raw-root",
+        "--vault-root",
+        "--allowed-root",
+        "--io-db",
+        "--artifacts-root",
+        "--canonical-manifest-hash",
+        "--expect-manifest-hash",
+        "--expect-assets-sha256",
+        "--raw-receipt-dir",
+        "--group-receipt-dir",
+        "--note-receipt-root",
+        "--io-draft-receipt-root",
+        "--zotero-db",
+        "--apply",
+        "--verify",
+        "--label"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "b9ab339c6f18d5b7bb7c34bfdcf832ad377d95a0f6701e2d7a496ca578c66cc0"
+    },
+    {
+      "path": "scripts/literature_bind_draft_mappings.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault-root",
+        "--report-dir",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "e08fe99885f4c8b65c8b80ae9ffc95b0b35e768253507d0580438e5dddadd1ee"
+    },
+    {
+      "path": "scripts/literature_body_fill.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--apply",
+        "--db",
+        "--raw-backup"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "2cc226e579b8605e713cb43c701b58b36f6ad613796ce1cd819d56ba81b15b91"
+    },
+    {
+      "path": "scripts/literature_body_first.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--vault",
+        "--backup",
+        "--apply",
+        "--limit"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "442bdd27b165cf570e684636525ada20035bd437fd2b87fe60c3b0795ffecd48"
+    },
+    {
+      "path": "scripts/literature_body_from_old_raw.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--db",
+        "--vault",
+        "--old-raw",
+        "--report",
+        "--apply",
+        "--limit"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "19e05277b8c4208d25010bf2c0e066b6d4a704b01a88e12e2751b1f6328582f3"
+    },
+    {
+      "path": "scripts/literature_cleanup_batch.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "4cb2312c3790bb254ba695c7f50e48d6e69f000616538e12d6e9222fdaff25f4"
+    },
+    {
+      "path": "scripts/literature_cleanup_current_screen.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "a846d52f6c33a65240dd6985f51326d6efa34ed9c9d7fe22bcbc98768623c0d1"
+    },
+    {
+      "path": "scripts/literature_cleanup_eligibility.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--group-receipt",
+        "--post-hoc-receipt",
+        "--vault",
+        "--zotero-db",
+        "--io-db"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "f98ec0e06f0fdafa4341a47cfae4ed274f716814024753f16f729095042fdc7f"
+    },
+    {
+      "path": "scripts/literature_cleanup_raw_tree.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "0cd8066534e94b24f90460d77a38992701ac194e885347573ba48cc93a606b0b"
+    },
+    {
+      "path": "scripts/literature_cleanup_sample.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "368d76bf62aba1ac9b60f18ee6a0d7e7fd40ba64d7602eb1c032fbfe77bec8e7"
+    },
+    {
+      "path": "scripts/literature_cleanup_screen.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "c7bd65fa9ff2ac0644558d9acdbae6e198a4d8fb00cd07c247046bd3be9b92b0"
+    },
+    {
+      "path": "scripts/literature_group_executor.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "b524eee1733fd6a0c83b3a426cfde282dd233ec741f3f43bf98ba8fc6aaca8c0"
+    },
+    {
+      "path": "scripts/literature_group_production_caller.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--manifest",
+        "--approval",
+        "--backup-dir",
+        "--restore-report",
+        "--tasknote",
+        "--group",
+        "--raw-root",
+        "--allowed-root",
+        "--vault-root",
+        "--zotero-db",
+        "--io-db",
+        "--canonical-manifest-hash",
+        "--expect-asset-id",
+        "--expect-manifest-hash",
+        "--expect-assets-sha256",
+        "--apply",
+        "--artifacts-root",
+        "--index-path",
+        "--raw-receipt-dir",
+        "--group-receipt-dir",
+        "--note-receipt-root",
+        "--io-draft-receipt-root",
+        "--writer-contract",
+        "--note-writer-policy",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "cfa3e4c55b44921e3950558d096194e577ff11775cfee9af1b71be3b685d7c8b"
+    },
+    {
+      "path": "scripts/literature_group_receipt.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "c72521136bee1b09cb1196fc7afd3529abc2e31c870577a88a2e35495020ef08"
+    },
+    {
+      "path": "scripts/literature_image_preupload.py",
+      "primary_ticket": "19",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "image-assets",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "9133c01642b9e31d2018fed181331fc56b50ff59ac71f5424c8efec9600e4d2c"
+    },
+    {
+      "path": "scripts/literature_image_public_readback.py",
+      "primary_ticket": "19",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "image-assets",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "f526596f161447c0d9c5a11a9b39938d255a4f1934cc691712f15301d9a2d3da"
+    },
+    {
+      "path": "scripts/literature_io_body_reconciliation.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "22",
+        "27"
+      ],
+      "role": "body-ownership",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--report-dir"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "2fb6d2e686d7259d85fcfd3bb47196f278ca5c544a627a7671e729876e8490d6"
+    },
+    {
+      "path": "scripts/literature_io_draft_backup.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "d3f4ea541166d3d22fd243501ab9216fdd361ea5da1a01cf4aa87c4ffb1bbac0"
+    },
+    {
+      "path": "scripts/literature_io_draft_source.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "df1003e787ebf63def5f200210858d8e3a2bbd5f3e81c1670e5f9cbc615a2fdc"
+    },
+    {
+      "path": "scripts/literature_io_draft_target.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "5db3d3e976bdbd157ffd7dc11e2391fa5f445fa2126db2d240d6139805e4929e"
+    },
+    {
+      "path": "scripts/literature_legacy_body_inventory.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--report-dir"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "e1f0d66a4826e4068850b9774761b9e9847bfc7da5b40722dec75b2126deb373"
+    },
+    {
+      "path": "scripts/literature_main_note_readback.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "702b351bc76fb2cbf2303abe7774f76258b031db1c96081b9fb62e44ad9c45a9"
+    },
+    {
+      "path": "scripts/literature_migration_gate.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--manifest",
+        "--approval",
+        "--backup-dir",
+        "--restore-report",
+        "--tasknote",
+        "--group",
+        "--raw-root",
+        "--allowed-root",
+        "--vault-root",
+        "--zotero-db",
+        "--io-db",
+        "--canonical-manifest-hash",
+        "--upload-evidence",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "5a7ab2bc6da5d70c05c8937f5143da2ffaeb537876f3826e6320c4225f34857d"
+    },
+    {
+      "path": "scripts/literature_news_fulltext_durability.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "22",
+        "27"
+      ],
+      "role": "body-ownership",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--freshrss-db",
+        "--io-db",
+        "--vault",
+        "--audit",
+        "--report-dir",
+        "--entry-id",
+        "--limit",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "8fd21aa7f27ed486d9676c43b3fb669c5f09240f29d7609041888f765fbf1284"
+    },
+    {
+      "path": "scripts/literature_operation_transition.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "20",
+        "22",
+        "27"
+      ],
+      "role": "operation-recovery",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--group",
+        "--action",
+        "--reconciliation",
+        "--apply",
+        "--io-db",
+        "--vault",
+        "--chunks",
+        "--note-receipts",
+        "--io-draft-receipts",
+        "--report-dir",
+        "--receipt-dir"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "d8d407e31abe05ba346bbe21e7e9ca63415987c6c585572cd38c3eb266aa7730"
+    },
+    {
+      "path": "scripts/literature_post_hoc_certify.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--zotero-db",
+        "--chunks",
+        "--note-receipts",
+        "--draft-receipts",
+        "--index",
+        "--out",
+        "--report",
+        "--group",
+        "--apply",
+        "--dry-run"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "12956d0201f56e9eb74648c18a3c5c6e9790a48578881fdcdb95a0369da22b73"
+    },
+    {
+      "path": "scripts/literature_post_hoc_group_receipt.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "72bd1daf4a1528b6c428a9b832c95b54d46f1f6df902205867e4685fec32a57f"
+    },
+    {
+      "path": "scripts/literature_provision_file_keys.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--manifest",
+        "--batch",
+        "--vault",
+        "--io-db",
+        "--raw-root",
+        "--artifacts-root",
+        "--apply",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "1b649b1377cde7a01e79eabfdaabf586b20fafc8059c13aa5a74ed5abe2f01f4"
+    },
+    {
+      "path": "scripts/literature_raw_apply.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "5a2f8e26a1e9961f4dbaafffb8adec58f64aa1e0a2d62e8676d723480d0d55fe"
+    },
+    {
+      "path": "scripts/literature_raw_stage.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "c7d07d55980d3f34a0889a792b61c1c1fc8e4651526d574fe1e34ee00ed0e7ce"
+    },
+    {
+      "path": "scripts/literature_reconcile_stuck_groups.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "20",
+        "22",
+        "27"
+      ],
+      "role": "operation-recovery",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--chunks",
+        "--note-receipts",
+        "--group-receipts",
+        "--out"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "f3a0cabeeeed597440ffdd524079dabe38276620e8350b05e5eefa8986fe9c41"
+    },
+    {
+      "path": "scripts/literature_release_stuck_group.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "20",
+        "22",
+        "27"
+      ],
+      "role": "operation-recovery",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--group",
+        "--io-db",
+        "--reconciliation",
+        "--report-dir",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "ba0ea211dd4fc2877ed78a19faf3aa0b51efb694e1ad6783c674422ed77ef408"
+    },
+    {
+      "path": "scripts/literature_retire_undecided_news_texts.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--db",
+        "--freshrss-db",
+        "--backup",
+        "--report",
+        "--apply",
+        "--limit"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "4f2daafec11d18846259b23f2de09b2fb76b475e76f2cb0eff552edc32a8bfab"
+    },
+    {
+      "path": "scripts/literature_verified_asset_receipt.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "35d978c59c7d6ec4cde67c0f716a4b7160427e23d9b6c7442903bf45e675b37e"
+    },
+    {
+      "path": "scripts/literature_verify_migrated_group.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--vault",
+        "--group-receipt",
+        "--io-db",
+        "--item-id",
+        "--group-id",
+        "--note-receipt-root",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "744f5e969b015c303af4007a9a6c2c1478c574252ff19e21bac775a758bdbe25"
+    },
+    {
+      "path": "scripts/literature_zotero_note_conversion.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "16",
+        "17",
+        "21"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "d367064bc803cd2c1e330a114d3e478cea0155fa515477bbdc7d33d33820b2ff"
+    },
+    {
+      "path": "scripts/literature_zotero_note_source.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "16",
+        "17",
+        "21"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "4c94674525974087ea5ef1bdfb55149dd1130d0d686feb83241733d372a7bc5a"
+    },
+    {
+      "path": "scripts/literature_zotero_note_target.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "16",
+        "17",
+        "21"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "7acfd793d6b22a595d1ac279dc164e406c8f3cbf6b91405ded60127615bd76b6"
+    },
+    {
+      "path": "scripts/media_audit.py",
+      "primary_ticket": "19",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "image-assets",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--check-remote",
+        "--limit",
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "051a6cf4500833193e8a1c6519e8e1bab9f5a27a5852ab15b8188d40379ee56f"
+    },
+    {
+      "path": "scripts/media_catalog.py",
+      "primary_ticket": "19",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "image-assets",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--catalog",
+        "--database",
+        "--report",
+        "--apply",
+        "--limit"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "8ec66a1e2becce4cbf25ccd58d8a42da2ad6ea901cbdcaf45cee3780216603b7"
+    },
+    {
+      "path": "scripts/migrate_legacy_obsidian_content.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--index",
+        "--report",
+        "--item",
+        "--kinds",
+        "--batch",
+        "--frozen-raw-root",
+        "--reconstruct-draft-scaffolds",
+        "--limit",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "87880799df7cef91496c575b27b05954f1892af13256f8172b9af32061df8c0e"
+    },
+    {
+      "path": "scripts/news-browser.sh",
+      "primary_ticket": "07",
+      "supporting_tickets": [
+        "05",
+        "22"
+      ],
+      "role": "acquisition-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".sh",
+      "sha256": "bb95cd02de79e19785d7c6886c023325d454decf6b24fba2f058e7b6838e9a21"
+    },
+    {
+      "path": "scripts/obsidian/adopt-paper-digest.bundle.js",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "generated-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "657115263f07c6c9bdda4bb634a5cbb7494004214ea89c2deb98cabfe5f7aa17"
+    },
+    {
+      "path": "scripts/obsidian/adopt-paper-digest.js",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "0dd083bcb74d55307f4114a2aab1e818c3574c797286233c225cced17c059f3e"
+    },
+    {
+      "path": "scripts/obsidian/adopt-paper-digest.quickadd.js",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "03671343d2683f63bb7aca2c6749311d9c9efbfc473e1d734c7fe7af38447952"
+    },
+    {
+      "path": "scripts/obsidian/build-adopt-bundle.cjs",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "helper-build",
+      "tracked_in_reference": true,
+      "source_kind": ".cjs",
+      "sha256": "6374506734f855047bbd60af17bbf631ff69ac4b4167e87f7b667d8b9757a5b9"
+    },
+    {
+      "path": "scripts/obsidian/intent-helper.py",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "334db8049dea4882ff699591eaf43c04de908c7a4a1b4e9e941333c39b110ef1"
+    },
+    {
+      "path": "scripts/obsidian/receipt-sync.quickadd.js",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "2f4e9703321bcc408c5ba8108eeaea9aaae12a9664e7801ca492a5ccb29c2c07"
+    },
+    {
+      "path": "scripts/obsidian/vendor/js-yaml/LICENSE",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "vendor-dependency",
+      "tracked_in_reference": true,
+      "source_kind": "license",
+      "sha256": "a07bc24468b9654ce76a547d47a2db282d07733b715db4c73a98bd63961f9550"
+    },
+    {
+      "path": "scripts/obsidian/vendor/js-yaml/js-yaml.umd.min.js",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "vendor-dependency",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "02970a652376ad653ff069c606ee7440b0514f52ed94a98426cb52426c8e5a02"
+    },
+    {
+      "path": "scripts/obsidian/vendor/js-yaml/manifest.json",
+      "primary_ticket": "18",
+      "supporting_tickets": [
+        "17"
+      ],
+      "role": "vendor-dependency",
+      "tracked_in_reference": true,
+      "source_kind": ".json",
+      "sha256": "ab37f5ca6f56f66f979647aa646d4f9c8df5285c872a18ecd1e228ec38225127"
+    },
+    {
+      "path": "scripts/plan_literature_redesign.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--zotero-db",
+        "--raw-root",
+        "--literature-root",
+        "--out-dir",
+        "--journal-registry",
+        "--image-aliases",
+        "--arxiv-evidence",
+        "--hash-files",
+        "--no-hash-files",
+        "--hash-max-bytes",
+        "--limit-records",
+        "--force",
+        "--json"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "04babcdfee7a7f3c4280ee5f89ff2a107a8639d449b19775e0480a8937cd39e6"
+    },
+    {
+      "path": "scripts/prepare_arxiv_scope_backfill.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "45c51f49ef9bf8672ec013f7f3aeaf310c8882898bd7ee761b6cec1457431198"
+    },
+    {
+      "path": "scripts/prepare_literature_scope.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "3e99ffa4cd721c3047f46ca373d874b4e8d3ecd9da916c4ac30e052e98735c7a"
+    },
+    {
+      "path": "scripts/preview_literature_bbt_keys.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--candidates",
+        "--output",
+        "--io-db",
+        "--zotero-db",
+        "--known-keys",
+        "--library-id",
+        "--batch-size",
+        "--observed-at",
+        "--offline",
+        "--overwrite",
+        "--vault",
+        "--allow-vault-output"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "dba5210d4656a1b5fead9b0ba2570f76c3be815e7aa592410497f9910b4aa242"
+    },
+    {
+      "path": "scripts/production-bridge.sh",
+      "primary_ticket": "20",
+      "supporting_tickets": [
+        "02",
+        "17",
+        "18"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".sh",
+      "sha256": "aa41e89793ee5f5c6ba1fa011325da0ac02fbc7bd8ed373e53f3e795f35068f9"
+    },
+    {
+      "path": "scripts/production_cutover.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--archive",
+        "--item",
+        "--batch",
+        "--apply",
+        "--per-file",
+        "--rollback"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "96bac72e86bb8927c20233113d2204c4d1ca8ffe4a2a67d5d4a65fe3049f54a8"
+    },
+    {
+      "path": "scripts/publisher-browser.py",
+      "primary_ticket": "07",
+      "supporting_tickets": [
+        "05",
+        "22"
+      ],
+      "role": "acquisition-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "f4c6b265625f4210c5047a096990cf6bdd614a820c7e6f71baa8c186cd0c1205"
+    },
+    {
+      "path": "scripts/publisher-catalog-browser.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "5d851857bd6373868108b5e9d6a0c0c4513de613644f638ec0a66b97d9eda829"
+    },
+    {
+      "path": "scripts/reconcile_literature_index.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--index",
+        "--report-dir",
+        "--item",
+        "--kinds",
+        "--batch",
+        "--limit",
+        "--apply",
+        "--no-include-retired"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "cd178906fee7d34bd3028ee4aab6b67d3d6d775d430903360f3fe1fa7a324db2"
+    },
+    {
+      "path": "scripts/reconcile_publisher_catalog.py",
+      "primary_ticket": "22",
+      "supporting_tickets": [
+        "04",
+        "17",
+        "27"
+      ],
+      "role": "catalog-scope",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "4656e158f83bf0fde4cdf0a9690c55d3101aaaea86ea6236a80a4a39edfb5a91"
+    },
+    {
+      "path": "scripts/reconcile_residual_literature_mappings.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io-db",
+        "--vault",
+        "--archive",
+        "--item",
+        "--plan",
+        "--apply",
+        "--manifest"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "0b592f9a0ab0a5ad892180a72632dd2194d241977a10a3e58b50dc1138d4bbf0"
+    },
+    {
+      "path": "scripts/recover_arxiv_metadata.py",
+      "primary_ticket": "06",
+      "supporting_tickets": [
+        "22"
+      ],
+      "role": "metadata-recovery",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report",
+        "--ids"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "27ae1e289233e71358a51c0da5fa8a2f87ede24a8bea3e0e5379eee71c5fc1c0"
+    },
+    {
+      "path": "scripts/refresh-freshrss-ui.php",
+      "primary_ticket": "04",
+      "supporting_tickets": [
+        "12",
+        "14"
+      ],
+      "role": "host-projection",
+      "tracked_in_reference": true,
+      "source_kind": ".php",
+      "sha256": "73e68ba119e0c63d5fefeefebc8d8a1ceeaba29a9479f0e58ce27c9f784e67a2"
+    },
+    {
+      "path": "scripts/register_private_raw_source.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "22",
+        "27"
+      ],
+      "role": "body-ownership",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--private-root",
+        "--snapshot-id",
+        "--apply",
+        "--rollback",
+        "--expect-token"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "2c821c918a8b81d340dc9167c100d1143704aef1b6f160be42843ca1bdaf1f03"
+    },
+    {
+      "path": "scripts/repair_metadata.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--vault",
+        "--apply",
+        "--previous-backup"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "8cfba1df63687fb07841b7455b5790da4ac9428c231767067f58ac1fcd00164a"
+    },
+    {
+      "path": "scripts/repair_zotero_bibliography.py",
+      "primary_ticket": "16",
+      "supporting_tickets": [
+        "17",
+        "22",
+        "27"
+      ],
+      "role": "note-reconciliation",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--apply"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "39c308f93786edd93d110b53a85d3c2d8d9ad5bdf9adec67c95c366b6ea47927"
+    },
+    {
+      "path": "scripts/reset_paper_bodies.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "22",
+        "27"
+      ],
+      "role": "body-ownership",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--database",
+        "--batch",
+        "--missing-item",
+        "--vault",
+        "--keep",
+        "--apply-plan",
+        "--output"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "e9248a4df8432046c524e6549334ab2a2da9011be6b11c51be95c5f00748ac3b"
+    },
+    {
+      "path": "scripts/restore_literature_items.py",
+      "primary_ticket": "27",
+      "supporting_tickets": [
+        "01",
+        "17",
+        "21",
+        "22"
+      ],
+      "role": "migration-component",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": false,
+      "sha256": "93366c19b05027d5c038ad4574cbb7d3b6e78dabd878dff1e0cf0e08174096ee"
+    },
+    {
+      "path": "scripts/sage-browser.py",
+      "primary_ticket": "07",
+      "supporting_tickets": [
+        "05",
+        "22"
+      ],
+      "role": "acquisition-helper",
+      "tracked_in_reference": true,
+      "source_kind": "source-alias",
+      "alias_of": "scripts/publisher-browser.py",
+      "link": "publisher-browser.py",
+      "sha256": "9ba7274392340d9289c5041784c339727840fcb3c05bd9ab2023d5a35e1c8aef"
+    },
+    {
+      "path": "scripts/setup-acquisition.sh",
+      "primary_ticket": "28",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "20"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".sh",
+      "sha256": "474b446e83e4ab1ccbd76e88f9b3d6f3f195622ebb5821ce7e6f4089d71c6859"
+    },
+    {
+      "path": "scripts/sync_paper_topics_batch.py",
+      "primary_ticket": "23",
+      "supporting_tickets": [
+        "22",
+        "27"
+      ],
+      "role": "classification",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--apply-production",
+        "--max-batches"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "ede806d5a24162e936db7ac70cf64003db51726b3f58c948fe7b5561cabca551"
+    },
+    {
+      "path": "scripts/sync_zotero_child_notes.py",
+      "primary_ticket": "16",
+      "supporting_tickets": [
+        "17",
+        "22",
+        "27"
+      ],
+      "role": "note-reconciliation",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--report",
+        "--database",
+        "--prepare-current"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "30f69c438f22157c2db1cd6ecaf5584d830dedc4c662064277ed2d1330ce9d2c"
+    },
+    {
+      "path": "scripts/update-paywall-extension.py",
+      "primary_ticket": "28",
+      "supporting_tickets": [
+        "05",
+        "07",
+        "20"
+      ],
+      "role": "bootstrap",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--apply",
+        "--no-restart"
+      ],
+      "argparse_subcommands": [
+        "check",
+        "update"
+      ],
+      "python_main_probe": true,
+      "sha256": "936f87d85ee0bf2738f3c500e34810f2bf41a7148fc7c38e162bd57569475aa2"
+    },
+    {
+      "path": "scripts/validate_paper_markdown.cjs",
+      "primary_ticket": "07",
+      "supporting_tickets": [
+        "11",
+        "22"
+      ],
+      "role": "material-validation",
+      "tracked_in_reference": true,
+      "source_kind": ".cjs",
+      "sha256": "a3de988b188b3db3968bccbcd0850f0d2830069a84b245d608b66c701f98ac0c"
+    },
+    {
+      "path": "scripts/vendor-ui.cjs",
+      "primary_ticket": "12",
+      "supporting_tickets": [
+        "14",
+        "29"
+      ],
+      "role": "build-asset",
+      "tracked_in_reference": true,
+      "source_kind": ".cjs",
+      "sha256": "5ab40515777d7513fe2fc2366095cbdd72f3455f1ccb6bc7d51b1abee261dc2a"
+    },
+    {
+      "path": "scripts/zotero/create-obsidian-note-helper.py",
+      "primary_ticket": "17",
+      "supporting_tickets": [
+        "16"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "0daff74b56fd129e0870752428f33e05c01f4beb4ec3f03e44ab20bc368dacff"
+    },
+    {
+      "path": "scripts/zotero/create-obsidian-note.action.js",
+      "primary_ticket": "17",
+      "supporting_tickets": [
+        "16"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": true,
+      "source_kind": ".js",
+      "sha256": "8e9b09388228c99105720b2359c93d38128862d7c42ff1a425d705224c4db4ac"
+    },
+    {
+      "path": "scripts/zotero/create-obsidian-note.loader.js",
+      "primary_ticket": "17",
+      "supporting_tickets": [
+        "16"
+      ],
+      "role": "external-helper",
+      "tracked_in_reference": false,
+      "source_kind": ".js",
+      "sha256": "1af95df215a0c3df10ca560402770173a5976b13577ababcd9c72a824d0b68b7"
+    },
+    {
+      "path": "scripts/zotero_verified_cleanup.py",
+      "primary_ticket": "21",
+      "supporting_tickets": [
+        "16",
+        "22",
+        "27"
+      ],
+      "role": "cleanup",
+      "tracked_in_reference": true,
+      "source_kind": ".py",
+      "argparse_flags": [
+        "--io",
+        "--zotero",
+        "--storage",
+        "--plan",
+        "--backup",
+        "--expected-plan-hash"
+      ],
+      "argparse_subcommands": [],
+      "python_main_probe": true,
+      "sha256": "142b1fff77fb31325f9068901228e93aca806c54a0d148060816c2dc7c421a63"
+    }
+  ]
+}
