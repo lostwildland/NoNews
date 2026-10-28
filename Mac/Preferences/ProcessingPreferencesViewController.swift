@@ -321,7 +321,8 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
 		let accountID = AccountManager.shared.defaultAccount.accountID
 		request("GET", "/api/settings/feeds", ["namespace": namespace, "accountID": accountID], onFailure: { [weak self] in
-			self?.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
+			guard let self, self.nativeSourceGeneration == generation else { return }
+			self.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
 		}) { [weak self] value in
 			guard let self, self.nativeSourceGeneration == generation else { return }
 			let feeds = value["feeds"] as? [[String: Any]] ?? []
@@ -333,6 +334,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			self.request("GET", "/api/config/prompts", ["role": "curator"]) { value in
 				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["prompts"] as? [[String: Any]] ?? []
+				self.nativeCuratorRows = rows
 				self.nativeCuratorPicker.removeAllItems()
 				self.nativeCuratorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
@@ -340,6 +342,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			self.request("GET", "/api/config/prompts", ["role": "editor"]) { value in
 				guard self.nativeSourceGeneration == generation else { return }
 				let rows = value["prompts"] as? [[String: Any]] ?? []
+				self.nativeEditorRows = rows
 				self.nativeEditorPicker.removeAllItems()
 				self.nativeEditorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 				self.nativeFeedChanged()
