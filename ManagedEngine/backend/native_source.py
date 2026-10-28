@@ -460,6 +460,8 @@ def feeds(db, method, body):
             if values["service_id"] and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone() is None:
                 raise ValueError("Service not found")
             if values["processing_mode"] in {"normal", "important"}:
+                if not values["media_type"] or not values["curator_prompt_id"] or not values["service_id"]:
+                    raise ValueError("Enabled feed policy requires media, a Curator prompt, and a service")
                 service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone()
                 if service_row:
                     service_value = json.loads(service_row[0])
