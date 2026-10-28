@@ -28,19 +28,29 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private var currentPrompt: [String: Any]?
 	private var selectedBinding: [String: Any]?
 	private var versions: [[String: Any]] = []
-	private let legacyBinding = NSPopUpButton()
 	private let legacyTarget = NSPopUpButton()
-	private let legacyJob = NSPopUpButton()
 	private let editorGateway = NSPopUpButton()
+	private let reportSection = NSPopUpButton()
+	private let reportPosition = NSTextField(labelWithString: "No report")
+	private let reportDetail = NSTextView()
 	private let migrationStatus = NSTextField(wrappingLabelWithString: "Review legacy routing only when migrating existing settings.")
-	private var legacyRows: [[String: Any]] = []
-	private var legacyJobs: [[String: Any]] = []
+	private var reportSnapshot: String?
+	private var reportCounts: [String: Int] = [:]
+	private var reportIndex = 0
+	private var reportGeneration = 0
+	private var reportRow: [String: Any] = [:]
 	private var editorGatewayRows: [[String: Any]] = []
 	private var migrationChoices: [String: String] = [:]
 	private var editorServices: [String: String] = [:]
 	private var migrationReview = MigrationReviewState()
 	private var migrationWaiting = false
 	private var editorReviewToken: String?
+
+	override func viewDidDisappear() {
+		super.viewDidDisappear()
+		migrationReview.invalidate()
+		releaseMigrationReport()
+	}
 
 	override func loadView() {
 		view = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 620))
@@ -123,19 +133,32 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		serviceType.target = self
 		serviceType.action = #selector(migrationInputChanged)
 		for field in [serviceName, endpoint, credential] { field.delegate = self }
-		for popup in [legacyBinding, legacyTarget, legacyJob, editorGateway] {
+		for popup in [legacyTarget, editorGateway] {
 			popup.target = self
 			popup.action = #selector(migrationInputChanged)
 		}
 		credential.placeholderString = "Stored in Keychain"
 		let actions = NSStackView(views: [button("New", #selector(newService)), button("Save", #selector(saveService)), button("Refresh Models or Targets", #selector(refreshService)), button("Delete", #selector(deleteService))])
-		let mapping = NSStackView(views: [legacyBinding, legacyTarget, button("Choose Mapping", #selector(chooseMapping))])
-		let editorMapping = NSStackView(views: [legacyJob, editorGateway, button("Confirm Editor Gateway", #selector(chooseEditorGateway))])
+		reportSection.addItems(withTitles: ["Models", "Pending", "Evidence"])
+		reportSection.target = self
+		reportSection.action = #selector(changeReportSection)
+		let navigation = NSStackView(views: [reportSection, button("Previous", #selector(previousReportRow)), reportPosition, button("Next", #selector(nextReportRow)), button("Retry Entry", #selector(retryReportRow))])
+		let details = NSScrollView()
+		details.hasVerticalScroller = true
+		details.borderType = .bezelBorder
+		details.documentView = reportDetail
+		details.widthAnchor.constraint(equalToConstant: 530).isActive = true
+		details.heightAnchor.constraint(equalToConstant: 150).isActive = true
+		reportDetail.isEditable = false
+		reportDetail.isSelectable = true
+		reportDetail.isRichText = false
+		let mapping = NSStackView(views: [legacyTarget, button("Choose Mapping for Shown Model", #selector(chooseMapping))])
+		let editorMapping = NSStackView(views: [editorGateway, button("Confirm Shown Editor Gateway", #selector(chooseEditorGateway))])
 		let migration = NSStackView(views: [button("Preview Routing", #selector(previewMigration)), button("Pause Claims", #selector(pauseMigration)), button("Apply Mappings", #selector(applyMigration))])
 		return form([NSTextField(wrappingLabelWithString: "Reading works without AI. Refresh checks the directory only."),
 			row("Service", services), row("Name", serviceName), row("Type", serviceType), row("Endpoint", endpoint),
 			row("Bearer credential", credential), actions, NSTextField(labelWithString: "Advanced: Legacy Magpie Routing"),
-			migrationStatus, mapping, editorMapping, migration])
+			migrationStatus, navigation, details, mapping, editorMapping, migration])
 	}
 
 	private func promptForm() -> NSView {
@@ -195,7 +218,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	private func setEnabled(_ enabled: Bool, in view: NSView) {
 		if let control = view as? NSControl { control.isEnabled = enabled }
-		if let text = view as? NSTextView { text.isEditable = enabled }
+		if let text = view as? NSTextView { text.isEditable = enabled && text !== reportDetail }
 		for child in view.subviews { setEnabled(enabled, in: child) }
 	}
 
@@ -307,14 +330,11 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	private func clearMigrationReport() {
+		releaseMigrationReport()
 		migrationChoices = [:]
 		editorServices = [:]
 		migrationWaiting = false
 		editorReviewToken = nil
-		legacyRows = []
-		legacyJobs = []
-		legacyBinding.removeAllItems()
-		legacyJob.removeAllItems()
 		legacyTarget.removeAllItems()
 	}
 
@@ -396,7 +416,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		}
 	}
 
-	func controlTextDidChange(_ notification: Notification) { migrationReview.invalidate() }
+	func controlTextDidChange(_ notification: Notification) { migrationReview.invalidate(); releaseMigrationReport() }
 	@objc private func migrationInputChanged() { migrationReview.invalidate() }
 
 	private func currentMigrationInput() -> MigrationReviewState.Input? {
@@ -412,18 +432,29 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 
 	private func startMigrationPreview() {
 		guard let input = currentMigrationInput() else { migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."; return }
+		reportGeneration += 1
 		let ticket = migrationReview.begin(input)
 		editorReviewToken = nil
-		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices], onFailure: { [weak self] in
+		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices, "browse": true], onFailure: { [weak self] in
 			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
 			self.migrationStatus.stringValue = self.migrationReview.readbackFailure(for: input)
 		}) { [weak self] result in
-			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
-			self.loadMigrationReport(result, data: Data(), ticket: ticket) { [weak self] report in
-				guard let self, self.migrationReview.complete(ticket, current: self.currentMigrationInput()) else { return }
-				self.editorReviewToken = report["editorReviewToken"] as? String
-				self.showMigrationReport(report)
+			guard let self else { return }
+			guard let snapshot = result["snapshotId"] as? String, let counts = result["counts"] as? [String: Int],
+				  self.migrationReview.complete(ticket, current: self.currentMigrationInput()) else {
+				if let snapshot = result["snapshotId"] as? String { self.releaseSnapshot(snapshot) }
+				return
 			}
+			self.releaseMigrationReport()
+			self.reportSnapshot = snapshot
+			self.reportCounts = counts
+			self.editorReviewToken = result["editorReviewToken"] as? String
+			let paused = result["paused"] as? Bool == true
+			if !paused { self.migrationWaiting = false }
+			let state = MigrationReviewState.status(paused: paused, waiting: self.migrationWaiting)
+			self.migrationStatus.stringValue = "\(self.migrationReview.applyAcknowledgement(for: input))\(state): \(result["running"] as? Int ?? 0) running, \(counts["pending"] ?? 0) pending, \(result["blocked"] as? Int ?? 0) unresolved."
+			self.reportIndex = 0
+			self.loadReportRow()
 		}
 	}
 
@@ -460,84 +491,107 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	@objc private func chooseMapping() {
-		let index = legacyBinding.indexOfSelectedItem
-		guard legacyRows.indices.contains(index), let kit = legacyRows[index]["kit"] as? String,
-			  let role = legacyRows[index]["role"] as? String, let chosen = legacyTarget.selectedItem?.title else { return }
+		guard reportSection.indexOfSelectedItem == 0, let kit = reportRow["kit"] as? String,
+			  let role = reportRow["role"] as? String, let chosen = legacyTarget.selectedItem?.title else { return }
 		migrationChoices["\(kit)/\(role)"] = chosen
 		migrationReview.invalidate()
+		releaseMigrationReport()
 		previewMigration()
 	}
 
 	@objc private func chooseEditorGateway() {
-		let jobIndex = legacyJob.indexOfSelectedItem
-		let gatewayIndex = editorGateway.indexOfSelectedItem
-		guard legacyJobs.indices.contains(jobIndex), editorGatewayRows.indices.contains(gatewayIndex),
-			  let job = legacyJobs[jobIndex]["id"] as? String, let service = editorGatewayRows[gatewayIndex]["id"] as? String else { return }
+		let index = editorGateway.indexOfSelectedItem
+		guard reportSection.indexOfSelectedItem == 1, reportRow["editorTarget"] is String,
+			  let job = reportRow["id"] as? String, editorGatewayRows.indices.contains(index),
+			  let service = editorGatewayRows[index]["id"] as? String else { return }
 		editorServices[job] = service
 		migrationReview.invalidate()
+		releaseMigrationReport()
 		previewMigration()
 	}
 
-	private func loadMigrationReport(_ page: [String: Any], data: Data, ticket: MigrationReviewState.Ticket, then: @escaping ([String: Any]) -> Void) {
-		guard migrationReview.accepts(ticket, current: currentMigrationInput()) else { return }
-		guard let encoded = page["chunk"] as? String else { then(page); return }
-		guard let chunk = Data(base64Encoded: encoded) else {
-			migrationStatus.stringValue = migrationReview.readbackFailure(for: ticket.input)
-			return
-		}
-		var accumulated = data
-		accumulated.append(chunk)
-		if let next = page["next"] as? [String: Any] {
-			request("POST", "/api/config/migration/preview", next, onFailure: { [weak self] in
-				guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
-				self.migrationStatus.stringValue = self.migrationReview.readbackFailure(for: ticket.input)
-			}) { [weak self] result in
-				self?.loadMigrationReport(result, data: accumulated, ticket: ticket, then: then)
-			}
-		} else if let result = try? JSONSerialization.jsonObject(with: accumulated) as? [String: Any] {
-			then(result)
-			if let snapshot = page["snapshotId"] as? String {
-				request("POST", "/api/config/migration/release", ["snapshotId": snapshot]) { _ in }
-			}
-		} else { migrationStatus.stringValue = migrationReview.readbackFailure(for: ticket.input) }
+	private var currentReportSection: String {
+		["models", "pending", "evidence"][max(0, min(2, reportSection.indexOfSelectedItem))]
 	}
 
-	private func showMigrationReport(_ result: [String: Any]) {
-			self.legacyRows = result["models"] as? [[String: Any]] ?? []
-			self.legacyBinding.removeAllItems()
-			for row in self.legacyRows {
-				let old = row["old"] as? [String: Any] ?? [:]
-				let source = "\(old["provider"] as? String ?? "")/\(old["model"] as? String ?? "")"
-				let destination = row["target"] as? String ?? "Unresolved"
-				self.legacyBinding.addItem(withTitle: "\(row["kit"] as? String ?? "") / \(row["role"] as? String ?? ""): \(source) → \(destination)")
-			}
-			let jobs = result["pending"] as? [[String: Any]] ?? []
-			let blocked = jobs.filter { !($0["blocked"] as? [String] ?? []).isEmpty }.count
-			let running = result["running"] as? Int ?? 0
-			let paused = result["paused"] as? Bool == true
-			if !paused { migrationWaiting = false }
-			let state = MigrationReviewState.status(paused: paused, waiting: migrationWaiting)
-			self.legacyJobs = jobs.filter { $0["editorTarget"] is String }
-			self.legacyJob.removeAllItems()
-			self.legacyJob.addItems(withTitles: self.legacyJobs.map { $0["id"] as? String ?? "Unknown job" })
-			let details = jobs.map { job in
-				let reasons = (job["blocked"] as? [String] ?? []).joined(separator: ", ")
-				let target = job["editorTarget"] as? String
-				@MainActor func gatewayName(_ id: String?) -> String {
-					guard let id else { return "unknown" }
-					guard let row = self.serviceRows.first(where: { $0["id"] as? String == id }) else { return "Unavailable [\(id)]" }
-					return self.serviceLabel(row)
-				}
-				let known = gatewayName(job["editorServiceId"] as? String)
-				let proposed = gatewayName(job["proposedEditorServiceId"] as? String)
-				let knownID = job["editorServiceId"] as? String
-				let proposedID = job["proposedEditorServiceId"] as? String
-				let confirmation = knownID != nil ? (knownID == proposedID ? "existing association" : "conflicting proposal") :
-					(job["editorAssociationExplicit"] as? Bool == true ? "selected for review" : "not confirmed")
-				let editor = target.map { " Editor target: \($0); known gateway: \(known); proposed gateway: \(proposed) (\(confirmation))." } ?? ""
-				return "\(job["id"] as? String ?? "Unknown job"): \(reasons.isEmpty ? "ready for mapping" : reasons).\(editor)"
-			}.joined(separator: "\n")
-			self.migrationStatus.stringValue = "\(migrationReview.applyAcknowledgement(for: currentMigrationInput()))\(state): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
+	private func releaseSnapshot(_ snapshot: String) {
+		request("POST", "/api/config/migration/release", ["snapshotId": snapshot], onFailure: {}) { _ in }
+	}
+
+	private func releaseMigrationReport() {
+		reportGeneration += 1
+		if let snapshot = reportSnapshot { releaseSnapshot(snapshot) }
+		reportSnapshot = nil
+		reportCounts = [:]
+		reportRow = [:]
+		reportPosition.stringValue = "No report"
+		reportDetail.string = ""
+	}
+
+	@objc private func changeReportSection() { reportIndex = 0; loadReportRow() }
+	@objc private func retryReportRow() { loadReportRow() }
+	@objc private func previousReportRow() { if reportIndex > 0 { reportIndex -= 1; loadReportRow() } }
+	@objc private func nextReportRow() {
+		if reportIndex + 1 < (reportCounts[currentReportSection] ?? 0) { reportIndex += 1; loadReportRow() }
+	}
+
+	private func loadReportRow() {
+		reportGeneration += 1
+		let generation = reportGeneration
+		let section = currentReportSection
+		let count = reportCounts[section] ?? 0
+		reportRow = [:]
+		guard let snapshot = reportSnapshot, reportIndex < count else {
+			reportPosition.stringValue = "0 of \(count)"
+			reportDetail.string = "No entries in this section."
+			return
+		}
+		let index = reportIndex
+		reportPosition.stringValue = "\(index + 1) of \(count)"
+		reportDetail.string = "Loading…"
+		loadReportPart(snapshot: snapshot, section: section, index: index, part: 0, data: Data(), generation: generation)
+	}
+
+	private func loadReportPart(snapshot: String, section: String, index: Int, part: Int, data: Data, generation: Int) {
+		request("POST", "/api/config/migration/preview", ["snapshotId": snapshot, "section": section, "index": index, "part": part], onFailure: { [weak self] in
+			guard let self, self.reportGeneration == generation else { return }
+			self.reportDetail.string = "Could not load this entry. Preview again if the report expired."
+		}) { [weak self] result in
+			guard let self, self.reportGeneration == generation, self.reportSnapshot == snapshot,
+				  result["snapshotId"] as? String == snapshot, result["section"] as? String == section,
+				  result["index"] as? Int == index, result["part"] as? Int == part,
+				  let encoded = result["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { return }
+			var record = data
+			record.append(chunk)
+			if let next = result["nextPart"] as? Int {
+				self.loadReportPart(snapshot: snapshot, section: section, index: index, part: next, data: record, generation: generation)
+			} else if let item = try? JSONSerialization.jsonObject(with: record, options: .fragmentsAllowed) {
+				self.reportRow = item as? [String: Any] ?? [:]
+				self.reportDetail.string = self.describeReportRow(item, section: section)
+			} else { self.reportDetail.string = "The entry could not be read. Preview again." }
+		}
+	}
+
+	private func describeReportRow(_ item: Any, section: String) -> String {
+		func value(_ value: Any?) -> String {
+			guard let value, !(value is NSNull) else { return "Unknown" }
+			if let dict = value as? [String: Any] { return dict.keys.sorted().map { "\($0): \(valueFor(dict[$0]))" }.joined(separator: ", ") }
+			if let array = value as? [Any] { return array.map { valueFor($0) }.joined(separator: ", ") }
+			return String(describing: value)
+		}
+		func valueFor(_ item: Any?) -> String { value(item) }
+		func gateway(_ id: Any?) -> String {
+			guard let id = id as? String else { return "Unknown" }
+			return serviceRows.first(where: { $0["id"] as? String == id }).map { serviceLabel($0) } ?? "Unavailable [\(id)]"
+		}
+		guard let row = item as? [String: Any] else { return value(item) }
+		if section == "models" {
+			return "Kit: \(value(row["kit"]))\nRole: \(value(row["role"]))\nPrior: \(value(row["old"]))\nProposed target: \(value(row["target"]))\nBasis: \(value(row["basis"]))\nService: \(gateway(row["serviceId"]))\nBlocked: \(value(row["blocked"]))"
+		}
+		if section == "pending" {
+			return "Job: \(value(row["id"]))\nKit: \(value(row["kit"]))\nStage: \(value(row["stage"]))\nBlocked: \(value(row["blocked"]))\nPinned Editor target: \(value(row["editorTarget"]))\nKnown gateway: \(gateway(row["editorServiceId"]))\nProposed gateway: \(gateway(row["proposedEditorServiceId"]))\nAssociation reviewed: \(value(row["editorAssociationExplicit"]))"
+		}
+		return row.keys.sorted().map { "\($0): \(value(row[$0]))" }.joined(separator: "\n")
 	}
 
 	@objc private func deleteService() {

@@ -93,6 +93,35 @@ class MigrationTest(unittest.TestCase):
             self.assertEqual(report['models'][0]['kit'], 'large-0000-' + suffix)
             self.assertEqual(report['models'][-1]['kit'], 'large-2199-' + suffix)
             self.assertEqual(report['evidence'], [{'text': 'literal ], { and "quote"', 'values': [1, {'nested': '值'}]}, {'old': None}])
+            browse = call('POST', '/api/config/migration/preview', {'serviceId': service['id'], 'browse': True})['result']
+            self.assertEqual(browse['counts']['models'], 2201)
+            self.assertEqual(browse['counts']['evidence'], 2)
+            first_record = call('POST', '/api/config/migration/preview',
+                {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': 0, 'part': 0})['result']
+            self.assertEqual(json.loads(base64.b64decode(first_record['chunk']))['kit'], 'large-0000-' + suffix)
+            self.assertEqual(first_record, call('POST', '/api/config/migration/preview',
+                {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': 0, 'part': 0})['result'])
+            last_record = call('POST', '/api/config/migration/preview',
+                {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': 2200, 'part': 0})['result']
+            self.assertEqual(json.loads(base64.b64decode(last_record['chunk']))['kit'], 'later')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("DELETE FROM model_configs WHERE kit_id='later'")
+            process.stdin.close()
+            process.stdout.close()
+            self.assertEqual(process.wait(timeout=30), 0)
+            process = start()
+            self.assertEqual(last_record, call('POST', '/api/config/migration/preview',
+                {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': 2200, 'part': 0})['result'])
+            for index in range(2201):
+                item = call('POST', '/api/config/migration/preview',
+                    {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': index, 'part': 0})['result']
+                expected = 'later' if index == 2200 else f'large-{index:04}-' + suffix
+                self.assertEqual(json.loads(base64.b64decode(item['chunk']))['kit'], expected)
+            self.assertTrue(call('POST', '/api/config/migration/release', {'snapshotId': browse['snapshotId']})['result']['released'])
+            self.assertEqual(call('POST', '/api/config/migration/preview',
+                {'snapshotId': browse['snapshotId'], 'section': 'models', 'index': 0, 'part': 0})['code'], 'snapshot_expired')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("INSERT INTO model_configs VALUES ('later','curator','{\"provider\":\"old\",\"model\":\"model\"}','now')")
             legacy = json.dumps(report['evidence'])
             self.assertTrue(call('POST', '/api/config/migration/pause', {})['result']['paused'])
             with closing(sqlite3.connect(database)) as db, db:

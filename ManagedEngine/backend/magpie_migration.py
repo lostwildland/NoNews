@@ -227,13 +227,30 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
 def report_page(db, body):
     identity = body.get('snapshotId')
     offset = body.get('offset')
-    if not isinstance(identity, str) or len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity) or type(offset) is not int or offset < 0:
+    if not isinstance(identity, str) or len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity):
         raise configuration.ConfigurationError('Invalid migration cursor')
     prefix = f'nonews.migration-snapshot.{identity}.'
     meta = db.execute('SELECT value FROM app_settings WHERE key=?', (prefix + 'count',)).fetchone()
     if meta is None:
         raise SnapshotExpired('Migration report expired')
-    if offset >= int(meta[0]):
+    if 'section' in body:
+        section, index, part = body.get('section'), body.get('index'), body.get('part')
+        try:
+            info = json.loads(meta[0])
+        except (ValueError, TypeError):
+            raise configuration.ConfigurationError('Invalid migration cursor')
+        if not isinstance(info, dict) or section not in ('models', 'pending', 'evidence') or type(index) is not int or type(part) is not int or index < 0 or part < 0 or index >= info['counts'][section]:
+            raise configuration.ConfigurationError('Invalid migration cursor')
+        key = prefix + f'b.{section}.{index}.'
+        count = db.execute('SELECT value FROM app_settings WHERE key=?', (key + 'count',)).fetchone()
+        if count is None or part >= int(count[0]):
+            raise configuration.ConfigurationError('Invalid migration cursor')
+        row = db.execute('SELECT value FROM app_settings WHERE key=?', (key + str(part),)).fetchone()
+        if row is None:
+            raise configuration.ConfigurationError('Migration snapshot incomplete')
+        return {'snapshotId': identity, 'section': section, 'index': index, 'part': part,
+                'chunk': row[0], 'nextPart': part + 1 if part + 1 < int(count[0]) else None}
+    if type(offset) is not int or offset < 0 or offset >= int(meta[0]):
         raise configuration.ConfigurationError('Invalid migration cursor')
     row = db.execute('SELECT value FROM app_settings WHERE key=?', (prefix + str(offset),)).fetchone()
     if row is None:
@@ -249,8 +266,7 @@ def release_report(db, body):
     with transaction(db):
         if db.execute('SELECT 1 FROM app_settings WHERE key=?', (prefix + 'count',)).fetchone() is None:
             raise SnapshotExpired('Migration report expired')
-        db.execute('DELETE FROM app_settings WHERE key=? OR (key>=? AND key<?)',
-                   (prefix + 'count', prefix + '0', prefix + ':'))
+        db.execute('DELETE FROM app_settings WHERE key>=? AND key<?', (prefix, prefix[:-1] + '/'))
     return {'released': True}
 
 
@@ -305,9 +321,57 @@ def snapshot_report(db, report):
             if kept <= SNAPSHOT_KEEP:
                 continue
             old_prefix = key[:-5]
-            db.execute('DELETE FROM app_settings WHERE key=? OR (key>=? AND key<?)',
-                       (key, old_prefix + '0', old_prefix + ':'))
+            db.execute('DELETE FROM app_settings WHERE key>=? AND key<?', (old_prefix, old_prefix[:-1] + '/'))
     return report_page(db, {'snapshotId': identity, 'offset': 0})
+
+
+def browse_snapshot(db, report):
+    identity = uuid.uuid4().hex
+    prefix = f'nonews.migration-snapshot.{identity}.'
+    encoder = json.JSONEncoder(ensure_ascii=True, separators=(',', ':'))
+    info = {key: report[key] for key in ('running', 'paused', 'lastApply')}
+    if 'editorReviewToken' in report:
+        info['editorReviewToken'] = report['editorReviewToken']
+    info['counts'] = {}
+    info['blocked'] = 0
+    with transaction(db):
+        for section in ('models', 'pending', 'evidence'):
+            count = 0
+            for item in report[section]:
+                if section == 'pending' and item['blocked']:
+                    info['blocked'] += 1
+                key = prefix + f'b.{section}.{count}.'
+                buffer = bytearray()
+                parts = 0
+                for piece in encoder.iterencode(item):
+                    for start in range(0, len(piece), 16000):
+                        data = piece[start:start + 16000].encode('ascii')
+                        while data:
+                            size = min(48000 - len(buffer), len(data))
+                            buffer.extend(data[:size])
+                            data = data[size:]
+                            if len(buffer) == 48000:
+                                save(db, key + str(parts), base64.b64encode(buffer).decode('ascii'))
+                                buffer.clear()
+                                parts += 1
+                if buffer:
+                    save(db, key + str(parts), base64.b64encode(buffer).decode('ascii'))
+                    parts += 1
+                save(db, key + 'count', str(parts))
+                count += 1
+            info['counts'][section] = count
+        save(db, prefix + 'count', json.dumps(info))
+        kept = 0
+        for row in db.execute("SELECT key FROM app_settings WHERE key>=? AND key<? AND key LIKE '%.count' ORDER BY rowid DESC",
+                              ('nonews.migration-snapshot.', 'nonews.migration-snapshot/')):
+            key = row[0]
+            if not re.fullmatch(r'nonews\.migration-snapshot\.[0-9a-f]{32}\.count', key):
+                continue
+            kept += 1
+            if kept > SNAPSHOT_KEEP:
+                old_prefix = key[:-5]
+                db.execute('DELETE FROM app_settings WHERE key>=? AND key<?', (old_prefix, old_prefix[:-1] + '/'))
+    return {'snapshotId': identity, **info}
 
 
 def editor_review_digest(db, connection, choices, editor_services, report):
@@ -371,7 +435,7 @@ def command(db, action, body):
             save(db, 'nonews.migration-editor-review', json.dumps(receipt))
             if receipt:
                 report['editorReviewToken'] = receipt['token']
-            return snapshot_report(db, report)
+            return browse_snapshot(db, report) if body.get('browse') is True else snapshot_report(db, report)
     if action != 'apply':
         raise configuration.ConfigurationError('Invalid migration action')
     db.execute('PRAGMA temp_store=FILE')

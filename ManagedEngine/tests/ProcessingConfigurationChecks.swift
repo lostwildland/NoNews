@@ -1,6 +1,7 @@
 import Foundation
 
 @main struct ProcessingConfigurationChecks {
+	@MainActor static var maximumPageLatency: TimeInterval = 0
 	@MainActor static func wait(_ engine: ProcessingEngine, state: ProcessingEngine.State) async throws {
 		for _ in 0..<800 {
 			if engine.state == state { return }
@@ -15,6 +16,23 @@ import Foundation
 		}
 	}
 
+	@MainActor static func reportRecord(_ engine: ProcessingEngine, snapshot: String, section: String, index: Int) async throws -> [String: Any] {
+		var data = Data()
+		var part = 0
+		repeat {
+			let started = Date()
+			let page = try await request(engine, "POST", "/api/config/migration/preview", ["snapshotId": snapshot, "section": section, "index": index, "part": part])
+			maximumPageLatency = max(maximumPageLatency, Date().timeIntervalSince(started))
+			precondition(page["snapshotId"] as? String == snapshot && page["index"] as? Int == index && page["part"] as? Int == part)
+			guard let encoded = page["chunk"] as? String, let chunk = Data(base64Encoded: encoded) else { throw NSError(domain: "Report chunk", code: 1) }
+			data.append(chunk)
+			guard let next = page["nextPart"] as? Int else { break }
+			part = next
+		} while true
+		guard let row = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw NSError(domain: "Report record", code: 1) }
+		return row
+	}
+
 	@MainActor static func main() async throws {
 		let root = URL(fileURLWithPath: CommandLine.arguments[1])
 		let runtime = root.appendingPathComponent("ManagedEngine/.prepared/python/bin/python3")
@@ -22,7 +40,7 @@ import Foundation
 		let directory = Process()
 		let output = Pipe()
 		directory.executableURL = runtime
-		directory.arguments = [root.appendingPathComponent("ManagedEngine/tests/configuration_directory_fixture.py").path]
+		directory.arguments = ["-B", "-I", root.appendingPathComponent("ManagedEngine/tests/configuration_directory_fixture.py").path]
 		directory.standardOutput = output
 		directory.standardError = FileHandle.nullDevice
 		try directory.run()
@@ -72,6 +90,44 @@ import Foundation
 		let preserved = try await request(engine, "GET", "/api/config/prompts", ["id": id])
 		let status = try await request(engine, "GET", "/api/status")
 		precondition(preserved["text"] as? String == text && status["schemaVersion"] is Int && engine.state == .ready)
+		func fixture(_ mutate: Bool) throws {
+			let process = Process()
+			process.executableURL = runtime
+			process.arguments = ["-B", "-I", root.appendingPathComponent("ManagedEngine/tests/configuration_browse_fixture.py").path, data.appendingPathComponent("information.sqlite").path] + (mutate ? ["mutate"] : [])
+			try process.run()
+			process.waitUntilExit()
+			precondition(process.terminationStatus == 0)
+		}
+		try fixture(false)
+		let started = Date()
+		let report = try await request(engine, "POST", "/api/config/migration/preview", ["serviceId": serviceID, "browse": true])
+		let previewTime = Date().timeIntervalSince(started)
+		guard let snapshot = report["snapshotId"] as? String, let counts = report["counts"] as? [String: Int] else { throw NSError(domain: "Browse snapshot", code: 1) }
+		precondition(counts["models"] == 2200 && counts["evidence"] == 1)
+		let first = try await reportRecord(engine, snapshot: snapshot, section: "models", index: 0)
+		precondition(first["kit"] as? String == "native-0000-" + String(repeating: "x", count: 8000))
+		try fixture(true)
+		engine.stop()
+		try await wait(engine, state: .stopped)
+		engine.start()
+		try await wait(engine, state: .ready)
+		let retried = try await reportRecord(engine, snapshot: snapshot, section: "models", index: 0)
+		precondition(retried["kit"] as? String == first["kit"] as? String)
+		let replacement = try await request(engine, "POST", "/api/config/migration/preview", ["serviceId": serviceID, "browse": true])
+		guard let replacementID = replacement["snapshotId"] as? String, let replacementCounts = replacement["counts"] as? [String: Int] else { throw NSError(domain: "Replacement snapshot", code: 1) }
+		precondition(replacementID != snapshot && replacementCounts["models"] == 2199)
+		let replacementFirst = try await reportRecord(engine, snapshot: replacementID, section: "models", index: 0)
+		precondition(replacementFirst["kit"] as? String == "native-0001-" + String(repeating: "x", count: 8000))
+		let traversal = Date()
+		for index in 0..<2200 {
+			let row = try await reportRecord(engine, snapshot: snapshot, section: "models", index: index)
+			precondition(row["kit"] as? String == String(format: "native-%04d-", index) + String(repeating: "x", count: 8000))
+		}
+		let evidence = try await reportRecord(engine, snapshot: snapshot, section: "evidence", index: 0)
+		precondition(evidence["detail"] as? String == String(repeating: "文", count: 30000))
+		_ = try await request(engine, "POST", "/api/config/migration/release", ["snapshotId": snapshot])
+		_ = try await request(engine, "POST", "/api/config/migration/release", ["snapshotId": replacementID])
+		print("Native browse: preview \(previewTime)s; 2200 records and multipart evidence \(Date().timeIntervalSince(traversal))s; max page \(maximumPageLatency)s")
 		engine.stop()
 		try await wait(engine, state: .stopped)
 		print("Processing configuration checks passed")
