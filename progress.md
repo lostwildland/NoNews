@@ -7,7 +7,7 @@
 
 ## 2026-10-28 — T03 durable correction and T30 provider propagation
 
-- T03 `8525300` makes credential verification state a single observable save and preserves legacy service listing; fresh paired review remains pending.
+- T03 `cea6222` retains typed mutation rejection outcomes across restart and checks report row capacity incrementally; fresh paired review remains pending.
 - T30 `60e1f5c` adds local status compensation on outbox insertion failure, original dequeue error propagation and CloudKit claim/send/delete serialization. The latest macOS plan passed with zero failures/skips; fresh paired R23 review is pending.
 
 - T03 `bd4fffa` adds direct mutation receipts, persisted incomplete/verified credential state, bounded migration snapshot/per-row capacity, bounded unknown recovery IDs and an Advanced output disclosure. The source suite passed 16 tests with one optional skip; fresh paired correction review is pending. XIB layout, full HIG/UI/Keychain and signed runtime acceptance remain open.

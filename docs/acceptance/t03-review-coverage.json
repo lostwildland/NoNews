@@ -1,7 +1,7 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "8525300",
-  "state": "Correction8525300 makes credential-state persistence observable and preserves legacy service recovery. The listed21-path blobs still describe6e9dac9; fresh paired correction review is pending and ledger refresh remains required.",
+  "candidate": "cea6222",
+  "state": "Correctioncea6222 retains typed mutation rejection outcomes and incremental report limits and preserves legacy service recovery. The listed21-path blobs still describe6e9dac9; fresh paired correction review is pending and ledger refresh remains required.",
   "groups": {
     "native": 2,
     "backend": 4,
