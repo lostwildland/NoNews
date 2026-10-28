@@ -12,24 +12,39 @@ struct MigrationReviewState {
 		let generation: UInt
 		let input: Input
 	}
+	struct ApplyTicket {
+		let generation: UInt
+		let input: Input
+	}
 	private var generation: UInt = 0
+	// Preview retries must not invalidate an in-flight Apply response.
+	private var applyGeneration: UInt = 0
 	private(set) var reviewed: Input?
-	private var lastApplyStatus: String?
-	mutating func recordApply(status: String) { lastApplyStatus = status }
-	mutating func clearApply() { lastApplyStatus = nil }
-	var applyAcknowledgement: String {
-		switch lastApplyStatus {
+	private var lastApply: (input: Input, status: String)?
+	mutating func beginApply(_ input: Input) -> ApplyTicket {
+		invalidate()
+		applyGeneration &+= 1
+		return ApplyTicket(generation: applyGeneration, input: input)
+	}
+	mutating func recordApply(status: String, ticket: ApplyTicket) -> Bool {
+		guard ticket.generation == applyGeneration, status == "applied" || status == "waiting" else {
+			return false
+		}
+		lastApply = (ticket.input, status)
+		return true
+	}
+	func applyAcknowledgement(for input: Input?) -> String {
+		guard let lastApply, lastApply.input == input else {
+			return ""
+		}
+		switch lastApply.status {
 		case "applied": return "Mappings applied. "
-		case "waiting": return "Claims remain paused while work drains. "
+		case "waiting": return "The previous Apply waited for running work. "
 		default: return ""
 		}
 	}
-	func readbackFailure() -> String {
-		switch lastApplyStatus {
-		case "applied": return "Mappings applied. The routing report could not be read; preview again."
-		case "waiting": return "Claims remain paused while work drains. The routing report could not be read; preview again."
-		default: return "The routing report could not be read; preview again."
-		}
+	func readbackFailure(for input: Input?) -> String {
+		applyAcknowledgement(for: input) + "The routing report could not be read; preview again."
 	}
 	mutating func invalidate() { generation &+= 1; reviewed = nil }
 	mutating func begin(_ input: Input) -> Ticket {
