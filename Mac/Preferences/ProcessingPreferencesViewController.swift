@@ -700,7 +700,14 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				self.prompts.addItem(withTitle: "\(role): \(name)")
 			}
 			if let id = selectedID, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.prompts.selectItem(at: index) }
-			else { self.prompts.selectItem(at: -1) }
+			else {
+				self.prompts.selectItem(at: -1)
+				self.promptSelectionID = nil
+				self.currentPrompt = nil
+				self.promptGeneration += 1
+				self.role.selectItem(at: -1)
+				self.role.isEnabled = true
+			}
 		}
 	}
 

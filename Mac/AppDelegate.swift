@@ -418,7 +418,7 @@ let appName = "NetNewsWire"
 		let bodies = articles.map { article -> [String: Any] in
 			var body: [String: Any] = ["namespace": namespace, "accountID": article.accountID, "feedID": article.feedID,
 				"articleID": article.articleID, "uniqueID": article.uniqueID, "title": article.title ?? "",
-				"originalURL": article.rawLink ?? "", "feedURL": article.feedID, "allowUnresolved": true]
+				"originalURL": article.rawLink ?? "", "feedURL": article.feed?.url ?? "", "allowUnresolved": true]
 			if let rawLink = article.rawLink, !rawLink.isEmpty {
 				body["identityType"] = "url"
 				body["identityValue"] = rawLink

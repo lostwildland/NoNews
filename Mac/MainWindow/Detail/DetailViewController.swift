@@ -100,7 +100,16 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
 		let controller = webViewController(for: mode)
 		controller.setNativeSourceBinding(nil)
-		if case .article(let article, _) = state {
+		if case let .article(article, _) = state {
+			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
+				guard let controller, let current = controller.article,
+					current.accountID == article.accountID, current.feedID == article.feedID,
+					current.articleID == article.articleID else {
+					return
+				}
+				controller.setNativeSourceBinding(binding)
+			}
+		} else if case let .extracted(article, _, _) = state {
 			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
 				guard let controller, let current = controller.article,
 					current.accountID == article.accountID, current.feedID == article.feedID,
