@@ -1,6 +1,6 @@
 # T03 current configuration candidate
 
-Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; reviewed checkpoint00c2665, coordinator error-queue correctiondd58d6e and latest pushed partial correction `f96d605107231383ae07f3aa8eb976d2dca97251`. The [review ledger](t03-review-coverage.json) pins21 original-base paths. T03 is open and unaccepted. The original implementation owner is now active on R14 and may have newer unfinished changes; root owns product, review and small review corrections. No new worktree was created.
+Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; reviewed checkpoint00c2665, coordinator error-queue correctiondd58d6e, partialf96d605 and latest pushed checkpoint `cf95ccd1ba0c8829b14835dd306d509e378eac1e`. The [review ledger](t03-review-coverage.json) pins21 original-base paths. T03 is open and unaccepted. The original implementation owner is now active on R15 and may have newer unfinished changes; root owns product, review and small review corrections. No new worktree was created.
 
 ## Execution recovery
 
@@ -19,7 +19,7 @@ The owner reports seven focused configuration/migration/stdio passes with one op
 
 ## Required next work
 
-Fresh [R5 paired cooperative reviews](t03-cooperative-review-r5.md) covered7/7changed-hunk sets at00c2665. Standards reported no independent Standards finding and separately three Spec P2 concerns; Spec reported one P1 and three P2s. Root reproduced and fixed acknowledged-error queue exhaustion atdd58d6e; the final regression plus full large-report case passed together (two tests,14.057seconds). The owner reports render-envelope and unread-preview cleanup corrections plus three migration passes atf96d605; fresh recheck is pending, including cancelled-error acknowledgement. Same ownerR14 now finishes the P1 transaction-coupled queued-save outcome/native recovery. No definitive Save failure may conceal a later committed write.
+Fresh [R5 paired cooperative reviews](t03-cooperative-review-r5.md) covered7/7changed-hunk sets at00c2665. Standards reported no independent Standards finding and separately three Spec P2 concerns; Spec reported one P1 and three P2s. Root reproduced and fixed acknowledged-error queue exhaustion atdd58d6e; the final regression plus full large-report case passed together (two tests,14.057seconds). The owner reports render-envelope and unread-preview cleanup atf96d605 and transactional queued-save receipts/native recovery atcf95ccd. The focused suite reports14 passes/1 optional skip, but the final missing-receipt change was after the strict native run. A missing receipt after restart remains explicitly unknown; durable cancellation tombstones and definitive recovery remain required.
 
 Root's [native interaction source audit](t03-native-interaction-source-audit.md) identifies a source-derived P1 at6da5efa: unscoped service/prompt callbacks can publish stale editor state, including a saved service binding that differs from the visible selection. The owner reports general form guards and captured copy input at00c2665, but actual controller/request out-of-order regressions are still unwritten. The finding remains pending fresh review and behavioral proof; migration-only state checks do not clear it.
 

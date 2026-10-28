@@ -1,7 +1,7 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "f96d605107231383ae07f3aa8eb976d2dca97251",
-  "state": "21paths at partial R5f96d605; rootdd58 error-queue red/green retained. Owner reports render/cancel cleanup source changes,3migration tests. P1 transaction-coupled queued-save/native recovery unimplemented; same ownerR14 active. Full forms/source/runtime gates pending.",
+  "candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
+  "state": "21 paths at cf95ccd. Transactional queued receipts, native recovery and controller polling are implemented; missing receipt after restart remains explicit unknown, so P1 is open. Focused 14 pass/1 optional skip; strict native run predates final missing-receipt change. Fresh review and full UI/runtime gates pending.",
   "groups": {
     "native": 2,
     "backend": 4,
@@ -15,14 +15,14 @@
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
-      "blob": "379d52b6026a690a8b5bbcfb2ca6ff879b7f7030",
+      "blob": "4d0f81127a41cf84c91bec3e4b675a8bb46a2bd9",
       "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
       "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
-      "blob": "d8a2a0130f55711b672ce0834d34bc03ec060345",
+      "blob": "436d33056e8268cf85b6abcbaeddaf2ca1fc0727",
       "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
       "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
     },
@@ -43,7 +43,7 @@
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "backend",
-      "blob": "30000871cbd1f74bb5acef2ff098cd09c883bb8d",
+      "blob": "fb954d2d6ca2ed9e3e5a1e3e2e75f0a265e9a30e",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -57,7 +57,7 @@
     {
       "path": "ManagedEngine/stdio_service.py",
       "group": "backend",
-      "blob": "34d00bb51b90e97b6f82e76cbe3c120c4af6a542",
+      "blob": "029e49b1a304fffab8edf9903dfc93c1b3aad23a",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -71,7 +71,7 @@
     {
       "path": "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
       "group": "native-checks",
-      "blob": "d46b34bf0e13e9281fa43033cd08d4e5f4d8ae78",
+      "blob": "5685ffb398c0dbbc48f5fb98e87f9698b90b3e48",
       "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
       "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
     },
@@ -127,7 +127,7 @@
     {
       "path": "ManagedEngine/tests/test_configuration_migration.py",
       "group": "python-checks",
-      "blob": "3d53dac9f82f73948734d94a593c9438ec6aed61",
+      "blob": "5f997d983a42e570aeec791ec840846fa55076ee",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -148,7 +148,7 @@
     {
       "path": "docs/acceptance/t03-native-processing-configuration.md",
       "group": "evidence",
-      "blob": "9feee213b66a80ce59e5795120dd6a3cc74ca380",
+      "blob": "34195c4125e78d157acc84b77094b491d6ad504c",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -163,7 +163,7 @@
   "review_scopes": {
     "cooperative_operations": {
       "base": "6da5efa249ede069bf8ebccec8ecb86d198da9e2",
-      "candidate": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
+      "candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
       "paths": [
         "ManagedEngine/backend/server.py",
         "ManagedEngine/backend/magpie_migration.py",
@@ -173,7 +173,7 @@
         "ManagedEngine/tests/test_configuration_migration.py",
         "docs/acceptance/t03-native-processing-configuration.md"
       ],
-      "state": "R5 complete7/7changed-hunk coverage at00c2665; changes requested. Other preferences delta/full21path/native gates excluded."
+      "state": "R5 findings partially corrected at f96/cf95; queued-save recovery still changes requested. Fresh paired recheck required."
     }
   },
   "evidence": {
@@ -187,9 +187,13 @@
       "head": "dd58d6eed26dab5a0f496fcca9ebe9db01c5a02d",
       "baseline": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
       "result": "Final public test reproduces migration_busy at extracted baseline; error/retry/continued-settings test plus large-report case2passed14.057s, ResourceWarning error/systemPython. Not native timing/payload acceptance."
+    },
+    "latest_checkpoint": {
+      "head": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
+      "focused": "14passed/1optional skip; strict Swift6 client/typecheck was before final missing-receipt source change; no native proof of final source."
     }
   },
-  "previous_candidate": "dd58d6eed26dab5a0f496fcca9ebe9db01c5a02d",
+  "previous_candidate": "f96d605107231383ae07f3aa8eb976d2dca97251",
   "review_reports": {
     "cooperative_r5": "docs/acceptance/t03-cooperative-review-r5.md",
     "editor_intent": "docs/acceptance/t03-native-interaction-source-audit.md"

@@ -2,7 +2,7 @@
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
   "candidate": "51d169e477d96bf103c5dd98a673786a50bd363c",
   "source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
-  "state": "106paths at connected R17source49d80d0/evidence51d169e. Root independently read217focused passes; prod/test blobs identical across source/evidence pair. Fresh paired19-path durability/callback/admission review required; other scopes and full acceptance remain open.",
+  "state": "106 original-base paths at connected R17 source49d80d0/evidence51d169e. R18 paired review found2SpecP1 lookup/pending-status risks; coordinator shared helper correction9ab2069 adds4 unreviewed paths. Root independently read217focused passes for51d169e. Fresh R19 helper+R18 recheck required.",
   "groups": {
     "consumers": 27,
     "account-core": 7,
@@ -1270,7 +1270,8 @@
     "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
     "provider_r15": "docs/acceptance/t30-provider-review-r15.md",
     "page_delete_r17": "docs/acceptance/t30-page-delete-review-r17.md",
-    "admission_assessment": "docs/acceptance/t30-admission-assessment.md"
+    "admission_assessment": "docs/acceptance/t30-admission-assessment.md",
+    "committed_writes_r18": "docs/acceptance/t30-committed-writes-review-r18.md"
   },
   "previous_candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
   "review_scopes": {
@@ -1315,6 +1316,17 @@
         "docs/acceptance/t30-native-fixture-lifetime.md"
       ],
       "state": "Ready for paired R18:19paths671additions229deletions; source-only review, actual native and wider source gates remain separate."
+    },
+    "shared_sql_helpers_r19": {
+      "base": "51d169e477d96bf103c5dd98a673786a50bd363c",
+      "candidate": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
+      "paths": [
+        "Modules/RSDatabase/Sources/RSDatabase/FMDatabase+Extras.swift",
+        "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseUpdateFailureTests.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncStatusTable.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "state": "Coordinator source correction: helper BEGIN/COMMIT error capture, SyncStatusTable mapping, batch failure stop and new tests. Not compiled or behaviorally validated; fresh paired review required."
     }
   }
 }

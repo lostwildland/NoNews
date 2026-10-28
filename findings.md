@@ -53,3 +53,7 @@
 - T30's new cancellation boundary reaches unchanged consumers and framework callbacks: false-success UI/undo, pre-fetch widget cleanup, callback admission loss and conditional-GET acknowledgement can undermine otherwise correct database rejection. Scope includes those connected callers; historical green suites do not prove the later fixes.
 
 - Accepted-build Swift products can still reference generated Clang module maps whose header paths belonged to a cleaned private source copy. A narrow standalone source check can use temporary maps to the matching accepted header tree without modifying shared products or rebuilding dependencies. This resolved the T03 missing-module check and exposed the nested gateway helper's actor-isolation warning; an explicit MainActor annotation passed strict source typechecking. It is not evidence of a linked or running app.
+
+2026-10-28 — R18 follow-up:
+- T03cf95ccd receipt/native checkpoint still leaves missing receipt after restart unknown; strict native run predates final source. P1 open.
+- T30 R18 found two Spec P1 data-integrity paths. Root9ab2069 shared SQLite helper correction is source-only; fresh R19 review and focused validation required.

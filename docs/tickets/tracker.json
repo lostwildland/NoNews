@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Partial R5f96d605 reports render budget/published-preview cancellation cleanup and3migration passes. Rootdd58 error-queue red/green retained. Queued-save P1 still open; same original ownerR14 now finishes transaction-coupled receipt/native recovery, with strict component/runtime grant once source ready. Controller wiring/full app/Keychain/HIG and fresh review remain pending.",
+      "implementation_state": "Checkpoint cf95ccd adds transactional queued-save receipts and native recovery. Focused14passes/1optional skip; strict native check predates final missing-receipt change. Missing receipt after restart remains explicit unknown, so P1 open. Fresh review, controller wiring, payload, full app/Keychain/HIG acceptance pending.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "f96d605107231383ae07f3aa8eb976d2dca97251",
+      "last_reported_head": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -572,9 +572,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Connected R17source49d80d0/evidence51d169e clean/pushed;217focused passes independently read. Owner reports real status/article COMMIT rollback/cache, status-creation/index errors, callback incomplete-page red/synthetic checkpoint recovery and admission red/green. Fresh19path paired review and other scopes pending. No realCKtoken/fullpageatomicity/fullMac/build/iOS/T30 acceptance. Native/source released.",
+      "implementation_state": "R18 paired review at source49d80d/evidence51d169 found2SpecP1 risks: failed article lookup success-empty and remote deletion discarding pending read. Coordinator9ab2069 shared helper fixes failed BEGIN/COMMIT rollback and first batch error, with tests not compiled/run. Fresh R19 review and original-owner behavioral validation pending; no full T30 acceptance.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "51d169e477d96bf103c5dd98a673786a50bd363c",
+      "last_reported_head": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
