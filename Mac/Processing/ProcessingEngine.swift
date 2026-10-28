@@ -104,6 +104,31 @@ final class ProcessingEngine {
 	// A 200,000-byte prompt can expand sixfold when JSON-escaped.
 	private let limit = 1_310_720
 	private let writer = DispatchQueue(label: "ProcessingEngine.writer")
+	private let recoveryKey = "NoNews.Processing.PendingMutationReceipts"
+	var unconfirmedMutations: [String] { UserDefaults.standard.stringArray(forKey: recoveryKey) ?? [] }
+	private func rememberMutation(_ identity: String) {
+		var ids = unconfirmedMutations
+		if !ids.contains(identity) { ids.append(identity); UserDefaults.standard.set(ids, forKey: recoveryKey) }
+	}
+	func forgetMutation(_ identity: String) {
+		request(method: "POST", path: "/api/config/migration/ack", body: ["cooperative": true, "receiptId": identity]) { [weak self] result in
+			guard let self, case .success(let value) = result, let operation = value["operationId"] as? String else { return }
+			self.pollAcknowledgement(operation, receipt: identity)
+		}
+	}
+	private func pollAcknowledgement(_ operation: String, receipt: String) {
+		request(method: "POST", path: "/api/config/migration/ack", body: ["operationId": operation]) { [weak self] response in
+			guard let self, case .success(let value) = response else { return }
+			if value["state"] as? String == "complete" {
+				UserDefaults.standard.set(self.unconfirmedMutations.filter { $0 != receipt }, forKey: self.recoveryKey)
+			} else if value["state"] as? String == "running" {
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in self?.pollAcknowledgement(operation, receipt: receipt) }
+			}
+		}
+	}
+	func recoverMutation(_ identity: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		pollMutation(identity, completion: completion)
+	}
 
 	private init() {
 		locate = {
@@ -240,18 +265,27 @@ final class ProcessingEngine {
 			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
 			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
-			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation"), ("POST", "/api/config/migration/ack")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
 		nextID += 1
 		let id = nextID
-		let message: [String: Any] = ["id": id, "token": token, "method": method, "path": path, "query": query, "body": body]
+		var message: [String: Any] = ["id": id, "token": token, "method": method, "path": path, "query": query, "body": body]
+		let tracked = method != "GET" && !path.hasPrefix("/api/config/migration/") && path != "/api/config/render" && path != "/api/settings/processing/probe"
+		let mutation = tracked ? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased() : nil
+		if let mutation { message["mutationId"] = mutation }
 		guard let bytes = try? JSONSerialization.data(withJSONObject: message), bytes.count < limit else {
 			completion(.failure(EngineError.invalidRequest))
 			return
 		}
-		pending[id] = completion
+		if let mutation { rememberMutation(mutation) }
+		pending[id] = { result in
+			guard let mutation else { completion(result); return }
+			if case .failure(let error) = result, error as? EngineError == .unavailable {
+				completion(.failure(EngineError.outcomeUnknown(mutation)))
+			} else { completion(result) }
+		}
 		timers[id] = Timer.scheduledTimer(withTimeInterval: timeout, repeats: false) { [weak self] _ in
 			Task { @MainActor in self?.requestTimedOut(id) }
 		}
@@ -313,7 +347,7 @@ final class ProcessingEngine {
 				pending.removeValue(forKey: id)
 				timers.removeValue(forKey: id)?.invalidate()
 				if let result = value["result"] as? [String: Any] {
-					if let identity = result["_pendingMutation"] as? String { pollMutation(identity, completion: completion) }
+					if let identity = result["_pendingMutation"] as? String { rememberMutation(identity); pollMutation(identity, completion: completion) }
 					else { completion(.success(result)) }
 				}
 				else {
@@ -340,17 +374,25 @@ final class ProcessingEngine {
 	private func pollMutation(_ identity: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		request(method: "POST", path: "/api/config/migration/operation", body: ["operationId": identity]) { [weak self] response in
 			switch response {
-			case .failure(let error): completion(.failure(error))
+			case .failure(let error):
+				if error as? EngineError == .invalidConfiguration || error as? EngineError == .renderTooLarge || error as? EngineError == .migrationBusy {
+					completion(.failure(error))
+					self?.forgetMutation(identity)
+				} else { completion(.failure(EngineError.outcomeUnknown(identity))) }
 			case .success(let value):
 				guard value["operationId"] as? String == identity else { completion(.failure(EngineError.operation)); return }
 				if value["state"] as? String == "complete", let result = value["result"] as? [String: Any] {
 					completion(.success(result))
+					self?.forgetMutation(identity)
+				} else if value["state"] as? String == "notSaved" {
+					self?.forgetMutation(identity)
+					completion(.failure(EngineError.operation))
 				} else if value["state"] as? String == "running" {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
 						guard let self else { completion(.failure(EngineError.unavailable)); return }
 						self.pollMutation(identity, completion: completion)
 					}
-				} else { completion(.failure(EngineError.operation)) }
+				} else { completion(.failure(EngineError.outcomeUnknown(identity))) }
 			}
 		}
 	}
@@ -419,5 +461,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity, migrationBusy, outcomeUnknown(String) }
 }

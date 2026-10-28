@@ -18,7 +18,7 @@ ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/
            ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
            ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
            ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release'),
-           ('POST', '/api/config/migration/operation')}
+           ('POST', '/api/config/migration/operation'), ('POST', '/api/config/migration/ack')}
 
 
 def read_message():
@@ -125,6 +125,10 @@ def main():
                     send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration'})
                     continue
                 method, path = message.get('method'), message.get('path')
+                mutation_id = message.get('mutationId')
+                if mutation_id is not None and (not isinstance(mutation_id, str) or len(mutation_id) != 32 or any(c not in '0123456789abcdef' for c in mutation_id)):
+                    send({**correlation, 'error': 'invalid operation'})
+                    continue
                 body = message.get('body', {})
                 query = message.get('query', {})
                 if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
@@ -137,12 +141,12 @@ def main():
                 try:
                     if path == '/api/config/render':
                         envelope = json.dumps({**correlation, 'result': {'text': ''}}, separators=(',', ':'), ensure_ascii=True)
-                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1, mutation_id=mutation_id)
                     elif path == '/api/config/migration/operation':
                         envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
                         result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) + 1)
                     else:
-                        result = app.handle(method, path, query, body)
+                        result = app.handle(method, path, query, body, mutation_id=mutation_id)
                     send({**correlation, 'result': result})
                 except ValueError as error:
                     if getattr(error, 'code', None) == 'job_record_too_large':

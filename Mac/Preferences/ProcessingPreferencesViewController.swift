@@ -54,6 +54,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private var serviceGeneration = 0
 	private var serviceRequestGeneration = 0
 	private var listGeneration = 0
+	private var recoveringMutations = Set<String>()
 
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
@@ -191,7 +192,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		textScroll.heightAnchor.constraint(equalToConstant: 160).isActive = true
 		instructions.isRichText = false
 		instructions.isEditable = true
-		let actions = NSStackView(views: [button("New", #selector(newPrompt)), button("Save", #selector(savePrompt)), button("Save as Copy", #selector(copyPrompt)), button("Cancel", #selector(cancelPrompt)), button("Delete", #selector(deletePrompt))])
+		let actions = NSStackView(views: [button("New", #selector(newPrompt)), button("Save", #selector(savePrompt)), button("Save as Copy", #selector(copyPromptAction)), button("Cancel", #selector(cancelPrompt)), button("Delete", #selector(deletePrompt))])
 		let historyActions = NSStackView(views: [history, button("Preview", #selector(previewHistory)), button("Restore Text", #selector(restoreHistory))])
 		return form([NSTextField(wrappingLabelWithString: "Prompts are reusable. Curator and Editor are chosen independently."),
 			row("Prompt", prompts), row("Name", promptName), row("Role", role), row("Service", binding), row("Model or target", target),
@@ -217,6 +218,19 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
 			actionButton.isEnabled = true
 			loadLists()
+			for identity in ProcessingEngine.shared.unconfirmedMutations where recoveringMutations.insert(identity).inserted {
+				ProcessingEngine.shared.recoverMutation(identity) { [weak self] result in
+					guard let self else { return }
+					self.recoveringMutations.remove(identity)
+					switch result {
+					case .success:
+						self.feedback.stringValue = "A previous save was confirmed. Review the saved configuration."
+						self.loadLists()
+					case .failure(let error):
+						self.feedback.stringValue = error as? ProcessingEngine.EngineError == .operation ? "A previous save did not complete. Review your changes before retrying." : "A previous save is still being confirmed."
+					}
+				}
+			}
 		case .stopping:
 			statusLabel.stringValue = NSLocalizedString("Stopping…", comment: "Processing status")
 			actionButton.title = NSLocalizedString("Stop", comment: "Processing action")
@@ -241,7 +255,9 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			case .success(let value): then(value)
 			case .failure(let error):
 				if let onFailure { onFailure(); return }
-				if error as? ProcessingEngine.EngineError == .migrationBusy {
+				if case .some(.outcomeUnknown(_)) = error as? ProcessingEngine.EngineError {
+					self?.feedback.stringValue = "The save is being confirmed. Restart processing and check the saved configuration before retrying."
+				} else if error as? ProcessingEngine.EngineError == .migrationBusy {
 					self?.feedback.stringValue = "Routing is being updated. Try this change again when it finishes."
 				} else if error as? ProcessingEngine.EngineError == .snapshotExpired {
 					self?.feedback.stringValue = "The routing report expired. Preview again."
@@ -1042,7 +1058,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		}
 	}
 
-	@objc private func copyPrompt() {
+	@objc private func copyPromptAction() {
 		guard let body = promptBody(), currentPrompt?["id"] is String else { return }
 		copyPrompt(body, generation: promptGeneration)
 	}

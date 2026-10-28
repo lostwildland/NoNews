@@ -14,7 +14,7 @@ import Foundation
 		let data: Data = try await withCheckedThrowingContinuation { continuation in
 			engine.request(method: method, path: path, body: body) { result in
 				do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: result.get())) }
-				catch { continuation.resume(throwing: error) }
+				catch { print("Request failed: \(method) \(path): \(error)"); continuation.resume(throwing: error) }
 			}
 		}
 		guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw NSError(domain: "Configuration response", code: 1) }
@@ -95,6 +95,40 @@ import Foundation
 		let preserved = try await request(engine, "GET", "/api/config/prompts", ["id": id])
 		let status = try await request(engine, "GET", "/api/status")
 		precondition(preserved["text"] as? String == text && status["schemaVersion"] is Int && engine.state == .ready)
+		let lock = Process()
+		let lockInput = Pipe()
+		let lockOutput = Pipe()
+		lock.executableURL = runtime
+		lock.arguments = ["-B", "-I", root.appendingPathComponent("ManagedEngine/tests/configuration_lock_fixture.py").path, data.appendingPathComponent("information.sqlite").path]
+		lock.standardInput = lockInput
+		lock.standardOutput = lockOutput
+		try lock.run()
+		precondition(String(data: lockOutput.fileHandleForReading.availableData, encoding: .utf8)?.contains("locked") == true)
+		var callbackCount = 0
+		var recoveryID: String?
+		engine.request(method: "PUT", path: "/api/config/services", body: ["name": "Stopped fixture", "type": "magpie", "endpoint": "http://127.0.0.1:1"]) { result in
+			callbackCount += 1
+			if case .failure(ProcessingEngine.EngineError.outcomeUnknown(let identity)) = result { recoveryID = identity }
+		}
+		engine.stop()
+		try lockInput.fileHandleForWriting.write(contentsOf: Data("release\n".utf8))
+		lock.waitUntilExit()
+		try await wait(engine, state: .stopped)
+		precondition(callbackCount == 1 && recoveryID != nil)
+		engine.start()
+		try await wait(engine, state: .ready)
+		guard let recoveryID else { throw NSError(domain: "Recovery identity", code: 1) }
+		do {
+			let recovered = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+				engine.recoverMutation(recoveryID) { result in
+					do { continuation.resume(returning: try JSONSerialization.data(withJSONObject: result.get())) }
+					catch { continuation.resume(throwing: error) }
+				}
+			}
+			let value = try JSONSerialization.jsonObject(with: recovered) as? [String: Any]
+			precondition(value?["name"] as? String == "Stopped fixture")
+		} catch ProcessingEngine.EngineError.operation { }
+		precondition(callbackCount == 1)
 		func fixture(_ mutate: Bool) throws {
 			let process = Process()
 			process.executableURL = runtime

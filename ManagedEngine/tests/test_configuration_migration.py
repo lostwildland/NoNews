@@ -15,6 +15,122 @@ from threading import Thread
 
 
 class MigrationTest(unittest.TestCase):
+    def test_queued_save_receipt_survives_restart_and_rolls_back_with_save(self):
+        class Directory(BaseHTTPRequestHandler):
+            def do_GET(self):
+                self.send_response(200); self.end_headers(); self.wfile.write(b'{"data":[{"id":"model"}]}')
+            def log_message(self, *_): pass
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Directory)
+        thread = Thread(target=server.serve_forever, daemon=True); thread.start()
+        self.addCleanup(server.server_close); self.addCleanup(thread.join); self.addCleanup(server.shutdown)
+        script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
+        token = 'r' * 32
+        with tempfile.TemporaryDirectory() as root:
+            def start():
+                p = subprocess.Popen([sys.executable, '-B', str(script), root], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+                def cleanup():
+                    if not p.stdin.closed: p.stdin.close()
+                    if not p.stdout.closed: p.stdout.close()
+                    p.wait(timeout=30)
+                self.addCleanup(cleanup)
+                p.stdin.write(json.dumps({'token': token}) + '\n'); p.stdin.flush()
+                self.assertEqual(json.loads(p.stdout.readline()), {'status': 'ready'})
+                return p
+            p = start()
+            def call(path, body, method='POST', mutation_id=None):
+                message = {'id': 1, 'token': token, 'method': method, 'path': path, 'body': body}
+                if mutation_id: message['mutationId'] = mutation_id
+                p.stdin.write(json.dumps(message) + '\n'); p.stdin.flush()
+                return json.loads(p.stdout.readline())
+            database = Path(root) / 'information.sqlite'
+            with closing(sqlite3.connect(database)) as lock:
+                lock.execute('BEGIN IMMEDIATE')
+                call('/api/config/migration/preview', {'serviceId': 'missing', 'cooperative': True})
+                queued = call('/api/config/services', {'name': 'Saved', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:9'}, 'PUT')['result']['_pendingMutation']
+                lock.rollback()
+            while True:
+                with closing(sqlite3.connect(database)) as db:
+                    receipt = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + queued,)).fetchone()
+                if receipt: break
+                time.sleep(.01)
+            saved = json.loads(receipt[0])['result']
+            p.stdin.close(); p.stdout.close(); self.assertEqual(p.wait(timeout=30), 0)
+            p = start()
+            recovered = call('/api/config/migration/operation', {'operationId': queued})['result']
+            self.assertEqual(recovered['result'], saved)
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': queued})['result']['result'], saved)
+            self.assertEqual(call('/api/config/services', {'id': saved['id']}, 'GET')['result'], saved)
+            service = call('/api/config/services', {'name': 'Directory', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}, 'PUT')['result']
+            call('/api/config/refresh', {'id': service['id']})
+            with closing(sqlite3.connect(database)) as lock:
+                lock.execute('BEGIN IMMEDIATE')
+                call('/api/config/migration/preview', {'serviceId': 'missing', 'cooperative': True})
+                prompt_id = call('/api/config/prompts', {'name': 'Exact', 'role': 'curator', 'text': '原文 {{content}}', 'serviceId': service['id'], 'target': 'model'}, 'PUT')['result']['_pendingMutation']
+                lock.rollback()
+            while True:
+                prompt = call('/api/config/migration/operation', {'operationId': prompt_id})
+                if prompt.get('result', {}).get('state') == 'complete': break
+                time.sleep(.01)
+            original = prompt['result']['result']
+            p.stdin.close(); p.stdout.close(); self.assertEqual(p.wait(timeout=30), 0)
+            p = start()
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': prompt_id})['result']['result'], original)
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': prompt_id})['result']['result']['versionId'], original['versionId'])
+            retry = call('/api/config/prompts', {'name': 'Different', 'role': 'curator', 'text': 'different', 'serviceId': service['id'], 'target': 'model'}, 'PUT', mutation_id=prompt_id)['result']['_pendingMutation']
+            while True:
+                response = call('/api/config/migration/operation', {'operationId': retry})['result']
+                if response['state'] == 'complete': break
+                time.sleep(.01)
+            self.assertEqual(response['result'], original)
+            self.assertNotIn('Different', [row['name'] for row in call('/api/config/prompts', {}, 'GET')['result']['prompts']])
+            with closing(sqlite3.connect(database)) as lock:
+                lock.execute('BEGIN IMMEDIATE')
+                call('/api/config/migration/preview', {'serviceId': 'missing', 'cooperative': True})
+                cancelled_id = call('/api/config/services', {'name': 'Cancelled', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:11'}, 'PUT')['result']['_pendingMutation']
+                call('/api/config/migration/operation', {'operationId': cancelled_id, 'cancel': True})
+                lock.rollback()
+            while True:
+                cancelled = call('/api/config/migration/operation', {'operationId': cancelled_id})['result']
+                if cancelled['state'] != 'running': break
+                time.sleep(.01)
+            self.assertEqual(cancelled['state'], 'notSaved')
+            self.assertNotIn('Cancelled', [row['name'] for row in call('/api/config/services', {}, 'GET')['result']['services']])
+            with closing(sqlite3.connect(database)) as lock:
+                lock.execute('BEGIN IMMEDIATE')
+                call('/api/config/migration/preview', {'serviceId': 'missing', 'cooperative': True})
+                stopped_id = call('/api/config/services', {'name': 'Stopped', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:12'}, 'PUT')['result']['_pendingMutation']
+                call('/api/config/migration/operation', {'operationId': stopped_id, 'cancel': True})
+                p.stdin.close(); p.stdout.close()
+                lock.rollback()
+                self.assertEqual(p.wait(timeout=30), 0)
+            p = start()
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': stopped_id})['result']['state'], 'unknown')
+            self.assertNotIn('Stopped', [row['name'] for row in call('/api/config/services', {}, 'GET')['result']['services']])
+            acknowledged = call('/api/config/migration/ack', {'receiptId': prompt_id, 'cooperative': True})['result']['operationId']
+            while True:
+                response = call('/api/config/migration/ack', {'operationId': acknowledged})['result']
+                if response['state'] == 'complete': break
+                time.sleep(.01)
+            self.assertEqual(call('/api/config/migration/operation', {'operationId': prompt_id})['result']['state'], 'unknown')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("CREATE TRIGGER fail_receipt BEFORE INSERT ON app_settings WHEN NEW.key LIKE 'nonews.mutation-receipt.%' BEGIN SELECT RAISE(ABORT, 'injected'); END")
+            with closing(sqlite3.connect(database)) as lock:
+                lock.execute('BEGIN IMMEDIATE')
+                call('/api/config/migration/preview', {'serviceId': 'missing', 'cooperative': True})
+                failed_id = call('/api/config/services', {'name': 'Rollback', 'type': 'magpie', 'endpoint': 'http://127.0.0.1:10'}, 'PUT')['result']['_pendingMutation']
+                lock.rollback()
+            while True:
+                failed = call('/api/config/migration/operation', {'operationId': failed_id})
+                if 'error' in failed: break
+                time.sleep(.01)
+            self.assertEqual(failed['error'], 'operation failed')
+            services = call('/api/config/services', {}, 'GET')['result']['services']
+            self.assertNotIn('Rollback', [row['name'] for row in services])
+            with closing(sqlite3.connect(database)) as db, db:
+                self.assertIsNone(db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-receipt.' + failed_id,)).fetchone())
+                db.execute('DROP TRIGGER fail_receipt')
+            p.stdin.close(); p.stdout.close(); self.assertEqual(p.wait(timeout=30), 0)
+
     def test_acknowledged_operation_failures_do_not_exhaust_queue(self):
         script = Path(__file__).resolve().parents[1] / 'stdio_service.py'
         token = 'f' * 32
@@ -44,6 +160,15 @@ class MigrationTest(unittest.TestCase):
                 time.sleep(.001)
             self.assertEqual(response['code'], 'invalid_configuration')
             self.assertEqual(call('POST', '/api/config/migration/preview', cursor), response)
+        for _ in range(40):
+            started = call('POST', '/api/config/migration/preview', {'serviceId': 'missing-service', 'cooperative': True})['result']
+            cursor = {'operationId': started['operationId']}
+            call('POST', '/api/config/migration/preview', {**cursor, 'cancel': True})
+            while True:
+                response = call('POST', '/api/config/migration/preview', cursor)
+                if 'error' in response: break
+                time.sleep(.001)
+            self.assertIn(response['code'], {'snapshot_expired', 'invalid_configuration'})
         self.assertEqual(call('GET', '/api/status', {})['result']['schemaVersion'], 41)
         self.assertEqual(call('PUT', '/api/settings/processing', {'processors': 2})['result']['processors'], 2)
 
