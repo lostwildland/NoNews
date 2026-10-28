@@ -329,42 +329,33 @@ def context_results(db, method, body):
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
     if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=? AND c.item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, namespace, context_id)).fetchone() is None:
         raise ValueError("Context provenance mismatch")
-    if method == "GET":
-        for result_type, stage, table_key in (("curator", "curator", "run_id"), ("draft", "editor", "draft_id")):
-            rows = db.execute("SELECT json_extract(p.result_json, '$." + table_key + "') FROM processing_jobs j JOIN pipeline_stage_runs p ON p.job_id=j.id WHERE j.native_context_id=? AND p.stage=? AND p.result_json IS NOT NULL", (context_id, stage)).fetchall()
-            with transaction(db):
-                for result_row in rows:
-                    if result_row[0]:
-                        db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_row[0], utcnow()))
-        if method == "POST":
-            result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
-            result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
-            if result_type not in {"curator", "draft", "material"}:
-                raise ValueError("Unsupported context result")
-            if result_type == "curator":
-                row = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result_id,)).fetchone()
-            elif result_type == "draft":
-                row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
-            else:
-                row = db.execute("SELECT item_id,provenance FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
-            context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
-            if row is None or context_item is None or row[0] != context_item[0]:
-                raise ValueError("Context result does not belong to item")
-            if result_type == "curator":
-                if not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None:
-                    raise ValueError("Curator result does not match context prompt")
-            elif result_type == "draft":
-                if not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None:
-                    raise ValueError("Editor result does not match context prompt")
-            else:
-                try:
-                    provenance = json.loads(row[1]) if row[1] else {}
-                except (TypeError, json.JSONDecodeError):
-                    provenance = {}
-                if not isinstance(provenance, dict) or provenance.get("contextID") != context_id:
-                    raise ValueError("Material result provenance does not match context")
-            with transaction(db):
-                db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
+    if method == "POST":
+        result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
+        result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
+        if result_type not in {"curator", "draft", "material"}:
+            raise ValueError("Unsupported context result")
+        if result_type == "curator":
+            row = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result_id,)).fetchone()
+        elif result_type == "draft":
+            row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
+        else:
+            row = db.execute("SELECT item_id,provenance FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
+        context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+        if row is None or context_item is None or row[0] != context_item[0]:
+            raise ValueError("Context result does not belong to item")
+        if result_type == "curator" and (not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None):
+            raise ValueError("Curator result does not match context prompt")
+        if result_type == "draft" and (not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None):
+            raise ValueError("Editor result does not match context prompt")
+        if result_type == "material":
+            try:
+                provenance = json.loads(row[1]) if row[1] else {}
+            except (TypeError, json.JSONDecodeError):
+                provenance = {}
+            if not isinstance(provenance, dict) or provenance.get("contextID") != context_id:
+                raise ValueError("Material result provenance does not match context")
+        with transaction(db):
+            db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
     return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
 
 def observation(db, identity, namespace=None):
