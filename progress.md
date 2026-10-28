@@ -1,5 +1,9 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — HIG development requirement
+
+- User explicitly requires Apple's Human Interface Guidelines (HIG) as a reference during feature development. Expanded the goal, product brief, parity spec and native UX contract to cover design, implementation, review and acceptance with applicable macOS/iOS section links and actual interaction/accessibility evidence. This documentation change adds no implementation or UI acceptance claim.
+
 ## 2026-10-27
 - Active goal created with measurable parity/migration/sync/native-UX exit criteria.
 - User answers accepted; expanded scope explicitly includes all active IO capability families, full database/assets migration, sync, configurable personal defaults.

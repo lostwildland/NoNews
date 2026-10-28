@@ -18,6 +18,7 @@ Confirmed brief: NNW-native macOS reader with complete configurable IO functiona
 
 ## Design rules
 
+- Consult Apple's official [Human Interface Guidelines (HIG)](https://developer.apple.com/design/human-interface-guidelines/) when designing and implementing each UI or interaction change. Use the applicable macOS/iOS guidance for controls, navigation, feedback, keyboard and accessibility; record relevant section links and design decisions in the ticket's design or acceptance evidence, then verify the actual native behavior during review.
 - Reuse NNW/AppKit structures, menus, toolbar idioms, inspectors, standard Settings controls and system focus behavior.
 - Native Liquid Glass for supported navigation/control surfaces. Do not simulate it using pervasive CSS blur or blur reading content. Inspect SDK availability and retain native fallback on older supported systems.
 - Use system semantic colors, text styles and consistent SF Symbols; active, disabled, pending and failed states must be distinguishable without color alone.

@@ -8,7 +8,7 @@
 - 用户全部数据库、稿件、正文、版本、身份、人工判断、来源配置、队列、采用与收录回执、外部资产映射完整迁移，并独立核对；旧 IO 数据保持可回退。
 - 新用户安装 NoNews 后无需另行部署 IO／FreshRSS 后端；在原生设置内配置 AI、提示词及可选集成。
 - 保留全部 NNW 基础功能；新增 IO 设置、人工决定、内容与处理结果具备实际同步路径和冲突／离线行为验证，不仅保存于一台 Mac。
-- 原生 NNW 三栏、菜单、快捷键、Inspector 与 Settings 语言一致；遵循 Apple HIG，系统支持时采用原生 Liquid Glass，阅读正文以清晰度为先，支持深浅外观、Reduce Transparency/Motion、VoiceOver 和键盘。
+- 原生 NNW 三栏、菜单、快捷键、Inspector 与 Settings 语言一致；设计和开发功能时参考 Apple 官方 [Human Interface Guidelines（HIG，人机界面指南）](https://developer.apple.com/design/human-interface-guidelines/) 并遵循适用规范，系统支持时采用原生 Liquid Glass，阅读正文以清晰度为先，支持深浅外观、Reduce Transparency/Motion、VoiceOver 和键盘。
 - 用户可连续使用原有完整工作流；目标新用户可独立配置并完成筛选、阅读、加工和后续操作。UI 逐项审核，无影响任务完成的已知缺陷；不可自称获得 Apple 奖项。
 
 ## 已确认的十项决策
@@ -27,6 +27,8 @@
 ## 测试接缝与授权
 
 采用用户已授权的完整用户行为验收：应用启动及 Settings、NNW article-to-IO identity bridge 的公共接口、处理服务公开命令／读取 API、SQLite backup/import/export 公共接口、同步适配器公共操作、真实原生旅程。继承已有模块测试；测试结果不能仅断言实现内部字段。具体技术接缝由 ticket 负责人调查并记载，不再要求用户批准每个测试名称。
+
+涉及 UI 或交互的功能，从设计、实现到评审和验收都应查阅 HIG 中适用的 macOS／iOS 章节；在 ticket 设计或验收记录中注明参考链接及其对应的控件、导航、反馈、键盘和无障碍决策。以实际原生操作验证结果；仅引用 HIG 或成功编译不算界面验收。
 
 ## 执行与保护
 

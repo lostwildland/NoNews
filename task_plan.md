@@ -23,4 +23,6 @@ T00/T01/T02 accepted (3/31). Next: complete T03's bounded native report browsing
 - Installed gh rejects combined --slurp/--jq; native subissue readback uses a single per_page=100 response instead.
 
 ## Constraints
+UI and interaction work must consult Apple's official Human Interface Guidelines (HIG) during design and development, then record applicable guidance and verify native behavior at review/acceptance; see docs/goal-contract.md and docs/acceptance/native-ux-contract.md. User reaffirmed this requirement on 2026-10-28.
+
 No capability omissions. No production writes or private data in public repo. Use latest user decisions over older phase-downscope suggestions. No extra requirements interview. Reviews pin each ticket base. Source originals remain untouched. Only user-authorized integration targets.

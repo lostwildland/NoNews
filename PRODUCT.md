@@ -16,6 +16,9 @@ First available evaluation opens Curator. Existing IO result rendering and mater
 Reusable Curator/Editor prompts each bind model/service or Magpie target; credentials remain centralized. Feed settings choose prompts, automation and thresholds. Existing personal choices become explicit grouped settings with usable defaults, impact previews and migration preservation. Safety validation and data protection are invariants, not optional switches.
 
 ## Design authority
+
+Consult Apple's official [Human Interface Guidelines (HIG)](https://developer.apple.com/design/human-interface-guidelines/) throughout feature design, implementation and review, using the relevant macOS/iOS sections. Record applicable guidance and verify actual interaction and accessibility in the ticket's native UX acceptance.
+
 Preserve NNW's native composition and Apple platform conventions. Use native system controls, SF Symbols, semantic colors and system Liquid Glass for supported navigation/controls; maintain an uncluttered legible reading surface. Linear/Notion/Arc are references for product clarity, not visual templates to imitate. Reduce Transparency/Motion and VoiceOver/keyboard support are required. macOS versions without Liquid Glass retain native fallback.
 
 ## Delivery
