@@ -304,10 +304,11 @@ import os
 
 		let newsBlurUnreadStoryHashes = Set(hashes.map { $0.hash })
 		return try await syncDatabase.withStatusMutation { [self] in
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 		let pendingStoryHashes: Set<String>
-		do { pendingStoryHashes = try await self.syncDatabase.selectPendingReadStatusArticleIDs() }
+		do { pendingStoryHashes = try await self.syncDatabase.protectedStatusArticleIDs(key: .read) }
 		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		catch { throw error }
 		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
@@ -330,10 +331,11 @@ import os
 		}
 		let newsBlurStarredStoryHashes = Set(hashes.map { $0.hash })
 		return try await syncDatabase.withStatusMutation { [self] in
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 		let pendingStoryHashes: Set<String>
-		do { pendingStoryHashes = try await self.syncDatabase.selectPendingStarredStatusArticleIDs() }
+		do { pendingStoryHashes = try await self.syncDatabase.protectedStatusArticleIDs(key: .starred) }
 		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		catch { throw error }
 		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.

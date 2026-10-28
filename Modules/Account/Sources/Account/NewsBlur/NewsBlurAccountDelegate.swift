@@ -111,6 +111,7 @@ import Secrets
 	}
 
 	@MainActor private func sendArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
+		try await account.transferPendingSyncStatuses(to: syncDatabase)
 		Self.logger.info("NewsBlur: Sending story statuses")
 		defer {
 			Self.logger.info("NewsBlur: Finished sending article statuses")
@@ -185,7 +186,7 @@ import Secrets
 	/// Brings local read/starred statuses in line with the server. Returns the count
 	/// of articles whose local state actually changed.
 	@MainActor private func refreshArticleStatusReturningCount(for account: Account) async throws -> Int {
-		try await self.refreshArticleStatusReturningCountLocked(for: account)
+		try await syncDatabase.withStatusFetch { try await self.refreshArticleStatusReturningCountLocked(for: account) }
 	}
 
 	@MainActor private func refreshArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
@@ -512,26 +513,14 @@ import Secrets
 			return
 		}
 		try await syncDatabase.withStatusMutation { [self, account] in
-			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-			let syncStatuses = Set(changedArticleIDs.map { articleID in
-				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
-			})
-			do {
-				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-			} catch let queueError {
-				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
-					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				}, recovered: { [self] in
-					if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
-					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
-				})
-			}
-			if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: true)
+			await syncDatabase.noteLocalStatusMutation(articleIDs: changedArticleIDs, key: SyncStatus.Key(statusKey))
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 			if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
 		}
 	}
 
-	private var syncInitialization: Task<Void, Never>?
+	private var syncInitialization: Task<Void, Error>?
 
 	func accountDidInitialize() {
 		credentials = try? account?.retrieveCredentials(type: .newsBlurSessionID)
@@ -539,13 +528,19 @@ import Secrets
 		// A send in progress when the app was killed left its statuses selected. Clear them so
 		// they get sent, instead of waiting for the next selectForProcessing to pick them up.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/4280>
-		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
+		syncInitialization = Task {
+			do { try await syncDatabase.resetAllSelectedForProcessingAndWait() }
+			catch {
+				account?.postSyncError(error, operation: "Recovering in-flight article statuses")
+				throw error
+			}
+		}
 	}
 
 	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
 
 	func closeDatabases() async -> Bool {
-		await syncInitialization?.value
+		_ = await syncInitialization?.result
 		return await syncDatabase.close()
 	}
 

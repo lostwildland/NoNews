@@ -15,11 +15,13 @@ public final class TestingURLProtocol: URLProtocol {
 		public var statusCode: Int
 		public var data: Data?
 		public var headers: [String: String]?
+		public var beforeResponse: (@MainActor @Sendable () async -> Void)?
 
-		public init(statusCode: Int = 200, data: Data? = nil, headers: [String: String]? = nil) {
+		public init(statusCode: Int = 200, data: Data? = nil, headers: [String: String]? = nil, beforeResponse: (@MainActor @Sendable () async -> Void)? = nil) {
 			self.statusCode = statusCode
 			self.data = data
 			self.headers = headers
+			self.beforeResponse = beforeResponse
 		}
 	}
 
@@ -143,7 +145,23 @@ public final class TestingURLProtocol: URLProtocol {
 		Self.recordRequest(request)
 
 		let match = Self.response(for: request)
+		if let beforeResponse = match?.beforeResponse {
+			let transfer = ResponseTransfer(self)
+			Task { @MainActor in
+				await beforeResponse()
+				transfer.value.sendResponse(match, url: url)
+			}
+		} else {
+			sendResponse(match, url: url)
+		}
+	}
 
+	private final class ResponseTransfer: @unchecked Sendable {
+		let value: TestingURLProtocol
+		init(_ value: TestingURLProtocol) { self.value = value }
+	}
+
+	private func sendResponse(_ match: Response?, url: URL) {
 		let httpResponse = HTTPURLResponse(url: url, statusCode: match?.statusCode ?? 200, httpVersion: "HTTP/1.1", headerFields: match?.headers)!
 		client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)
 

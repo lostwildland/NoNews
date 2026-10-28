@@ -110,6 +110,8 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 	}
 
 	private func selectForProcessingLocked() async throws -> SendResult {
+		guard let account else { throw CancellationError() }
+		try await account.transferPendingSyncStatuses(to: syncDatabase)
 		let syncStatuses = try await syncDatabase.selectForProcessing(limit: blockSize)
 		guard !syncStatuses.isEmpty else {
 			return (0, 0)

@@ -76,6 +76,7 @@ final class CloudKitArticlesZone: CloudKitZone {
 	var delegate: CloudKitZoneDelegate?
 	var fetchChangesPageHandler: CloudKitZoneFetchPageHandler?
 	#if DEBUG
+	var modifyOperationForTesting: ((CKModifyRecordsOperation) -> Void)?
 	var fetchOperationForTesting: ((CKFetchRecordZoneChangesOperation, @escaping () -> Void) -> Void)?
 	var commitCheckpointForTesting: (() -> Void)?
 	#endif

@@ -48,11 +48,21 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 		accumulatedDeletedCount = 0
 	}
 
+	@MainActor func cloudKitWillFetchChanges() async throws -> CloudKitZoneFetchContext? {
+		let id = try await syncDatabase.beginStatusFetch()
+		return (apply: { [self] changed, deleted in
+			try await SyncDatabase.$currentStatusFetch.withValue(id) {
+				try await self.cloudKitDidModify(changed: changed, deleted: deleted)
+			}
+		}, finish: { [syncDatabase] in await syncDatabase.endStatusFetch(id) })
+	}
+
 	@MainActor func cloudKitDidModify(changed: [CKRecord], deleted: [CloudKitRecordKey]) async throws {
 		try await syncDatabase.withStatusMutation { [self] in
 			guard let account, account.acceptsFixtureWork, !account.isDeleted else { throw CancellationError() }
-			let pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
-			let pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
+			let pendingReadStatusArticleIDs = try await syncDatabase.protectedStatusArticleIDs(key: .read)
+			let pendingStarredStatusArticleIDs = try await syncDatabase.protectedStatusArticleIDs(key: .starred)
 			lastChangedCount = changed.count
 			lastDeletedCount = deleted.count
 			accumulatedChangedCount += changed.count

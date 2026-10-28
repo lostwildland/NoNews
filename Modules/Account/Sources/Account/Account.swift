@@ -16,6 +16,7 @@ import Articles
 import RSParser
 import RSDatabase
 import ArticlesDatabase
+import SyncDatabase
 import RSWeb
 import Secrets
 import ErrorLog
@@ -1068,19 +1069,31 @@ public enum FetchType {
 
 	/// Mark statuses for articleIDs. Returns the articleIDs whose status actually changed.
 	@discardableResult
-	func updateStatusesAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws -> Set<String> {
+	func updateStatusesAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, queueForSync: Bool = false) async throws -> Set<String> {
 		guard acceptsFixtureWork else { throw CancellationError() }
 		guard !articleIDs.isEmpty else {
 			return Set<String>()
 		}
 
-		let changedArticleIDs = try await database.markAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
+		let changedArticleIDs = try await database.markAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: queueForSync)
 		guard !changedArticleIDs.isEmpty else {
 			return Set<String>()
 		}
 		noteStatusesForArticleIDsDidChange(articleIDs: changedArticleIDs, statusKey: statusKey, flag: flag)
 
 		return changedArticleIDs
+	}
+
+	/// Transfers the durable article journal while the provider holds its status gate.
+	@discardableResult
+	func transferPendingSyncStatuses(to syncDatabase: SyncDatabase) async throws -> Bool {
+		let pending = try await database.pendingSyncStatuses()
+		guard !pending.isEmpty else { return false }
+		let statuses = Set(pending.map { SyncStatus(articleID: $0.articleID, key: SyncStatus.Key($0.key), flag: $0.flag) })
+		try await syncDatabase.insertStatusesOrThrow(statuses)
+		NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: self)
+		try await database.removePendingSyncStatuses(pending)
+		return true
 	}
 
 	// MARK: - Article Statuses

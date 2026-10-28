@@ -535,8 +535,18 @@ final class ArticlesTable: DatabaseTable, Sendable {
 		statusesTable.fetchArticleIDsForStatusesWithoutArticlesNewerThan(articleCutoffDate, completion)
 	}
 
-	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsResultBlock) {
-		transaction({ database in try self.statusesTable.mark(articleIDs, statusKey, flag, database) }) { result in
+	func mark(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, queueForSync: Bool = false, _ completion: @escaping ArticleIDsResultBlock) {
+		transaction({ database in
+			let changed = try self.statusesTable.mark(articleIDs, statusKey, flag, database)
+			if queueForSync {
+				for articleID in changed {
+					guard database.executeUpdate("INSERT OR REPLACE INTO pendingSyncStatuses (articleID, key, flag) VALUES (?, ?, ?)", withArgumentsIn: [articleID, statusKey.rawValue, flag]) else {
+						throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
+					}
+				}
+			}
+			return changed
+		}) { result in
 			DispatchQueue.main.async { completion(result) }
 		}
 	}

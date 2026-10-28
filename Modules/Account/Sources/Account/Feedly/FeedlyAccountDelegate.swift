@@ -88,6 +88,9 @@ import Secrets
 
 	let caller: FeedlyAPICaller
 	private let syncDatabase: SyncDatabase
+	#if DEBUG
+	var syncDatabaseForTesting: SyncDatabase { syncDatabase }
+	#endif
 	weak var account: Account?
 	private static let logger = Feedly.logger
 
@@ -309,6 +312,7 @@ import Secrets
 	}
 
 	private func sendArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
+		try await account.transferPendingSyncStatuses(to: syncDatabase)
 		if let statusSendTask {
 			return try await statusSendTask.value
 		}
@@ -822,31 +826,17 @@ import Secrets
 		Self.logger.debug("FeedlyAccountDelegate: markArticles")
 
 		try await syncDatabase.withStatusMutation { [self, account] in
-			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-			let syncStatuses = Set(changedArticleIDs.map { articleID in
-				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
-			})
-			do {
-				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-			} catch let queueError {
-				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
-					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				}, recovered: { [self] in
-					if !syncStatuses.isEmpty { self.lastNoChangeSyncDate = nil; NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
-					if let count = try? await self.syncDatabase.selectPendingCount(), count > Self.pendingStatusSendThreshold { account.startBackground { [self] in try? await sendArticleStatus() } }
-				})
-			}
-			if !syncStatuses.isEmpty {
-				lastNoChangeSyncDate = nil
-				NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
-			}
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: true)
+			await syncDatabase.noteLocalStatusMutation(articleIDs: changedArticleIDs, key: SyncStatus.Key(statusKey))
+			if !changedArticleIDs.isEmpty { lastNoChangeSyncDate = nil }
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 			if !rateLimiter.shouldSkip(), let count = try? await self.syncDatabase.selectPendingCount(), count > Self.pendingStatusSendThreshold {
 				account.startBackground { [self] in try? await sendArticleStatus() }
 			}
 		}
 	}
 
-	private var syncInitialization: Task<Void, Never>?
+	private var syncInitialization: Task<Void, Error>?
 
 	func accountDidInitialize() {
 		guard let account else {
@@ -858,13 +848,19 @@ import Secrets
 		// A send in progress when the app was killed left its statuses selected. Clear them so
 		// they get sent, instead of waiting for the next selectForProcessing to pick them up.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/4280>
-		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
+		syncInitialization = Task {
+			do { try await syncDatabase.resetAllSelectedForProcessingAndWait() }
+			catch {
+				account.postSyncError(error, operation: "Recovering in-flight article statuses")
+				throw error
+			}
+		}
 	}
 
 	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
 
 	func closeDatabases() async -> Bool {
-		await syncInitialization?.value
+		_ = await syncInitialization?.result
 		return await syncDatabase.close()
 	}
 
@@ -1050,6 +1046,10 @@ private extension FeedlyAccountDelegate {
 	/// `added` became unread, `removed` became read.
 	@discardableResult
 	func syncArticleReadState(for account: Account, userID: String) async throws -> (added: Int, removed: Int) {
+		try await syncDatabase.withStatusFetch { try await self.syncArticleReadStateDuringFetch(for: account, userID: userID) }
+	}
+
+	private func syncArticleReadStateDuringFetch(for account: Account, userID: String) async throws -> (added: Int, removed: Int) {
 		let resource = FeedlyCategoryResourceID.Global.all(for: userID)
 		// The floor is a safety net — Feedly auto-reads at about a month, so its unread
 		// stream can’t reach anywhere near the retention limit anyway. An article absent
@@ -1058,6 +1058,7 @@ private extension FeedlyAccountDelegate {
 		let (remoteUnreadIDs, truncated) = try await collectStreamIDs(for: account, resource: resource, kind: .refreshArticleStatuses, newerThan: newerThan, unreadOnly: true)
 
 		return try await syncDatabase.withStatusMutation {
+		try await account.transferPendingSyncStatuses(to: self.syncDatabase)
 		let localUnreadIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Read the pending set last, right before the diffs — an edit made during the
@@ -1066,7 +1067,7 @@ private extension FeedlyAccountDelegate {
 		// revert pending edits and arm the no-change backoff.
 		let pendingArticleIDs: Set<String>
 		do {
-			pendingArticleIDs = try await self.syncDatabase.selectPendingReadStatusArticleIDs()
+			pendingArticleIDs = try await self.syncDatabase.protectedStatusArticleIDs(key: .read)
 		} catch is CancellationError {
 			throw CancellationError()
 		} catch {
@@ -1094,10 +1095,15 @@ private extension FeedlyAccountDelegate {
 	/// `added` became starred, `removed` became unstarred.
 	@discardableResult
 	func syncArticleStarredState(for account: Account, userID: String) async throws -> (added: Int, removed: Int) {
+		try await syncDatabase.withStatusFetch { try await self.syncArticleStarredStateDuringFetch(for: account, userID: userID) }
+	}
+
+	private func syncArticleStarredStateDuringFetch(for account: Account, userID: String) async throws -> (added: Int, removed: Int) {
 		let resource = FeedlyTagResourceID.Global.saved(for: userID)
 		let (remoteStarredIDs, truncated) = try await collectStreamIDs(for: account, resource: resource, kind: .refreshArticleStatuses, unreadOnly: nil)
 
 		return try await syncDatabase.withStatusMutation {
+		try await account.transferPendingSyncStatuses(to: self.syncDatabase)
 		let localStarredIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Read the pending set last, right before the diffs — an edit made during the
@@ -1106,7 +1112,7 @@ private extension FeedlyAccountDelegate {
 		// revert pending edits and arm the no-change backoff.
 		let pendingArticleIDs: Set<String>
 		do {
-			pendingArticleIDs = try await self.syncDatabase.selectPendingStarredStatusArticleIDs()
+			pendingArticleIDs = try await self.syncDatabase.protectedStatusArticleIDs(key: .starred)
 		} catch is CancellationError {
 			throw CancellationError()
 		} catch {

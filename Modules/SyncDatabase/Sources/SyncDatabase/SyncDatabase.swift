@@ -38,6 +38,7 @@ private actor StatusMutationGate {
 }
 
 public actor SyncDatabase {
+	@TaskLocal public static var currentStatusFetch: UUID?
 	private struct Admission {
 		var closing = false
 		var accountID: String?
@@ -63,6 +64,7 @@ public actor SyncDatabase {
 	}
 	private let database: FMDatabase
 	private let statusMutationGate = StatusMutationGate()
+	private var statusFetches = [UUID: [SyncStatus.Key: Set<String>]]()
 	public nonisolated let databasePath: String
 
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "SyncDatabase")
@@ -110,22 +112,55 @@ public actor SyncDatabase {
 		lastErrorForTesting = nil
 		#endif
 		try SyncStatusTable.insertStatuses(statuses, database: database)
+		for (key, statuses) in Dictionary(grouping: statuses, by: \.key) {
+			noteLocalStatusMutation(articleIDs: Set(statuses.map { $0.articleID }), key: key)
+		}
 	}
 
-	public func recoverStatusMutationFailure(_ statuses: Set<SyncStatus>, queueError: Error, compensate: @escaping @MainActor @Sendable () async throws -> Void, recovered: @escaping @MainActor @Sendable () async -> Void) async throws -> Never {
-		do {
-			try await compensate()
-		} catch {
-			let compensationFailure = error.localizedDescription
-			do {
-				try insertStatusesOrThrow(statuses)
-			} catch {
-				throw StatusMutationRecoveryError(queueFailure: queueError.localizedDescription, compensationFailure: compensationFailure, outboxFailure: error.localizedDescription)
-			}
-			await recovered()
-			throw StatusMutationRecoveryError(queueFailure: queueError.localizedDescription, compensationFailure: compensationFailure, outboxFailure: nil)
+	/// Acknowledgement may remove pending rows while an older response is still in flight.
+	/// Keep those identities until every response that could predate them has completed.
+	public func noteLocalStatusMutation(articleIDs: Set<String>, key: SyncStatus.Key) {
+		for id in Array(statusFetches.keys) {
+			statusFetches[id, default: [:]][key, default: []].formUnion(articleIDs)
 		}
-		throw queueError
+	}
+
+	public func beginStatusFetch() async throws -> UUID {
+		await statusMutationGate.acquire()
+		do {
+			let pendingRead = try selectPendingReadStatusArticleIDs()
+			let pendingStarred = try selectPendingStarredStatusArticleIDs()
+			let id = UUID()
+			statusFetches[id] = [.read: pendingRead, .starred: pendingStarred]
+			await statusMutationGate.release()
+			return id
+		} catch {
+			await statusMutationGate.release()
+			throw error
+		}
+	}
+
+	public func endStatusFetch(_ id: UUID) { statusFetches.removeValue(forKey: id) }
+
+	public func withStatusFetch<T: Sendable>(_ operation: @escaping @MainActor @Sendable () async throws -> T) async throws -> T {
+		let id = try await beginStatusFetch()
+		do {
+			let result = try await Self.$currentStatusFetch.withValue(id, operation: operation)
+			endStatusFetch(id)
+			return result
+		} catch {
+			endStatusFetch(id)
+			throw error
+		}
+	}
+
+	/// Use under withStatusMutation after replaying the article journal.
+	public func protectedStatusArticleIDs(key: SyncStatus.Key) throws -> Set<String> {
+		var ids: Set<String>
+		if key == .read { ids = try selectPendingReadStatusArticleIDs() }
+		else { ids = try selectPendingStarredStatusArticleIDs() }
+		if let id = Self.currentStatusFetch, let fetch = statusFetches[id] { ids.formUnion(fetch[key] ?? []) }
+		return ids
 	}
 
 	public func selectForProcessing(limit: Int? = nil) throws -> Set<SyncStatus> {
@@ -182,7 +217,17 @@ public actor SyncDatabase {
 		return true
 	}
 
-	private func performAcceptedReset() { _resetAllSelectedForProcessing() }
+	private func performAcceptedReset() async {
+		await statusMutationGate.acquire()
+		do { try SyncStatusTable.resetAllSelectedForProcessing(database: database) }
+		catch {
+			#if DEBUG
+			lastErrorForTesting = error as? SyncDatabaseError
+			#endif
+			Self.logger.error("Resetting in-flight statuses failed: \(error.localizedDescription, privacy: .public)")
+		}
+		await statusMutationGate.release()
+	}
 
 	private nonisolated func finishAcceptedReset() {
 		let waiters = admission.withLock { state -> [CheckedContinuation<Void, Never>] in
@@ -196,9 +241,25 @@ public actor SyncDatabase {
 		for waiter in waiters { waiter.resume() }
 	}
 
-	public func resetAllSelectedForProcessingAndWait() {
-		guard acceptsWork else { return }
-		_resetAllSelectedForProcessing()
+	public func resetAllSelectedForProcessingAndWait() async throws {
+		let accepted = admission.withLock { state in
+			guard !state.sealed && (!state.closing || (state.accountID != nil && state.accountID == DatabaseWork.current?.accountID && DatabaseWork.current?.isActive == true)) else { return false }
+			state.pendingResets += 1
+			return true
+		}
+		guard accepted else { throw CancellationError() }
+		defer { finishAcceptedReset() }
+		#if DEBUG
+		await resetHook.withLock { $0 }?()
+		#endif
+		await statusMutationGate.acquire()
+		do {
+			try SyncStatusTable.resetAllSelectedForProcessing(database: database)
+			await statusMutationGate.release()
+		} catch {
+			await statusMutationGate.release()
+			throw error
+		}
 	}
 
 	public func close() async -> Bool {
@@ -254,11 +315,4 @@ private extension SyncDatabase {
 	CREATE TABLE if not EXISTS syncStatus (articleID TEXT NOT NULL, key TEXT NOT NULL, flag BOOL NOT NULL DEFAULT 0, selected BOOL NOT NULL DEFAULT 0, PRIMARY KEY (articleID, key));
 	"""
 
-	func _resetAllSelectedForProcessing() {
-		do {
-			try SyncStatusTable.resetAllSelectedForProcessing(database: database)
-		} catch {
-			Self.logger.error("\(#function, privacy: .public) — \(self.databasePath, privacy: .public) — \(error.localizedDescription, privacy: .public)")
-		}
-	}
 }

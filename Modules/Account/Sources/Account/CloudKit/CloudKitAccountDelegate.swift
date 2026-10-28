@@ -615,25 +615,10 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public)")
 
 		try await syncDatabase.withStatusMutation { [self, account] in
-			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-			let syncStatuses = Set(changedArticleIDs.map { articleID in
-				SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag)
-			})
-
-			do {
-				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-			} catch let queueError {
-				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
-					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				}, recovered: { [self] in
-					if !syncStatuses.isEmpty { self.lastNoChangeSyncDate = nil; NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
-					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
-				})
-			}
-			if !syncStatuses.isEmpty {
-				lastNoChangeSyncDate = nil
-				NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account)
-			}
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: true)
+			await syncDatabase.noteLocalStatusMutation(articleIDs: changedArticleIDs, key: SyncStatus.Key(statusKey))
+			if !changedArticleIDs.isEmpty { lastNoChangeSyncDate = nil }
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 			if let count = try? await syncDatabase.selectPendingCount(), count > 100 {
 				// Flush in the background so marking doesn't block the caller
 				// <https://github.com/Ranchero-Software/NetNewsWire/issues/5273>
@@ -644,7 +629,7 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		Self.logger.debug("CloudKitAccountDelegate: \(#function, privacy: .public) did complete")
 	}
 
-	private var syncInitialization: Task<Void, Never>?
+	private var syncInitialization: Task<Void, Error>?
 
 	func accountDidInitialize() {
 		guard let account else {
@@ -683,7 +668,13 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 		accountZone.fetchChangesPageHandler = makePageHandler(kind: .refreshFeedList)
 		articlesZone.fetchChangesPageHandler = makePageHandler(kind: .refreshArticleStatuses)
 
-		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
+		syncInitialization = Task {
+			do { try await syncDatabase.resetAllSelectedForProcessingAndWait() }
+			catch {
+				account.postSyncError(error, operation: "Recovering in-flight article statuses")
+				throw error
+			}
+		}
 
 		// Check to see if this is a new account and initialize anything we need
 		if account.externalID == nil {
@@ -708,7 +699,7 @@ enum CloudKitAccountDelegateError: LocalizedError, Sendable {
 	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
 
 	func closeDatabases() async -> Bool {
-		await syncInitialization?.value
+		_ = await syncInitialization?.result
 		return await syncDatabase.close()
 	}
 

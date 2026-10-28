@@ -648,6 +648,81 @@ private final class FetchPageObserver: CloudKitZoneDelegate, Sendable {
 		}
 	}
 
+	@Test(arguments: [ArticleStatus.Key.read, .starred])
+	func cloudKitOldFetchCannotUndoAcknowledgedLocalMark(key: ArticleStatus.Key) async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .onMyMac)
+		let sync = SyncDatabase(databasePath: account.dataFolder + "/fixture-sync.sqlite3")
+		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
+		zone.delegate = CloudKitArticlesZoneDelegate(account: account, database: sync, articlesZone: zone, syncErrorHandler: nil)
+		var articleIDs = [String]()
+		for uniqueID in ["local", "unrelated"] {
+			let record = CKRecord(recordType: "Article", recordID: CKRecord.ID(recordName: "a:" + uniqueID, zoneID: zone.zoneID))
+			record["webFeedURL"] = "fixture-feed" as CKRecordValue
+			record["uniqueID"] = uniqueID as CKRecordValue
+			let item = try #require(makeParsedItem(record))
+			#expect((await account.updateAsync(feedID: "fixture-feed", parsedItems: [item], deleteOlder: false)).error == nil)
+			articleIDs.append(Article.calculatedArticleID(feedID: "fixture-feed", uniqueID: uniqueID))
+		}
+		let localID = articleIDs[0]
+		let otherID = articleIDs[1]
+		let (fetched, fetchedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		var checkpoints = 0
+		zone.commitCheckpointForTesting = { checkpoints += 1 }
+		zone.fetchOperationForTesting = { op, checkpoint in
+			Task { @MainActor in
+				fetchedSignal.yield(())
+				for await _ in release { break }
+				for (id, flag) in [(localID, "0"), (otherID, "1")] {
+					let recordID = CKRecord.ID(recordName: "s:" + id, zoneID: zone.zoneID)
+					let record = CKRecord(recordType: "ArticleStatus", recordID: recordID)
+					record[key.rawValue] = flag as CKRecordValue
+					op.recordWasChangedBlock?(recordID, .success(record))
+				}
+				checkpoint()
+				op.fetchRecordZoneChangesResultBlock?(.success(()))
+			}
+		}
+		var sentStatus = false
+		zone.modifyOperationForTesting = { op in
+			for record in op.recordsToSave ?? [] where record.recordType == "ArticleStatus" {
+				#expect(record[key.rawValue] as? String == "1")
+				sentStatus = true
+			}
+			op.modifyRecordsResultBlock?(.success(()))
+		}
+		let fetch = Task { try await zone.fetchChangesInZone() }
+		for await _ in fetched { break }
+		try await sync.withStatusMutation {
+			_ = try await account.updateStatusesAsync(articleIDs: [localID], statusKey: key, flag: true, queueForSync: true)
+			try await account.transferPendingSyncStatuses(to: sync)
+		}
+		let sender = CloudKitSendStatusOperation(account: account, articlesZone: zone, database: sync, syncArticleContentForUnreadArticles: { false }, syncErrorHandler: nil)
+		let queue = MainThreadOperationQueue()
+		await withCheckedContinuation { continuation in
+			sender.completionBlock = { _ in continuation.resume() }
+			queue.add(sender)
+		}
+		#expect(!sender.didFail && sender.sentCount == 1 && sentStatus)
+		#expect(try await sync.selectPendingCount() == 0)
+		releaseSignal.finish()
+		try await fetch.value
+		#expect(checkpoints == 1)
+		if key == .read {
+			let unread = try await account.fetchUnreadArticleIDsAsync()
+			#expect(!unread.contains(localID) && !unread.contains(otherID))
+		} else {
+			let starred = try await account.fetchStarredArticleIDsAsync()
+			#expect(starred.contains(localID) && starred.contains(otherID))
+		}
+		zone.fetchOperationForTesting = nil
+		zone.modifyOperationForTesting = nil
+		zone.commitCheckpointForTesting = nil
+		#expect(await sync.close())
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func cloudKitFetchCallbacksRejectIndividualAndZoneErrors() async throws {
 		let zone = CloudKitArticlesZone(testingSyncArticleContent: { false })
 		let observer = FetchPageObserver()

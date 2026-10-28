@@ -48,6 +48,9 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 	private let variant: ReaderAPIVariant
 
 	private let syncDatabase: SyncDatabase
+	#if DEBUG
+	var syncDatabaseForTesting: SyncDatabase { syncDatabase }
+	#endif
 
 	private let caller: ReaderAPICaller
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "ReaderAPI")
@@ -235,6 +238,7 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 	}
 
 	private func sendArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
+		try await account.transferPendingSyncStatuses(to: syncDatabase)
 		Self.logger.debug("ReaderAPIAccountDelegate: sendArticleStatus")
 
 		return try await account.logActivity(kind: .sendArticleStatuses) { () -> Int in
@@ -308,7 +312,7 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 	/// Brings local read/starred statuses in line with the server. Returns the count
 	/// of articles whose local state actually changed.
 	@MainActor private func refreshArticleStatusReturningCount(for account: Account) async throws -> Int {
-		try await self.refreshArticleStatusReturningCountLocked(for: account)
+		try await syncDatabase.withStatusFetch { try await self.refreshArticleStatusReturningCountLocked(for: account) }
 	}
 
 	@MainActor private func refreshArticleStatusReturningCountLocked(for account: Account) async throws -> Int {
@@ -682,24 +686,14 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 		Self.logger.debug("ReaderAPIAccountDelegate: markArticles — statusKey \(statusKey.rawValue)")
 
 		try await syncDatabase.withStatusMutation { [self, account] in
-			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
-			let syncStatuses = Set(changedArticleIDs.map { articleID in SyncStatus(articleID: articleID, key: SyncStatus.Key(statusKey), flag: flag) })
-			do {
-				try await syncDatabase.insertStatusesOrThrow(syncStatuses)
-			} catch let queueError {
-				try await syncDatabase.recoverStatusMutationFailure(syncStatuses, queueError: queueError, compensate: {
-					_ = try await account.updateStatusesAsync(articleIDs: changedArticleIDs, statusKey: statusKey, flag: !flag)
-				}, recovered: { [self] in
-					if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
-					if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
-				})
-			}
-			if !syncStatuses.isEmpty { NotificationCenter.default.post(name: .AccountDidQueueArticleStatuses, object: account) }
+			let changedArticleIDs = try await account.updateStatusesAsync(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: true)
+			await syncDatabase.noteLocalStatusMutation(articleIDs: changedArticleIDs, key: SyncStatus.Key(statusKey))
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 			if let count = try? await self.syncDatabase.selectPendingCount(), count > 100 { account.startBackground { [self] in try? await sendArticleStatus() } }
 		}
 	}
 
-	private var syncInitialization: Task<Void, Never>?
+	private var syncInitialization: Task<Void, Error>?
 
 	func accountDidInitialize() {
 		guard let account else {
@@ -710,13 +704,19 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 		// A send in progress when the app was killed left its statuses selected. Clear them so
 		// they get sent, instead of waiting for the next selectForProcessing to pick them up.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/4280>
-		syncInitialization = Task { await syncDatabase.resetAllSelectedForProcessingAndWait() }
+		syncInitialization = Task {
+			do { try await syncDatabase.resetAllSelectedForProcessingAndWait() }
+			catch {
+				account.postSyncError(error, operation: "Recovering in-flight article statuses")
+				throw error
+			}
+		}
 	}
 
 	func beginClosing() { syncDatabase.beginClosing(accountID: account?.accountID) }
 
 	func closeDatabases() async -> Bool {
-		await syncInitialization?.value
+		_ = await syncInitialization?.result
 		return await syncDatabase.close()
 	}
 
@@ -1213,10 +1213,11 @@ private extension ReaderAPIAccountDelegate {
 		// A failed pending-statuses read must not be treated as “nothing pending” — that would revert pending changes.
 		let serverUnreadArticleIDs = Set(articleIDs)
 		return try await syncDatabase.withStatusMutation { [self] in
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 		let pendingArticleIDs: Set<String>
-		do { pendingArticleIDs = try await self.syncDatabase.selectPendingReadStatusArticleIDs() }
+		do { pendingArticleIDs = try await self.syncDatabase.protectedStatusArticleIDs(key: .read) }
 		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		catch { throw error }
 		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
@@ -1242,10 +1243,11 @@ private extension ReaderAPIAccountDelegate {
 		// A failed pending-statuses read must not be treated as “nothing pending” — that would revert pending changes.
 		let serverStarredArticleIDs = Set(articleIDs)
 		return try await syncDatabase.withStatusMutation { [self] in
+			try await account.transferPendingSyncStatuses(to: syncDatabase)
 		let pendingArticleIDs: Set<String>
-		do { pendingArticleIDs = try await self.syncDatabase.selectPendingStarredStatusArticleIDs() }
+		do { pendingArticleIDs = try await self.syncDatabase.protectedStatusArticleIDs(key: .starred) }
 		catch is CancellationError { throw CancellationError() }
-		catch { return 0 }
+		catch { throw error }
 		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.

@@ -23,18 +23,6 @@ public enum SyncDatabaseError: LocalizedError {
 	}
 }
 
-public struct StatusMutationRecoveryError: LocalizedError, Sendable {
-	public let queueFailure: String
-	public let compensationFailure: String
-	public let outboxFailure: String?
-
-	public var errorDescription: String? {
-		var message = "Status mutation recovery failed: queue=\(queueFailure); compensation=\(compensationFailure)"
-		if let outboxFailure { message += "; outbox=\(outboxFailure)" }
-		return message
-	}
-}
-
 extension FMDatabase {
 
 	/// Current SQLite error. Call before `rollback()` which overwrites the last-error state.

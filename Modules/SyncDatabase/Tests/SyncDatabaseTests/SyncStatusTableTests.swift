@@ -27,26 +27,122 @@ import Synchronization
 		#expect(await database.close())
 	}
 
-	@Test func failedCompensationRequeuesOutboxAndReportsRecovery() async throws {
+	@Test func fetchProtectionSurvivesAcknowledgementAndIsScopedToItsResponse() async throws {
 		let database = SyncDatabase(databasePath: ":memory:")
-		let statuses: Set<SyncStatus> = [SyncStatus(articleID: "retry", key: .read, flag: true)]
-		let recovered = Mutex(false)
-		await #expect(throws: StatusMutationRecoveryError.self) {
-			try await database.recoverStatusMutationFailure(statuses, queueError: SyncDatabaseError.sqliteError(operation: "queue", code: 19, message: "queue failed"), compensate: { throw CancellationError() }, recovered: { recovered.withLock { $0 = true } })
+		try await database.insertStatusesOrThrow([SyncStatus(articleID: "already-pending", key: .read, flag: true)])
+		try await database.withStatusFetch {
+			try await database.withStatusMutation {
+				try await database.insertStatusesOrThrow([SyncStatus(articleID: "marked-during-fetch", key: .starred, flag: true)])
+				let selected = try await database.selectForProcessing()
+				try await database.deleteSelectedForProcessingOrThrow(Set(selected.map { $0.articleID }))
+			}
+			#expect(try await database.selectPendingCount() == 0)
+			#expect(try await database.protectedStatusArticleIDs(key: .read) == ["already-pending"])
+			#expect(try await database.protectedStatusArticleIDs(key: .starred) == ["marked-during-fetch"])
+			// A later response must not inherit protection from an older overlapping fetch.
+			try await database.withStatusFetch {
+					let protectedRead = try await database.protectedStatusArticleIDs(key: .read)
+					let protectedStarred = try await database.protectedStatusArticleIDs(key: .starred)
+					#expect(protectedRead.isEmpty)
+					#expect(protectedStarred.isEmpty)
+			}
 		}
-		#expect(recovered.withLock { $0 })
-		#expect(try await database.selectPendingReadStatusArticleIDs().contains("retry"))
+		for cancel in [false, true] {
+			do {
+				try await database.withStatusFetch {
+					if cancel { throw CancellationError() }
+					throw SyncDatabaseError.sqliteError(operation: "fixture", code: 19, message: "fixture")
+				}
+			} catch { #expect((error is CancellationError) == cancel) }
+		}
+		#expect(try await database.protectedStatusArticleIDs(key: .read).isEmpty)
 		#expect(await database.close())
 	}
 
-	@Test func failedCompensationAndOutboxFallbackRemainObservable() async throws {
+	@Test func resetWaitsForInFlightSendAcknowledgement() async throws {
 		let database = SyncDatabase(databasePath: ":memory:")
-		let statuses: Set<SyncStatus> = [SyncStatus(articleID: "lost", key: .read, flag: true)]
-		#expect(await database.setStatusTableUnavailableForTesting(true))
-		await #expect(throws: StatusMutationRecoveryError.self) {
-			try await database.recoverStatusMutationFailure(statuses, queueError: SyncDatabaseError.sqliteError(operation: "queue", code: 19, message: "queue failed"), compensate: { throw CancellationError() }, recovered: {})
+		try await database.insertStatusesOrThrow([SyncStatus(articleID: "sent", key: .read, flag: true)])
+		let (selected, selectedSignal) = AsyncStream<Void>.makeStream()
+		let (acknowledge, acknowledgeSignal) = AsyncStream<Void>.makeStream()
+		let (resetStarted, resetSignal) = AsyncStream<Void>.makeStream()
+		let sender = Task {
+			try await database.withStatusMutation {
+				#expect(try await database.selectForProcessing().count == 1)
+				selectedSignal.yield(())
+				for await _ in acknowledge { break }
+				try await database.deleteSelectedForProcessingOrThrow(["sent"], key: .read)
+			}
 		}
-		#expect(await database.setStatusTableUnavailableForTesting(false))
+		for await _ in selected { break }
+		database.setResetHookForTesting { resetSignal.yield(()) }
+		let reset = Task { try await database.resetAllSelectedForProcessingAndWait() }
+			for await _ in resetStarted { break }
+		acknowledgeSignal.finish()
+		try await sender.value
+		try await reset.value
+		database.setResetHookForTesting(nil)
+		#expect(try await database.selectPendingCount() == 0)
+		#expect(await database.close())
+	}
+
+	@Test func cancelledAcceptedResetDrainsBeforeCloseAndRecoversAfterRestart() async throws {
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		let path = folder.appendingPathComponent("Sync.sqlite3").path
+		let database = SyncDatabase(databasePath: path)
+		try await database.insertStatusesOrThrow([SyncStatus(articleID: "retry", key: .starred, flag: true, selected: true)])
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		database.setResetHookForTesting {
+			startedSignal.yield(())
+			for await _ in release { break }
+		}
+		let reset = Task { try await database.resetAllSelectedForProcessingAndWait() }
+		for await _ in started { break }
+		reset.cancel()
+		database.beginClosing()
+		let close = Task { await database.close() }
+		releaseSignal.finish()
+		try await reset.value
+		#expect(await close.value)
+		let restarted = SyncDatabase(databasePath: path)
+		#expect(try await restarted.selectForProcessing().contains { $0.articleID == "retry" && $0.selected })
+		try await restarted.deleteSelectedForProcessingOrThrow(["retry"], key: .starred)
+		#expect(try await restarted.selectPendingCount() == 0)
+		#expect(await restarted.close())
+		try FileManager.default.removeItem(at: folder)
+	}
+
+	@Test func restartRecoversRowsSelectedByInterruptedSender() async throws {
+		let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+		let path = folder.appendingPathComponent("Sync.sqlite3").path
+		let first = SyncDatabase(databasePath: path)
+		try await first.insertStatusesOrThrow([SyncStatus(articleID: "interrupted", key: .read, flag: false)])
+		#expect(try await first.selectForProcessing().count == 1)
+		#expect(await first.close())
+		let restarted = SyncDatabase(databasePath: path)
+		try await restarted.resetAllSelectedForProcessingAndWait()
+		try await restarted.deleteSelectedForProcessingOrThrow(["interrupted"])
+		#expect(try await restarted.selectPendingCount() == 1)
+		#expect(try await restarted.selectForProcessing().contains { $0.articleID == "interrupted" && !$0.flag })
+		try await restarted.deleteSelectedForProcessingOrThrow(["interrupted"])
+		#expect(try await restarted.selectPendingCount() == 0)
+		#expect(await restarted.close())
+		try FileManager.default.removeItem(at: folder)
+	}
+
+	@Test func resetPreservesActualSQLiteCommitError() async throws {
+		let database = SyncDatabase(databasePath: ":memory:")
+		try await database.insertStatusesOrThrow([SyncStatus(articleID: "retry", key: .read, flag: true, selected: true)])
+		#expect(await database.executeSQLForTesting("PRAGMA foreign_keys=ON; CREATE TABLE fixture_parent (id INTEGER PRIMARY KEY); CREATE TABLE fixture_child (id INTEGER REFERENCES fixture_parent(id) DEFERRABLE INITIALLY DEFERRED); CREATE TRIGGER fixture_reset AFTER UPDATE OF selected ON syncStatus BEGIN INSERT INTO fixture_child VALUES (1); END;"))
+		do { try await database.resetAllSelectedForProcessingAndWait(); Issue.record("Reset commit failure reported success") }
+		catch let error as SyncDatabaseError {
+			if case .sqliteError(_, let code, _) = error { #expect(code == 19) }
+		}
+		#expect(await database.executeSQLForTesting("DROP TRIGGER fixture_reset; DROP TABLE fixture_child; DROP TABLE fixture_parent;"))
+		try await database.deleteSelectedForProcessingOrThrow(["retry"], key: .read)
+		#expect(try await database.selectPendingCount() == 0)
 		#expect(await database.close())
 	}
 

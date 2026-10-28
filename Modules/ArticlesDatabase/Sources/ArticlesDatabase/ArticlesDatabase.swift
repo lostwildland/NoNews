@@ -505,12 +505,12 @@ public struct ArticleCounts: Sendable {
 	// MARK: - Statuses
 
 	/// Mark statuses for articleIDs. Returns the articleIDs whose status actually changed.
-	public func markAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws -> Set<String> {
+	public func markAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, queueForSync: Bool = false) async throws -> Set<String> {
 		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
 		return try await withCheckedThrowingContinuation { continuation in
-			_mark(articleIDs: articleIDs, statusKey: statusKey, flag: flag) { changedArticleIDs in
+			_mark(articleIDs: articleIDs, statusKey: statusKey, flag: flag, queueForSync: queueForSync) { changedArticleIDs in
 				continuation.resume(with: changedArticleIDs)
 			}
 		}
@@ -523,6 +523,52 @@ public struct ArticleCounts: Sendable {
 		return try await withCheckedThrowingContinuation { continuation in
 			_markAndFetchNew(articleIDs: articleIDs, statusKey: statusKey, flag: flag) { articleIDs in
 				continuation.resume(with: articleIDs)
+			}
+		}
+	}
+
+	public struct PendingSyncStatus: Sendable {
+		public let articleID: String
+		public let key: ArticleStatus.Key
+		public let flag: Bool
+	}
+
+	public func pendingSyncStatuses() async throws -> [PendingSyncStatus] {
+		guard acceptsWork else { throw CancellationError() }
+		activeOperations += 1
+		defer { operationFinished() }
+		return try await withCheckedThrowingContinuation { continuation in
+			queue.runInTransaction(completion: { continuation.resume(with: $0) }) { database in
+				guard let rows = database.executeQuery("SELECT articleID, key, flag FROM pendingSyncStatuses", withArgumentsIn: nil) else {
+					throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
+				}
+				defer { rows.close() }
+				var statuses = [PendingSyncStatus]()
+				var error: NSError?
+				while rows.nextWithError(&error) {
+					guard let articleID = rows.swiftString(forColumn: "articleID"), let rawKey = rows.swiftString(forColumn: "key"), let key = ArticleStatus.Key(rawValue: rawKey) else {
+						throw CocoaError(.fileReadCorruptFile)
+					}
+					statuses.append(PendingSyncStatus(articleID: articleID, key: key, flag: rows.bool(forColumn: "flag")))
+				}
+				if let error { throw error }
+				return statuses
+			}
+		}
+	}
+
+	/// Call only after the matching sync queue insert commits, under the account's status gate.
+	public func removePendingSyncStatuses(_ statuses: [PendingSyncStatus]) async throws {
+		guard acceptsWork else { throw CancellationError() }
+		activeOperations += 1
+		defer { operationFinished() }
+		try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+			queue.runInTransaction(completion: { continuation.resume(with: $0) }) { database in
+				for status in statuses {
+					guard database.executeUpdate("DELETE FROM pendingSyncStatuses WHERE articleID=? AND key=? AND flag=?", withArgumentsIn: [status.articleID, status.key.rawValue, status.flag]) else {
+						throw database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
+					}
+				}
 			}
 		}
 	}
@@ -575,6 +621,7 @@ private extension ArticlesDatabase {
 	static let tableCreationStatements = """
 	CREATE TABLE if not EXISTS articles (articleID TEXT NOT NULL PRIMARY KEY, feedID TEXT NOT NULL, uniqueID TEXT NOT NULL, title TEXT, contentHTML TEXT, contentText TEXT, markdown TEXT, url TEXT, externalURL TEXT, summary TEXT, imageURL TEXT, bannerImageURL TEXT, datePublished DATE, dateModified DATE, searchRowID INTEGER, authors TEXT);
 
+	CREATE TABLE if not EXISTS pendingSyncStatuses (articleID TEXT NOT NULL, key TEXT NOT NULL CHECK (key IN ('read', 'starred')), flag BOOL NOT NULL, PRIMARY KEY (articleID, key));
 	CREATE TABLE if not EXISTS statuses (articleID TEXT NOT NULL PRIMARY KEY, read BOOL NOT NULL DEFAULT 0, starred BOOL NOT NULL DEFAULT 0, dateArrived DATE NOT NULL DEFAULT 0);
 
 	CREATE INDEX if not EXISTS articles_feedID_datePublished_articleID on articles (feedID, datePublished, articleID);
@@ -618,9 +665,9 @@ private extension ArticlesDatabase {
 		articlesTable.fetchStarredAndUnreadCount(feedIDs, completion)
 	}
 
-	func _mark(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, completion: @escaping ArticleIDsResultBlock) {
+	func _mark(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, queueForSync: Bool, completion: @escaping ArticleIDsResultBlock) {
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		articlesTable.mark(articleIDs, statusKey, flag, completion)
+		articlesTable.mark(articleIDs, statusKey, flag, queueForSync: queueForSync, completion)
 	}
 
 	func _markAndFetchNew(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool, completion: @escaping ArticleIDsCompletionBlock) {
