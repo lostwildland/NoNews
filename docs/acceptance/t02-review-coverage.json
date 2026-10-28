@@ -1,7 +1,7 @@
 {
   "base": "c9ecfa14e884a7ce8895bb13eec3ea8711cbef90",
-  "candidate": "20d62dd5d262159ef197efde84bcf8278f627298",
-  "state": "Cooperative preparation committed at20d62dd. Owner62total/61pass/1optionalSkip plus strengthened authentication/EOF focused assertion; native controller passed. Coordinator confirms clean remote/source/manifest/compile/diff. Fresh11-file correction review, current packaging and final connected review/bundle/UI remain open. T30 holds native resource.",
+  "candidate": "920efefd61fb993a850241719a4d99e5691023b6",
+  "state": "Current920efef is pushed/clean. Group inspections and correction deltas are covered; final cross-group assessment and current full native/signed-bundle validation remain. Historical R11 native Settings Ready observed via CUA; not current-head artifact proof. T30 holds serialized Xcode resource.",
   "rules": [
     "Each axis needs explicit complete coverage of every group and connected seam.",
     "Read git show of the pinned candidate when a worker is editing the live tree.",
@@ -20,514 +20,514 @@
       "path": ".github/macos-ci-no-signing.xcconfig",
       "group": "packaging",
       "blob": null,
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": ".github/macos-ci-signing.xcconfig",
       "group": "packaging",
       "blob": "8f15db80f0ec786429fc47d64308caf1d898c0fa",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "06e2051dd68a6ea33223999bb0d75f5cae198cc5"
     },
     {
       "path": ".github/workflows/ci.yml",
       "group": "packaging",
       "blob": "8cde69f6da54ed4f71194639b4101f0fc79a086c",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "b114be49a133f5555c4f6818778152f297a24823"
     },
     {
       "path": ".gitignore",
       "group": "packaging",
       "blob": "e422a19d79e9f54adde1be9468ba0cbf0ccd1e82",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "Mac/AppDelegate.swift",
       "group": "native",
       "blob": "92f50b1835a800e3c7a4cb86af13e503445424da",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "Mac/Preferences/PreferencesWindowController.swift",
       "group": "native",
       "blob": "d12338b1698cdaeb76ffb6b3a200ca0771bc7551",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
       "blob": "f1d0657ec81b0e1c7f78d43b8ca1b237c6a8ccff",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
-      "blob": "108c1a0883559ef6d9335a988fe8f1a86e6f8558",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "blob": "c195b35e97f2f9b0993737a61caeb018e1fe2578",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/JOBS-IPC.md",
       "group": "jobs",
-      "blob": "03b0d546460f2142a5007c79bc5112295fbe7f57",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "blob": "a75c62b02bab8df89fd1ef00f36454b673ef115f",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "6bf7b44ee97feed92aed3ee64a749375becbdb53"
     },
     {
       "path": "ManagedEngine/PROVENANCE.md",
       "group": "packaging",
       "blob": "dc002a3b7bc5144d801e74a768ba29cc04235544",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "a1c46e04f0b84d7ff36cade0dd8c804079f7e1a4"
     },
     {
       "path": "ManagedEngine/assemble_payload.py",
       "group": "packaging",
       "blob": "21e895bb9747287e9c7a2f70d7a885f4a4cdb9d7",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "982208cb04de9fcd4f4fec9473c5d39e1517e297"
     },
     {
       "path": "ManagedEngine/backend/__init__.py",
       "group": "database",
       "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/causes.py",
       "group": "jobs",
       "blob": "6e52d7a73be049582a15aafb15a1a2390d2331c6",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
+      "spec": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
       "previous_blob": "b3f3e6c7bd5071190bed651ea55ad2c71917b895"
     },
     {
       "path": "ManagedEngine/backend/content_store.py",
       "group": "database",
       "blob": "34a0bab256d3ee84af32445d4567c6bfd5fb2882",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/core.py",
       "group": "database",
       "blob": "0f3dda70baca690aa1b0b782307540ad29392b07",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
+      "spec": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
       "previous_blob": "4a85e7ada498faf8f6a5267e453f19a012daf8cf"
     },
     {
       "path": "ManagedEngine/backend/delivery.py",
       "group": "database",
       "blob": "27019df30b3c65f8510d02b03d64165e93a51664",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/feed_settings.py",
       "group": "database",
       "blob": "de3a47b82819b16c768f8070822ed769408c598c",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/folders.py",
       "group": "database",
       "blob": "1efbb509011a0bfffd1f38a62a55acd3d8407c22",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/job_stream.py",
       "group": "jobs",
       "blob": "a2984ce74f87f2807b61013ae5b52058101ad71a",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
+      "spec": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
       "previous_blob": "dd8423f0a324e783512828046bad97bd5ffe1d99"
     },
     {
       "path": "ManagedEngine/backend/jobs.py",
       "group": "database",
       "blob": "6c068fc6e4e2fc698eb9c66ddd2bb06ff8fadd72",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/legacy_content_migration.py",
       "group": "database",
       "blob": "198e1846d8d7cd0cd7c8e664eb282b0b3c10ed3c",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/literature.py",
       "group": "database",
       "blob": "34e702f19ad0654af0deffcd867553523854e5fc",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/literature_mapping.py",
       "group": "database",
       "blob": "956c47311b2bb7fc3ee0d5f47a2fe2d081902804",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/media_jobs.py",
       "group": "database",
       "blob": "fba9f2166af86992d4d1d77fc8683b57f268267a",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/media_raw_activation.py",
       "group": "database",
       "blob": "dfc31687758a9cd10ec21aacdde749743a0fa70e",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/media_store.py",
       "group": "database",
       "blob": "9d8075435dae6c9aba73bf3c92d2901644192ff8",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/news_media.py",
       "group": "database",
       "blob": "6222c06c14f4fe1b8721244d73565e290597bdf3",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/pipeline.py",
       "group": "database",
       "blob": "2119992c8f6aac8766e8dd2ea62579343710249f",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/projection.py",
       "group": "database",
       "blob": "cc7ef6fb79a588c2892bfecff6817e186a971091",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/reading_notes.py",
       "group": "database",
       "blob": "67de0fa638fe01b6aa580418dfaf42c868944dd2",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/reconciliation.py",
       "group": "database",
       "blob": "670a2500a1bb58bbd4dbe28ac6f160ad7edd0899",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/reject_cleanup.py",
       "group": "database",
       "blob": "f3c7837766b60812e6d8b03ee8b501b9a94bbc61",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/reject_media_cleanup.py",
       "group": "database",
       "blob": "540ac85a29ac4120f726a505d0be4eae6ca3fb76",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/schema.py",
       "group": "database",
       "blob": "6416e4496c269aff561de30b181444e81988cd38",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/schema_semantics.py",
       "group": "database",
       "blob": "259a1b108ab93aeb4fdb18872ae9eea224c6bf46",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "8ad3e9e0f18f2c375518cb3db475fbd463958990"
     },
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "jobs",
-      "blob": "3cda2f6ccee8da0f3a9d7de483dc85e93e122353",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "blob": "4e5fae5620002a1e27c732d509cbac8cc86caf04",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "5fdfda8623cfb27ec9c936a288277e6a357c2077"
     },
     {
       "path": "ManagedEngine/backend/service.py",
       "group": "database",
       "blob": "5d0a457c147343ce986b56159759b229f646a0f6",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/settings.py",
       "group": "database",
       "blob": "381e3beada9244a596616bbdb4f10da0414a8769",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/backend/zotero.py",
       "group": "database",
       "blob": "f87bfee153e80e78e309b4c9ae671364f28e2756",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending"
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/payload_manifest.py",
       "group": "packaging",
       "blob": "75ff77eab9f5bd1267627aea94e6e0365d0a3473",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/payload_sources.py",
       "group": "packaging",
       "blob": "87bc0f4aa8acf0363fb13bc893ef134efbf4a1c4",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/prepare_runtime.sh",
       "group": "packaging",
       "blob": "8b6c94cd92c86f1df46ee2eb636fb7f165a29ab7",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/requirements.lock",
       "group": "packaging",
       "blob": "4e1a8c7d671a5a872fefd66ed455f387ee25e57d",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/stdio_service.py",
       "group": "native",
       "blob": "24398b35581d518387e5d8cdf2d0ba19b5f7ce94",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
+      "spec": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
       "previous_blob": "3421902575297f3cab91158a38164c00eadc8a3b"
     },
     {
       "path": "ManagedEngine/tests/ProcessingEngineChecks.swift",
       "group": "native",
-      "blob": "3c42695e4a82c6493945a921eb71e72164a2bbd6",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "blob": "506b1ed111ba23ca6479bddae3544fd9b1c63b91",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "e329864ab15828a32e2556ee2d1793abd2d7213b"
     },
     {
       "path": "ManagedEngine/tests/make_large_fixture.py",
       "group": "jobs",
       "blob": "5226d16d713f7d65045964728ea1ac883dfad8d6",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
+      "standards": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "9910428df4d27e4bd40f400aae2c394e0d01d5e0"
     },
     {
       "path": "ManagedEngine/tests/native_fixture.py",
       "group": "native",
-      "blob": "f7d737f36685715ef346aa54567275d20d5b9142",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "blob": "e9fcb7ed7737f88290fdb1407ca7819c7bf73d54",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/run_native_checks.sh",
       "group": "native",
       "blob": "1868054762864c48f498eddd92a5dda2e247d137",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_channel.py",
       "group": "native",
       "blob": "ca45dfd66835df76b543f269d6d6592570baf85b",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_initialization_probe.py",
       "group": "database",
       "blob": "4df1d559a87d6397fce67b5912c27b3e78e38a09",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "971f4736983af5293ba4c204f2e757803e82946b"
     },
     {
       "path": "ManagedEngine/tests/test_job_stream.py",
       "group": "jobs",
       "blob": "15f6579a02d461bb89936995b5b5f75ededc7b71",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
+      "standards": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "ce709597f209edbbdd2e28cbdc125a5e4bfcedce"
     },
     {
       "path": "ManagedEngine/tests/test_jobs_paging.py",
       "group": "jobs",
       "blob": "6adabab7338e0416df2b9702c75ab18fa266a673",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
+      "standards": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete jobs group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "b54e7adc5768908b80bb98e1527c595b0d7ccf2e"
     },
     {
       "path": "ManagedEngine/tests/test_large_snapshot.py",
       "group": "jobs",
       "blob": "5097a4f7c4a56abf8ec058970cb934b2bccad344",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "standards": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
+      "spec": "R31 complete11/11 correction; two P2s corrected and cleared by R32; final connected/runtime gates open",
       "previous_blob": "44a93285294a25275d6fc4d0631c5d89ba5c5731"
     },
     {
       "path": "ManagedEngine/tests/test_packaged_service.py",
       "group": "packaging",
       "blob": "2c3daa159aa028bbddeb748c0a32f9f45f01500a",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_payload_manifest.py",
       "group": "packaging",
       "blob": "2f1d5710001e48ee69ba4f644fbd5b85b450831c",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_payload_sources.py",
       "group": "packaging",
       "blob": "c3d9ed02f44b9afaaacbdd7a1f4b218d2cecbc34",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_runtime.py",
       "group": "packaging",
       "blob": "e4f8f58bc90f7bfb575a201087223899edd37577",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/tests/test_startup_status.py",
       "group": "database",
       "blob": "7c614e917f556a29838a90d8aa490b473ba076e2",
-      "standards": "27-path inspection at26071ee plus complete R27/R28 corrections; zero actionable P1/P2; final connected review pending",
-      "spec": "27-path inspection at19bce6b plus complete R27/R28 corrections; zero remaining actionable P1/P2; final connected review pending",
+      "standards": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete database group/corrections; identical blob to91fdf89; final connected/runtime gates open",
       "previous_blob": "536956f005a4438aa4f61aaed2b3d8b977d1bab2"
     },
     {
       "path": "ManagedEngine/tests/test_stdio.py",
       "group": "native",
       "blob": "3ecd92d819113adc6800c63d459c1efe2586777a",
-      "standards": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending",
-      "spec": "complete native scope atd73d8d2; identical current blob; zero actionable P1/P2; cross-group/UI pending"
+      "standards": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open",
+      "spec": "Historical complete native group/corrections; identical blob to91fdf89; final connected/runtime gates open"
     },
     {
       "path": "ManagedEngine/verify_payload_source.py",
       "group": "packaging",
       "blob": "dbd3c6b13f669b13ee3a5702d40681df0f6cf943",
-      "standards": "pending current candidate review",
-      "spec": "pending current candidate review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "a7db9cdbdf94c2a3e2d47c9e77e5704384802a75"
     },
     {
       "path": "NetNewsWire.xcodeproj/project.pbxproj",
       "group": "packaging",
       "blob": "8a33dc2d005c598a97823af5ab15214f34177857",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "buildscripts/acceptance.entitlements",
       "group": "packaging",
       "blob": "38da9a976819359ce83aff27dbd6341393655029",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "buildscripts/acceptance.sh",
       "group": "packaging",
       "blob": "f049ee10db861766fc02381def35ee1aef6f3e06",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "cbf6a9fcb5cff467d3f91eaa6aeba038644856c9"
     },
     {
       "path": "buildscripts/embed-processing-engine.sh",
       "group": "packaging",
       "blob": "854b38aa228b495b123d429c0f640ade9ea75f98",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "buildscripts/processing-engine.entitlements",
       "group": "packaging",
       "blob": "688a512932d8dee975cafb670fb14ee0e67ae7b4",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "buildscripts/test_acceptance.py",
       "group": "packaging",
       "blob": "3b0557ec904c2c30fd0e6243f352353a09031d40",
-      "standards": "pending current blob review",
-      "spec": "pending current blob review",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "c1a1ce87de931e8180b1bdfd270c6404c57e511c"
     },
     {
       "path": "buildscripts/verify_acceptance.py",
       "group": "packaging",
       "blob": "0813b241c81088a819589a6516644bfc36bda37d",
-      "standards": "historical inspection at identical blob; current connected-seam clearance pending",
-      "spec": "historical inspection at identical blob; current connected-seam clearance pending"
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open"
     },
     {
       "path": "docs/acceptance/t00-native-baseline.md",
       "group": "packaging",
       "blob": "391adcf2cf8f17241655b0dc29e6ff68524ab5da",
-      "standards": "pending correction review at26071ee",
-      "spec": "pending correction review at26071ee",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "f422d658704a8d1dc604161a5e4ab173a30f822b"
     },
     {
       "path": "docs/acceptance/t02-managed-engine.md",
       "group": "packaging",
-      "blob": "7714e30f988fc891b4474aa2f699a18b8ddb4967",
-      "standards": "pending cooperative-read/capacity correction review at20d62dd",
-      "spec": "pending cooperative-read/capacity correction review at20d62dd",
+      "blob": "b1f378ca8162b8d4d55acb583c90315a3a513307",
+      "standards": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "Historical complete packaging reviews plus R33 complete8/8 delta and current seams; zero actionable P1/P2; final connected/runtime gates open",
       "previous_blob": "ccc30b3b3f0e4523a6e247f83c06623865bcf37d"
     },
     {
       "path": "ManagedEngine/tests/test_cooperative_jobs.py",
       "group": "jobs",
-      "blob": "0fbd6d682831dc2567af18f3abce3d0130b64884",
-      "standards": "pending new cooperative-read correction review",
-      "spec": "pending new cooperative-read correction review"
+      "blob": "1a43aa2b1eb4b065c9edc8b9691441891240a2da",
+      "standards": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open",
+      "spec": "R32 complete7/7 correction plus connected frame/native seams; zero actionable P1/P2; final connected/runtime gates open"
     }
   ],
   "scope_reviews": {
@@ -601,6 +601,38 @@
       "coverage": "2 changed paths and connected source/preparation/embed seams complete",
       "findings": "0 actionable P1/P2",
       "evidence": "t02-current-candidate.md"
+    },
+    {
+      "axis": "standards",
+      "base": "20d62dd5d262159ef197efde84bcf8278f627298",
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "R32 complete7/7 and connected cleanup/native-error seams",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-cooperative-review-r31-r33.md"
+    },
+    {
+      "axis": "standards",
+      "base": "eb6a15667d415c3569703ba7530b945e8cf703e0",
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "R33 complete8/8 packaging delta plus source/CI/cache/signing seams",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-cooperative-review-r31-r33.md"
+    },
+    {
+      "axis": "spec",
+      "base": "20d62dd5d262159ef197efde84bcf8278f627298",
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "R32 complete7/7 and connected cleanup/native-error seams",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-cooperative-review-r31-r33.md"
+    },
+    {
+      "axis": "spec",
+      "base": "eb6a15667d415c3569703ba7530b945e8cf703e0",
+      "head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "coverage": "R33 complete8/8 packaging delta plus source/CI/cache/signing seams",
+      "findings": "0 actionable P1/P2",
+      "evidence": "t02-cooperative-review-r31-r33.md"
     }
   ],
   "source_verification": {
@@ -619,5 +651,11 @@
     "matching": 26,
     "missing": 0,
     "scope": "source file hashes listed by observed provenance; not a full extraction equivalence or runtime proof"
+  },
+  "native_observation": {
+    "artifact_source": "91fdf89b306c53c65b97df2662348e81db80ce5e",
+    "evidence": "assets/t02-r11-processing-ready.jpg",
+    "observed": "CUA Settings→Processing Ready and Stop",
+    "boundary": "Historical artifact only; current bundle pending"
   }
 }

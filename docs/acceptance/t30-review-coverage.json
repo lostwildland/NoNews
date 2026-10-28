@@ -1,7 +1,7 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "857cadd5ac96c0f9ea2636707688048bad5f6bc2",
-  "state": "R6 account changed hunks16/16 inspected on both axes, connected-seam coverage incomplete. Standards2P2/Spec2P2; coordinator trigger/caller-context patches uncommitted, syntax/whitespace only. Original owner must complete callback/download drain and runtime regressions. Full T30 remains open.",
+  "candidate": "7accb68382f80c0d4b48c922c8b81899f0364b57",
+  "state": "R11 source6f849ae/evidence7accb68:771passes independently read; R7 core review3source-derivedP2s; coordinator small pending-save/maintenance fixes uncommitted, original owner R12 regressions/native validation running.",
   "groups": {
     "account": 16,
     "storage": 14,
@@ -19,17 +19,17 @@
       "path": "Modules/Account/Sources/Account/Account.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "c311894d36b4bcd6ea771c63d0bf687201ea4fb1",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "blob": "9697bc8dd940ac8db402a81a1e73a7227f35e2f3",
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/AccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "415057384283d09cae62747b9bb4aa867484411b",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
@@ -44,24 +44,24 @@
       "previous_path": null,
       "group": "account",
       "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/Feed.swift",
       "previous_path": null,
       "group": "account",
       "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/FeedSettings.swift",
       "previous_path": null,
       "group": "account",
       "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
@@ -92,8 +92,8 @@
       "previous_path": null,
       "group": "account",
       "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
@@ -107,7 +107,7 @@
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "98daa7ce7c0bf766ba666b0313c891093c7ed564",
+      "blob": "30f4714f7d7eac6e70d9c8a484ca710c9672a922",
       "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
       "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
@@ -115,7 +115,7 @@
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
       "previous_path": null,
       "group": "account",
-      "blob": "553bf86139f5115dad7f173107375b45eb7b2119",
+      "blob": "cec6adec2bf78880e93a0336e493abf27972a838",
       "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
       "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
     },
@@ -140,8 +140,8 @@
       "previous_path": null,
       "group": "account",
       "blob": "d132500bd6528202567e2cd24e151fb798236db3",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+      "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
@@ -163,7 +163,7 @@
       "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
       "previous_path": null,
       "group": "fixtures",
-      "blob": "216ea6627c70ff9ff764e2329a83928b95ef3f19",
+      "blob": "b32709e334ee5ea1958c77e46714b489ea278228",
       "standards": "pending bounded scope review",
       "spec": "pending bounded scope review"
     },
@@ -443,7 +443,7 @@
       "path": "docs/acceptance/t30-native-fixture-lifetime.md",
       "previous_path": null,
       "group": "harness",
-      "blob": "de72cff7802fd9e7da6cdaf969d7c9efa50af3df",
+      "blob": "45f18f788637abef49db5dfcf569fd04c36b0c1b",
       "standards": "pending bounded scope review",
       "spec": "pending bounded scope review"
     }
@@ -470,5 +470,5 @@
       "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift"
     ]
   },
-  "working_tree_note": "Only Account.swift has coordinator uncommitted trigger/caller-context patches; no source SHA or runtime pass is claimed for them."
+  "working_tree_note": "Original T30 owner owns uncommitted coordinator Account.swift/OPMLFile.swift corrections and their tests; pinned7accb68 remains review source until new handoff."
 }
