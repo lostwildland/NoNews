@@ -258,7 +258,7 @@ def observe(db, body):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
         if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
-            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "conflict", now))
+            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
         state = "unresolved"
         item_id = existing["item_id"] if existing else None
         if identity:
@@ -301,7 +301,7 @@ def observe(db, body):
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
-            existing_context = db.execute("SELECT id,processing_mode FROM native_processing_contexts WHERE item_id=? AND observation_id=?", (item_id, observation_id)).fetchone()
+            existing_context = db.execute("SELECT id,processing_mode,policy_revision FROM native_processing_contexts WHERE item_id=? AND observation_id=?", (item_id, observation_id)).fetchone()
             context_id = existing_context[0] if existing_context else uuid.uuid4().hex
             db.execute("INSERT OR IGNORE INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
@@ -313,7 +313,7 @@ def observe(db, body):
                 from . import configuration
                 service_value = configuration._record(db, "service", policy[2])
                 service_available = not (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt"))
-            if service_available and policy and state == "verified" and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
+            if service_available and policy and state == "verified" and not was_unresolved and (existing_context is None or existing_context[2] == policy[8]) and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
@@ -328,6 +328,9 @@ def replay(db, body):
         raise ValueError("Context not found")
     if row[8] not in {"normal", "important"} or row[12] is None:
         raise ValueError("Current source policy is unavailable or disabled for replay")
+    observation_state
+    if observation_state is None or observation_state[0] != "verified":
+        raise ValueError("Conflicting or unresolved observation cannot be replayed")
     service_available = True
     if isinstance(row[6], str) and len(row[6]) == 32:
         from . import configuration
@@ -336,7 +339,7 @@ def replay(db, body):
     if not service_available:
         raise ValueError("Current service binding is unavailable for replay")
     allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
-    if any(strategy not in allowed.get(row[7], set()) for strategy in {row[10], row[11]} if strategy):
+    if any(strategy not in {None, "", "default"} and strategy not in allowed.get(row[7], set()) for strategy in {row[10], row[11]}):
         raise ValueError("Current material strategy is incompatible with replay")
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
     decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row[0],)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
@@ -358,6 +361,9 @@ def claim_job(db, body):
         row = db.execute("SELECT j.*,o.namespace FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND j.status='pending' AND o.namespace=?", (_text(body.get("jobID"), "job ID", required=True, maximum=128), namespace)).fetchone()
         if row is None:
             raise ValueError("Native job is unavailable")
+        observation_state = db.execute("SELECT o.identity_state FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=?", (row["native_context_id"], namespace)).fetchone()
+        if observation_state is None or observation_state[0] != "verified":
+            raise ValueError("Conflicting or unresolved observation cannot be claimed")
         current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row["item_id"],)).fetchone()[0]
         if current_generation != row["decision_generation"]:
             raise ValueError("Native job decision is stale")
