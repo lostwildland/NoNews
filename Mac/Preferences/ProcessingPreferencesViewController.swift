@@ -199,15 +199,16 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		for child in view.subviews { setEnabled(enabled, in: child) }
 	}
 
-	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], then: @escaping ([String: Any]) -> Void) {
+	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], onFailure: (() -> Void)? = nil, then: @escaping ([String: Any]) -> Void) {
 		ProcessingEngine.shared.request(method: method, path: path, body: body) { [weak self] result in
 			switch result {
 			case .success(let value): then(value)
 			case .failure(let error):
+				if let onFailure { onFailure(); return }
 				if error as? ProcessingEngine.EngineError == .snapshotExpired {
 					self?.feedback.stringValue = "The routing report expired. Preview again."
 				} else if error as? ProcessingEngine.EngineError == .snapshotCapacity {
-					self?.feedback.stringValue = "The routing report is too large to retain. No mappings were applied."
+					self?.feedback.stringValue = "The routing report is too large to retain."
 				} else if error as? ProcessingEngine.EngineError == .invalidConfiguration {
 					self?.feedback.stringValue = "Configuration is invalid or in use. Check the binding, directory, and source references."
 				} else { self?.feedback.stringValue = "Could not save or load configuration. Check the processing component and try again." }
@@ -221,11 +222,11 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			self.serviceRows = rows
 			self.editorGatewayRows = rows.filter { $0["type"] as? String == "magpie" }
 			self.editorGateway.removeAllItems()
-			self.editorGateway.addItems(withTitles: self.editorGatewayRows.map { $0["name"] as? String ?? "Unavailable service" })
+			self.editorGateway.addItems(withTitles: self.editorGatewayRows.map { self.serviceLabel($0) })
 			self.services.removeAllItems()
 			self.binding.removeAllItems()
 			for row in rows {
-				let name = row["name"] as? String ?? "Unavailable service"
+				let name = self.serviceLabel(row)
 				self.services.addItem(withTitle: name)
 				self.binding.addItem(withTitle: name)
 			}
@@ -248,6 +249,10 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			}
 			if let id = self.currentPrompt?["id"] as? String, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.prompts.selectItem(at: index) }
 		}
+	}
+
+	private func serviceLabel(_ row: [String: Any]) -> String {
+		MigrationReviewState.serviceLabel(name: row["name"] as? String ?? "Unavailable service", id: row["id"] as? String ?? "unknown")
 	}
 
 	private func loadPage(_ kind: String, after: String?, collected: [[String: Any]], then: @escaping ([[String: Any]]) -> Void) {
@@ -393,10 +398,18 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	}
 
 	@objc private func previewMigration() {
+		migrationReview.clearApply()
+		startMigrationPreview()
+	}
+
+	private func startMigrationPreview() {
 		guard let input = currentMigrationInput() else { migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."; return }
 		let ticket = migrationReview.begin(input)
 		editorReviewToken = nil
-		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices]) { [weak self] result in
+		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices], onFailure: { [weak self] in
+			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
+			self.migrationStatus.stringValue = self.migrationReview.readbackFailure()
+		}) { [weak self] result in
 			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
 			self.loadMigrationReport(result, data: Data(), ticket: ticket) { [weak self] report in
 				guard let self, self.migrationReview.complete(ticket, current: self.currentMigrationInput()) else { return }
@@ -428,8 +441,10 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 		migrationReview.invalidate()
 		request("POST", "/api/config/migration/apply", body) { [weak self] result in
 			guard let self else { return }
+			self.migrationReview.recordApply(status: result["status"] as? String ?? "")
+			self.migrationStatus.stringValue = result["status"] as? String == "applied" ? "Mappings applied. Refreshing the routing report." : "Claims remain paused while work drains. Refreshing the routing report."
 			self.migrationWaiting = result["status"] as? String == "waiting"
-			if self.currentMigrationInput() == input { self.previewMigration() }
+			if self.currentMigrationInput() == input { self.startMigrationPreview() }
 		}
 	}
 
@@ -455,11 +470,14 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 	private func loadMigrationReport(_ page: [String: Any], data: Data, ticket: MigrationReviewState.Ticket, then: @escaping ([String: Any]) -> Void) {
 		guard migrationReview.accepts(ticket, current: currentMigrationInput()) else { return }
 		guard let encoded = page["chunk"] as? String else { then(page); return }
-		guard let chunk = Data(base64Encoded: encoded) else { feedback.stringValue = "Could not read the routing report."; return }
+		guard let chunk = Data(base64Encoded: encoded) else { migrationStatus.stringValue = migrationReview.readbackFailure(); return }
 		var accumulated = data
 		accumulated.append(chunk)
 		if let next = page["next"] as? [String: Any] {
-			request("POST", "/api/config/migration/preview", next) { [weak self] result in
+			request("POST", "/api/config/migration/preview", next, onFailure: { [weak self] in
+				guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
+				self.migrationStatus.stringValue = self.migrationReview.readbackFailure()
+			}) { [weak self] result in
 				self?.loadMigrationReport(result, data: accumulated, ticket: ticket, then: then)
 			}
 		} else if let result = try? JSONSerialization.jsonObject(with: accumulated) as? [String: Any] {
@@ -467,7 +485,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			if let snapshot = page["snapshotId"] as? String {
 				request("POST", "/api/config/migration/release", ["snapshotId": snapshot]) { _ in }
 			}
-		} else { feedback.stringValue = "Could not read the routing report." }
+		} else { migrationStatus.stringValue = migrationReview.readbackFailure() }
 	}
 
 	private func showMigrationReport(_ result: [String: Any]) {
@@ -493,7 +511,8 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				let target = job["editorTarget"] as? String
 				func gatewayName(_ id: String?) -> String {
 					guard let id else { return "unknown" }
-					return self.serviceRows.first { $0["id"] as? String == id }?["name"] as? String ?? "Unavailable (\(id))"
+					guard let row = self.serviceRows.first(where: { $0["id"] as? String == id }) else { return "Unavailable [\(id)]" }
+					return self.serviceLabel(row)
 				}
 				let known = gatewayName(job["editorServiceId"] as? String)
 				let proposed = gatewayName(job["proposedEditorServiceId"] as? String)
@@ -504,7 +523,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 				let editor = target.map { " Editor target: \($0); known gateway: \(known); proposed gateway: \(proposed) (\(confirmation))." } ?? ""
 				return "\(job["id"] as? String ?? "Unknown job"): \(reasons.isEmpty ? "ready for mapping" : reasons).\(editor)"
 			}.joined(separator: "\n")
-			self.migrationStatus.stringValue = "\(state): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
+			self.migrationStatus.stringValue = "\(migrationReview.applyAcknowledgement)\(state): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
 	}
 
 	@objc private func deleteService() {

@@ -17,5 +17,11 @@ import Foundation
 		precondition(MigrationReviewState.status(paused: true, waiting: true) == "Waiting; claims paused")
 		precondition(MigrationReviewState.status(paused: true, waiting: false) == "Claims paused")
 		precondition(MigrationReviewState.status(paused: false, waiting: true) == "Claims active")
+		state.recordApply(status: "applied")
+		precondition(state.applyAcknowledgement == "Mappings applied. ")
+		precondition(state.readbackFailure() == "Mappings applied. The routing report could not be read; preview again.")
+		state.recordApply(status: "waiting")
+		precondition(state.readbackFailure() == "Claims remain paused while work drains. The routing report could not be read; preview again.")
+		precondition(MigrationReviewState.serviceLabel(name: "Gateway", id: "first") != MigrationReviewState.serviceLabel(name: "Gateway", id: "second"))
 	}
 }

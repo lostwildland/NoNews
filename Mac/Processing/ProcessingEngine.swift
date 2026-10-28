@@ -2,6 +2,7 @@ import Foundation
 import Darwin
 
 struct MigrationReviewState {
+	static func serviceLabel(name: String, id: String) -> String { "\(name) [\(id)]" }
 	struct Input: Equatable {
 		let serviceID: String
 		let choices: [String: String]
@@ -13,6 +14,23 @@ struct MigrationReviewState {
 	}
 	private var generation: UInt = 0
 	private(set) var reviewed: Input?
+	private var lastApplyStatus: String?
+	mutating func recordApply(status: String) { lastApplyStatus = status }
+	mutating func clearApply() { lastApplyStatus = nil }
+	var applyAcknowledgement: String {
+		switch lastApplyStatus {
+		case "applied": return "Mappings applied. "
+		case "waiting": return "Claims remain paused while work drains. "
+		default: return ""
+		}
+	}
+	func readbackFailure() -> String {
+		switch lastApplyStatus {
+		case "applied": return "Mappings applied. The routing report could not be read; preview again."
+		case "waiting": return "Claims remain paused while work drains. The routing report could not be read; preview again."
+		default: return "The routing report could not be read; preview again."
+		}
+	}
 	mutating func invalidate() { generation &+= 1; reviewed = nil }
 	mutating func begin(_ input: Input) -> Ticket {
 		invalidate()
