@@ -1007,7 +1007,7 @@ private extension FeedbinAccountDelegate {
 
 	}
 
-	func syncArticleReadState(account: Account, articleIDs: [Int]?) async throws -> Int {
+	internal func syncArticleReadState(account: Account, articleIDs: [Int]?) async throws -> Int {
 		guard let articleIDs else {
 			return 0
 		}

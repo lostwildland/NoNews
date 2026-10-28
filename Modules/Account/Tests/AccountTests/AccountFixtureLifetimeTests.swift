@@ -52,14 +52,26 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		let queuedObserver = NotificationCenter.default.addObserver(forName: .AccountDidQueueArticleStatuses, object: account, queue: nil) { _ in
 			notifications.count.withLock { $0 += 1 }
 		}
-		account.database.beginClosing()
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		account.startBackground {
+			startedSignal.yield(())
+			for await _ in release { break }
+		}
+		for await _ in started { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
 		await #expect(throws: CancellationError.self) {
 			try await account.markArticles(articleIDs: ["stored"], statusKey: .read, flag: false)
 		}
 		#expect(notifications.count.withLock { $0 } == 0)
-		#expect(try await delegate.syncDatabase.selectPendingCount() == 0)
 		NotificationCenter.default.removeObserver(observer)
 		NotificationCenter.default.removeObserver(queuedObserver)
+		releaseSignal.finish()
+		#expect(await close.value)
+		#expect(try stringValue(in: account.dataFolder + "/Sync.sqlite3", sql: "SELECT count(*) FROM syncStatus") == "0")
 		try await manager.deleteAccount(account)
 	}
 
