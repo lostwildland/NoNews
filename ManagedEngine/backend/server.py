@@ -98,7 +98,10 @@ class Application:
                 if method == 'POST':
                     return native_source.observe(db.db, body)
                 if method == 'GET':
-                    return native_source.list_observations(db.db, body)
+                    listing_body = dict(body)
+                    if query.get('namespace') is not None:
+                        listing_body['namespace'] = query.get('namespace')
+                    return native_source.list_observations(db.db, listing_body)
             if path == '/api/native/observation':
                 if method == 'GET':
                     if body.get('id'):
