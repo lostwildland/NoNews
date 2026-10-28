@@ -2,6 +2,7 @@
 
 ## 2026-10-28 — Connected transaction handoff and remaining Save P1
 
+- Root independently reran the exact T03 `6e9dac9` source fixture with system Python: 15 tests, 14 passed and 1 optional reference skip in 49.748s, including definitive queued-save outcomes, restart recovery, cancellation cleanup, oversized-frame continuity and payload-source checks. This validates the source service boundary only; native/controller, payload refresh, Keychain, UI/HIG and packaged-app acceptance remain open.
 - T03 original owner reports partialf96d605 render-envelope/unread-preview cleanup and3migration passes; queued-save P1 remains. Same ownerR14 now focuses on one-transaction receipts and native recovery, preserving dd58queue correction. After T30 release, granted strict standalone native/component/runtime/deadline checks only once P1 source/function tests are ready; full app/GUI/Keychain remain pending.
 - T30 source49d80d0/evidence51d169e clean/remote verified; only evidence document differs across the pair. Root independently read15-57-10xcresult217pass/0fail/0skip. Owner reports status/article COMMIT rollback/cache, status creation/search-index failures, exact record-error callback red/synthetic checkpoint recovery and admission red/green. No real CKtoken/fullpageatomicity/currentfullbuild claim. Updated106-path ledger and19-path connected R18 review scope; native resource released.
 
