@@ -309,6 +309,7 @@ def observe(db, body):
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             if (not was_unresolved) and (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", 0, context_id))
+                db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
 
 
@@ -327,6 +328,7 @@ def replay(db, body):
     db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
     job_id = "native-replay-" + uuid.uuid4().hex
     db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "curatorPromptID": row[4], "editorPromptID": row[5], "serviceID": row[6], "mediaType": row[7], "processingMode": row[8], "threshold": row[9], "scoringStrategy": row[10], "bodyStrategy": row[11], "preview": True}), "user", 0, replay_context_id))
+    db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", (job_id, row[0], "curator", "pending", json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12]}), now))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
 
@@ -458,8 +460,13 @@ def feeds(db, method, body):
             if values["service_id"] and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone() is None:
                 raise ValueError("Service not found")
             if values["processing_mode"] in {"normal", "important"}:
-                if not values["media_type"] or not values["curator_prompt_id"] or not values["service_id"]:
-                    raise ValueError("Enabled feed policy requires media and a Curator prompt")
+                service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone()
+                if service_row:
+                    service_value = json.loads(service_row[0])
+                    service_value["credentialState"] = service_value.get("credentialState") or ("not_required" if service_value.get("type") == "magpie" else "incomplete")
+                    if service_value.get("type") != "magpie" and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt")):
+                        raise ValueError("Service binding is unavailable")
+
                 strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
                 allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
                 if any(strategy not in allowed.get(values["media_type"], set()) for strategy in strategies):
