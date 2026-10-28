@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS native_observation_identities(
   media_type TEXT NOT NULL,
   identity_type TEXT NOT NULL,
   identity_value TEXT NOT NULL,
-  raw_identity_value TEXT NOT NULL,
+  raw_identity_value TEXT NOT NULL DEFAULT '',
   evidence_state TEXT NOT NULL CHECK(evidence_state IN ('verified','conflict')),
   observed_at TEXT NOT NULL,
   UNIQUE(observation_id, media_type, identity_type, identity_value)
@@ -247,7 +247,7 @@ def observe(db, body):
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
             prior_state = existing["identity_state"]
-            if (not identity or not media_type) and prior_state in {"verified", "conflict"}:
+            if (not identity or not media_type) and (prior_state in {"verified", "conflict"} or existing["raw_identity_value"]):
                 state = prior_state
                 identity_type = existing["identity_type"]
                 identity_value = existing["identity_value"]
@@ -282,6 +282,15 @@ def context_results(db, method, body):
         result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
         if result_type not in {"curator", "draft", "material"}:
             raise ValueError("Unsupported context result")
+        if result_type == "curator":
+            row = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result_id,)).fetchone()
+        elif result_type == "draft":
+            row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
+        else:
+            row = db.execute("SELECT item_id FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
+        context_item = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+        if row is None or row[0] != context_item[0]:
+            raise ValueError("Context result does not belong to item")
         with transaction(db):
             db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
     return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}
@@ -351,11 +360,24 @@ def feeds(db, method, body):
             if values["processing_mode"] in {"normal", "important"}:
                 if not values["media_type"] or not values["curator_prompt_id"]:
                     raise ValueError("Enabled feed policy requires media and a Curator prompt")
-                for prompt_id in (values["curator_prompt_id"], values["editor_prompt_id"]):
-                    if prompt_id and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.prompt." + prompt_id,)).fetchone() is None:
-                        raise ValueError("Prompt not found")
+                for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
+                    if prompt_id:
+                        prompt_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.prompt." + prompt_id,)).fetchone()
+                        if prompt_row is None or json.loads(prompt_row[0]).get("role") != role:
+                            raise ValueError("Prompt role does not match feed policy")
+                if values["service_id"] and db.execute("SELECT 1 FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone() is None:
+                    raise ValueError("Service not found")
+                strategies = {values["scoring_strategy"], values["body_strategy"]} - {None, "", "default"}
+                allowed = {"news": {"abstract", "full"}, "paper": {"abstract", "full"}, "newsletter": {"abstract", "full"}, "podcast": {"transcript", "full"}, "video": {"captions", "full"}}
+                if any(strategy not in allowed.get(values["media_type"], set()) for strategy in strategies):
+                    raise ValueError("Material strategy is incompatible with media")
             if prior and body.get("revision") is not None and body["revision"] != prior["revision"]:
                 raise ValueError("Feed policy changed during save")
             db.execute("INSERT INTO native_feed_policies(namespace,account_id,feed_id,title,media_type,processing_mode,curator_prompt_id,editor_prompt_id,service_id,threshold,scoring_strategy,body_strategy,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,service_id=excluded.service_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",
                        (namespace, account_id, feed_id, values["title"], values["media_type"], values["processing_mode"], values["curator_prompt_id"], values["editor_prompt_id"], values["service_id"], values["threshold"], values["scoring_strategy"], values["body_strategy"], (prior["revision"] + 1 if prior else 1), now, now))
+            for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
+                if prompt_id:
+                    from . import configuration
+                    reference_id = uuid.uuid5(uuid.NAMESPACE_URL, _feed_key(namespace, account_id, feed_id) + "\0" + role).hex
+                    configuration._store(db, "reference", {"id": reference_id, "sourceId": _feed_key(namespace, account_id, feed_id), "name": values["title"] or feed_id, "role": role, "promptId": prompt_id})
     return {"feeds": [_policy_row(db.execute("SELECT * FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()) for feed_id in feed_ids], "affectedSources": affected, "historicalRerun": "explicit-preview-required"}

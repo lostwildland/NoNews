@@ -41,7 +41,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	}
 
 	private lazy var regularWebViewController = createWebViewController()
-	private var searchWebViewController: DetailWebViewController?
+	private var nativeSourceBinding: [String: Any]?
 
 	var windowState: DetailWindowState {
 		currentWebViewController.windowState
@@ -98,6 +98,11 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	// MARK: - API
 
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
+		if case .article(let article, _) = state {
+			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak self] binding in
+				self?.nativeSourceBinding = binding
+			}
+		}
 		switch mode {
 		case .regular:
 			detailStateForRegular = state

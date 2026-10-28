@@ -137,6 +137,11 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	private let feedback = NSTextField(wrappingLabelWithString: "")
 	private let configurationTabs = NSTabView()
 	private let nativeSourceSummary = NSTextField(wrappingLabelWithString: "No native sources loaded.")
+	private let nativeFeedPicker = NSPopUpButton()
+	private let nativeModePicker = NSPopUpButton()
+	private let nativeMediaPicker = NSPopUpButton()
+	private let nativeThreshold = NSTextField(string: "")
+	private var nativeFeedRows: [[String: Any]] = []
 	private var serviceRows: [[String: Any]] = []
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
@@ -256,11 +261,28 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		nativeSourceSummary.lineBreakMode = .byWordWrapping
 		nativeSourceSummary.maximumNumberOfLines = 0
 		nativeSourceSummary.setAccessibilityLabel("Native source policies")
+		nativeFeedPicker.setAccessibilityLabel("Native source")
+		nativeModePicker.addItems(withTitles: ["Disabled", "Normal", "Important"])
+		nativeMediaPicker.addItems(withTitles: ["Unresolved", "News", "Paper", "Newsletter", "Podcast", "Video"])
+		nativeThreshold.placeholderString = "Threshold 0–10"
 		let refresh = button("Refresh Sources", #selector(refreshNativeSources))
-		return NSStackView(views: [nativeSourceSummary, refresh])
+		let save = button("Save Source Policy", #selector(saveSelectedNativeSource))
+		return NSStackView(views: [nativeSourceSummary, row("Source", nativeFeedPicker), row("Mode", nativeModePicker), row("Media", nativeMediaPicker), row("Threshold", nativeThreshold), NSStackView(views: [refresh, save])])
 	}
 
 	@objc private func refreshNativeSources() { loadNativeSourceSummary() }
+
+	@objc private func saveSelectedNativeSource() {
+		guard nativeFeedPicker.indexOfSelectedItem >= 0, nativeFeedPicker.indexOfSelectedItem < nativeFeedRows.count,
+			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
+		let row = nativeFeedRows[nativeFeedPicker.indexOfSelectedItem]
+		let mediaTitles = ["", "news", "paper", "newsletter", "podcast", "video"]
+		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem]]
+		if let threshold = Double(nativeThreshold.stringValue), 0...10 ~= threshold { body["threshold"] = threshold }
+		saveNativeSourcePolicy(body) { [weak self] result in
+			if case .success = result { self?.loadNativeSourceSummary() }
+		}
+	}
 
 	private func loadNativeSourceSummary() {
 		guard engine.state == .ready,
@@ -270,6 +292,9 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			self?.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
 		}) { [weak self] value in
 			let feeds = value["feeds"] as? [[String: Any]] ?? []
+			self?.nativeFeedRows = feeds
+			self?.nativeFeedPicker.removeAllItems()
+			self?.nativeFeedPicker.addItems(withTitles: feeds.map { ($0["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? ($0["feed_id"] as? String ?? "") })
 			self?.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
 		}
 	}

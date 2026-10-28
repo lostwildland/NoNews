@@ -446,7 +446,7 @@ let appName = "NetNewsWire"
 				let body = current.first else { nativeArticleDrainActive = false; return }
 			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
 				guard let self else { return }
-				if case .failure = result, ProcessingEngine.shared.state != .ready {
+				if case .failure = result {
 					self.nativeArticleDrainActive = false
 					return
 				}
