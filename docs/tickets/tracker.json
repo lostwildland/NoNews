@@ -79,7 +79,7 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Bounded native browsing Slice3A pushed6da5efa; owner reports declared-runtime prompt/browse check,12focused Python passes/1optional skip and narrow source Swift6 typecheck. Native harness usedSwift5 after strict diagnostic; exact manifest failed67extra generatedpyc. Cooperative preview/Apply/release still red and uncommitted. Same ownerR12 continues source/lightweight functional checks; native grant released toT30. Full review/app/Keychain/HIG acceptance open.",
+      "implementation_state": "Bounded native browsing Slice3A pushed6da5efa; owner reports declared-runtime prompt/browse checks,12focused Python passes/1optional skip and narrow source Swift6 typecheck. Cooperative preview/Apply/release remains pending. Coordinator source audit foundP1 editor-intent race: stale binding/prompt callbacks can publish a different service than visible selection; same ownerR12 steered for connected fix/regressions. Strict harness, exact payload integrity, paired review, Keychain and actualHIG UI gates remain open. T30 retains focused native resource.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
@@ -99,7 +99,8 @@
       "additional_review_evidence": [
         "docs/acceptance/t03-ui-acknowledgement-review-r4.md",
         "docs/acceptance/t03-preview-binding-review-r3.md"
-      ]
+      ],
+      "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md"
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",

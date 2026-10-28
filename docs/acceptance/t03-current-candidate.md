@@ -18,6 +18,8 @@ The owner reports seven focused configuration/migration/stdio passes with one op
 
 ## Required next work
 
+Root's [native interaction source audit](t03-native-interaction-source-audit.md) identifies an additional source-derived P1 at6da5efa: unscoped service/prompt callbacks can publish stale editor state, including a saved service binding that differs from the visible selection. The original owner received the concrete response-order schedules during R12. General editor-intent guards and actual request-boundary regressions remain required alongside cooperative migration; the migration-only state checks do not clear this finding.
+
 The owner reports twelve focused passes and one optional skip for1ddb5a6. Apply/read traversal Python allocation peaks were433,011bytes for200 rows and470,169bytes for2,200 rows; RSS high-water samples were54.6MB and191.5MB including setup/SQLite, without a general RSS bound. These measurements and the complete focused suite have not been independently rerun by root.
 
 Bounded native browsing is implemented at the current source checkpoint, with fresh review and actual UI acceptance pending. Slice3B cooperative preview/Apply/release remains incomplete; its enabled uncommitted red asserts a running response that does not yet exist. The same owner resumed as R12 for source and ordinary lightweight functional checks while T30 receives the focused native resource. No arbitrary smaller total-report limit or increased global timeout is accepted.

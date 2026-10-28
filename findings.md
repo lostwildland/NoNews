@@ -1,5 +1,9 @@
 # Execution findings
 
+2026-10-28 — T03 native editor intent:
+- Source6da5efa `loadBinding` accepts a delayed service response without checking the visible selection; `promptBody` uses that response's service ID. Related prompt/history/save callbacks are also unscoped. Coordinator source-derivedP1, no application reproduction; original ownerR12 received the concrete response-order schedules. See docs/acceptance/t03-native-interaction-source-audit.md.
+- Apple HIG Settings/Feedback/Accessibility pages were read from their official Markdown representations. Recorded actual-native keyboard, focus, feedback, credential-error and VoiceOver checks; no source-only accessibility score or UI acceptance is claimed.
+
 2026-10-27:
 - Native environment: macOS 27.0.1, Xcode 27.1; SDK Swift 6.2 repository baseline, macOS deployment target 15.0.
 - APFS available about 20 GiB: stage builds and imports, avoid simultaneous full Xcode builds and unbounded duplicate assets.

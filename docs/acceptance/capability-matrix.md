@@ -25,7 +25,7 @@ The [script entry-point coverage](../research/io-script-ticket-coverage.md) adds
 | B8 | 先判断 Video 值不值得深入 | [T10](https://github.com/lostwildland/NoNews/issues/12) | not implemented in NoNews | source inventory only; native verification pending |
 | B9 | 配图可读、可追溯和修复 | [T19](https://github.com/lostwildland/NoNews/issues/21) | not implemented in NoNews | source inventory only; native verification pending |
 | C1 | 看评分、理由和局限 | [T05](https://github.com/lostwildland/NoNews/issues/7), [T06](https://github.com/lostwildland/NoNews/issues/8) | not implemented in NoNews | source inventory only; native verification pending |
-| C2 | 按兴趣处理不同来源 | [T03](https://github.com/lostwildland/NoNews/issues/5) | configuration source in progress; acceptance pending | [current correction review](t03-preview-binding-review-r3.md); native/runner binding verification pending |
+| C2 | 按兴趣处理不同来源 | [T03](https://github.com/lostwildland/NoNews/issues/5) | configuration and bounded native browsing implemented in source; acceptance pending | [current candidate and evidence limits](t03-current-candidate.md); [editor-intent/HIG source audit](t03-native-interaction-source-audit.md); responsiveness, strict/native UI and runner binding verification pending |
 | C3 | 分类和回看主题 | [T23](https://github.com/lostwildland/NoNews/issues/25) | not implemented in NoNews | source inventory only; native verification pending |
 | C4 | 从材料得到可阅读的加工稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |
 | C5 | 明确重评或重写、比较多稿 | [T11](https://github.com/lostwildland/NoNews/issues/13) | not implemented in NoNews | source inventory only; native verification pending |

@@ -1,5 +1,10 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Configuration editor intent audit
+
+- Root read committed6da5efa form callbacks, service/target binding, prompt/reference/history and shared-save paths. Source-derived P1: out-of-order responses can restore a different service binding or prompt than the current visible editor; no native reproduction claimed. The original T03 owner received the concrete schedules during R12 without root editing its source boundary.
+- Read official Apple HIG Settings/Feedback/Accessibility pages and recorded applicable native checks. Current AppKit classes are source observations, not keyboard/VoiceOver/visual acceptance. Updated C2's matrix evidence to the actual current candidate and explicitly pending editor-intent, responsiveness and native/runner gates. No accepted ticket count changed.
+
 ## 2026-10-28 — Native browse handoff and R17 safety findings
 
 - T03 original owner delivered6da5efa native indexed/multipart browsing and reported declared-runtime200000-byte prompt/browse journeys,12Python passes/1optional skip and narrow source Swift6 typecheck. Native harness compiledSwift5 after a Swift6 continuation diagnostic; exact prepared integrity failed67extra generatedpyc. Slice3B cooperative preview/Apply/release remains red/uncommitted. Same ownerR12 continues source/lightweight functional work; timing/native resource released toT30.

@@ -25,4 +25,6 @@ T00/T01/T02 accepted (3/31). T03 delivered bounded native browsing6da5efa and re
 ## Constraints
 UI and interaction work must consult Apple's official Human Interface Guidelines (HIG) during design and development, then record applicable guidance and verify native behavior at review/acceptance; see docs/goal-contract.md and docs/acceptance/native-ux-contract.md. User reaffirmed this requirement on 2026-10-28.
 
+T03 source audit at6da5efa found unscoped editor responses can select a service/target different from the visible form. The same owner received the concrete stale-binding, prompt-load and shared-save schedules during R12. Complete matching-intent guards and actual controller/request regressions along with cooperative operations before final native acceptance; do not count migration-only state checks as coverage of general forms.
+
 No capability omissions. No production writes or private data in public repo. Use latest user decisions over older phase-downscope suggestions. No extra requirements interview. Reviews pin each ticket base. Source originals remain untouched. Only user-authorized integration targets.
