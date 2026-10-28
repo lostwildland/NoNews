@@ -279,10 +279,23 @@ def observe(db, body):
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
+            if policy and policy[4] in {"normal", "important"}:
+                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), "automatic", 0))
     return observation(db, observation_id)
 
 
-def context_results(db, method, body):
+
+def replay(db, body):
+    context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
+    row = db.execute("SELECT item_id,policy_revision FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+    if row is None:
+        raise ValueError("Context not found")
+    now = utcnow()
+    job_id = "native-replay-" + uuid.uuid4().hex
+    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": row[1], "preview": True}), "user", 0))
+    return {"jobID": job_id, "contextID": context_id, "historicalRerun": "queued"}
+
+
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
     if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts WHERE id=? AND item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, context_id)).fetchone() is None:

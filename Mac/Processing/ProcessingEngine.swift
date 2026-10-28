@@ -326,7 +326,7 @@ final class ProcessingEngine {
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
 			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
 			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation"), ("POST", "/api/config/migration/ack"),
-			   ("GET", "/api/native/observations"), ("POST", "/api/native/observations"), ("GET", "/api/native/observation"), ("GET", "/api/native/context/results"), ("POST", "/api/native/context/results"), ("GET", "/api/settings/feeds"), ("PUT", "/api/settings/feeds")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("GET", "/api/native/observations"), ("POST", "/api/native/observations"), ("GET", "/api/native/observation"), ("POST", "/api/native/replay"), ("GET", "/api/native/context/results"), ("POST", "/api/native/context/results"), ("GET", "/api/settings/feeds"), ("PUT", "/api/settings/feeds")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}

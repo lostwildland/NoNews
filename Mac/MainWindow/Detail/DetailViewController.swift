@@ -90,9 +90,17 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		self.init(nibName: "DetailView", bundle: nil)
 	}
 
-	override func viewDidLoad() {
+		override func viewDidLoad() {
 		currentWebViewController = regularWebViewController
+		NotificationCenter.default.addObserver(self, selector: #selector(nativeEngineDidChange), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
 		updateMouseoverLinkOverlay()
+	}
+
+	@objc private func nativeEngineDidChange() {
+		guard ProcessingEngine.shared.state == .ready, let article = currentWebViewController.article else { return }
+		ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak self] binding in
+			self?.currentWebViewController.setNativeSourceBinding(binding)
+		}
 	}
 
 	// MARK: - API

@@ -562,6 +562,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			recoveryButton.isHidden = engine.unconfirmedMutations.isEmpty
 			recoveryButton.isEnabled = !acknowledgingMutations && !engine.unconfirmedMutations.isEmpty
 			loadLists()
+			loadNativeSourceSummary()
 			for identity in engine.unconfirmedMutations where recoveringMutations.insert(identity).inserted {
 				engine.recoverMutation(identity) { [weak self] result in
 					guard let self else { return }
