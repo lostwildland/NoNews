@@ -1007,7 +1007,11 @@ private extension FeedbinAccountDelegate {
 
 	}
 
-	internal func syncArticleReadState(account: Account, articleIDs: [Int]?) async throws -> Int {
+}
+
+extension FeedbinAccountDelegate {
+
+	func syncArticleReadState(account: Account, articleIDs: [Int]?) async throws -> Int {
 		guard let articleIDs else {
 			return 0
 		}
@@ -1032,6 +1036,10 @@ private extension FeedbinAccountDelegate {
 
 		return markedUnread.count + markedRead.count
 	}
+
+}
+
+private extension FeedbinAccountDelegate {
 
 	func syncArticleStarredState(account: Account, articleIDs: [Int]?) async throws -> Int {
 		guard let articleIDs else {
