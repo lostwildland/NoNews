@@ -307,7 +307,7 @@ def observe(db, body):
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
             if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
-                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), "automatic", 0, context_id))
+                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", 0, context_id))
     return observation(db, observation_id)
 
 
@@ -325,7 +325,7 @@ def replay(db, body):
     now = utcnow()
     db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
     job_id = "native-replay-" + uuid.uuid4().hex
-    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0, replay_context_id))
+    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "curatorPromptID": row[4], "editorPromptID": row[5], "serviceID": row[6], "mediaType": row[7], "processingMode": row[8], "threshold": row[9], "scoringStrategy": row[10], "bodyStrategy": row[11], "preview": True}), "user", 0, replay_context_id))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
 
@@ -470,10 +470,12 @@ def feeds(db, method, body):
             if values["processing_mode"] == "disabled" and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='processing_jobs'").fetchone():
                 db.execute("UPDATE processing_jobs SET status='failed',error='native_policy_disabled',updated_at=? WHERE native_context_id IN (SELECT c.id FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE o.namespace=? AND o.account_id=? AND o.feed_id=?) AND status IN ('pending','running')", (now, namespace, account_id, feed_id))
 
+            for role in ("curator", "editor"):
                 db.execute("DELETE FROM app_settings WHERE key LIKE 'nonews.reference.%' AND json_extract(value,'$.sourceId')=? AND json_extract(value,'$.role' )=?", (_feed_key(namespace, account_id, feed_id), role))
-            for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
-                if prompt_id:
-                    from . import configuration
-                    reference_id = uuid.uuid5(uuid.NAMESPACE_URL, _feed_key(namespace, account_id, feed_id) + "\0" + role).hex
-                    configuration._store(db, "reference", {"id": reference_id, "sourceId": _feed_key(namespace, account_id, feed_id), "name": values["title"] or feed_id, "role": role, "promptId": prompt_id})
+            if values["processing_mode"] != "disabled":
+                for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
+                    if prompt_id:
+                        from . import configuration
+                        reference_id = uuid.uuid5(uuid.NAMESPACE_URL, _feed_key(namespace, account_id, feed_id) + "\0" + role).hex
+                        configuration._store(db, "reference", {"id": reference_id, "sourceId": _feed_key(namespace, account_id, feed_id), "name": values["title"] or feed_id, "role": role, "promptId": prompt_id})
     return {"feeds": [_policy_row(db.execute("SELECT * FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?", (namespace, account_id, feed_id)).fetchone()) for feed_id in feed_ids], "affectedSources": affected, "historicalRerun": "explicit-preview-required"}

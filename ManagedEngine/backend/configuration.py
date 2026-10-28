@@ -465,8 +465,12 @@ def _list(db, kind, body, response_budget=None):
     if not isinstance(after, str) or (after and (len(after) != 32 or any(c not in '0123456789abcdef' for c in after))):
         raise ConfigurationError('Invalid cursor')
     prefix = f'nonews.{kind}.'
-    rows = db.execute('SELECT value FROM app_settings WHERE key > ? AND key < ? ORDER BY key LIMIT 101',
-                      (prefix + after, f'nonews.{kind}/')).fetchall()
+    role = body.get('role') if kind == 'prompt' and body.get('role') in {'curator', 'editor'} else None
+    if role:
+        rows = db.execute("SELECT value FROM app_settings WHERE key > ? AND key < ? AND json_extract(value,'$.role')=? ORDER BY key LIMIT 101", (prefix + after, f'nonews.{kind}/', role)).fetchall()
+    else:
+        rows = db.execute('SELECT value FROM app_settings WHERE key > ? AND key < ? ORDER BY key LIMIT 101',
+                          (prefix + after, f'nonews.{kind}/')).fetchall()
     values = []
     for row in rows:
         value = json.loads(row[0])
