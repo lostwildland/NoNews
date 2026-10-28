@@ -203,6 +203,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	override func viewDidDisappear() {
 		super.viewDidDisappear()
 		nativeSourceGeneration += 1
+		clearNativeSourceControls()
 		migrationReview.invalidate()
 		cancelMigrationPreview()
 		releaseMigrationReport()
@@ -322,6 +323,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		let accountID = AccountManager.shared.defaultAccount.accountID
 		request("GET", "/api/settings/feeds", ["namespace": namespace, "accountID": accountID], onFailure: { [weak self] in
 			guard let self, self.nativeSourceGeneration == generation else { return }
+			self.clearNativeSourceControls()
 			self.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
 		}) { [weak self] value in
 			guard let self, self.nativeSourceGeneration == generation else { return }
@@ -358,6 +360,14 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		}
 	}
 
+	private func clearNativeSourceControls() {
+		nativeFeedRows = []
+		nativeFeedPicker.removeAllItems()
+		nativeCuratorPicker.selectItem(at: -1)
+		nativeEditorPicker.selectItem(at: -1)
+		nativeServicePicker.selectItem(at: -1)
+		nativeThreshold.stringValue = ""
+	}
 	func saveNativeSourcePolicy(_ body: [String: Any], completion: ((Result<[String: Any], Error>) -> Void)? = nil) {
 		requestClient.request(method: "PUT", path: "/api/settings/feeds", body: body, completion: { result in
 			completion?(result)
@@ -707,14 +717,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				self.prompts.addItem(withTitle: "\(role): \(name)")
 			}
 			if let id = selectedID, let index = rows.firstIndex(where: { $0["id"] as? String == id }) { self.prompts.selectItem(at: index) }
-			else {
-				self.prompts.selectItem(at: -1)
-				self.promptSelectionID = nil
-				self.currentPrompt = nil
-				self.promptGeneration += 1
-				self.role.selectItem(at: -1)
-				self.role.isEnabled = true
-			}
+			else { self.resetPrompt() }
 		}
 	}
 
