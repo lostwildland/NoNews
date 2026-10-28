@@ -284,8 +284,9 @@ def observe(db, body):
 
 def context_results(db, method, body):
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
-    if db.execute("SELECT 1 FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone() is None:
-        raise ValueError("Context not found")
+    origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
+    if origin_context_id != context_id or db.execute("SELECT 1 FROM native_processing_contexts WHERE id=? AND item_id=(SELECT item_id FROM native_processing_contexts WHERE id=?)", (origin_context_id, context_id)).fetchone() is None:
+        raise ValueError("Context provenance mismatch")
     if method == "POST":
         result_type = _text(body.get("resultType"), "result type", required=True, maximum=32)
         result_id = _text(body.get("resultID"), "result ID", required=True, maximum=256)
@@ -381,7 +382,7 @@ def feeds(db, method, body):
                            "editor_prompt_id": changes.get("editorPromptID", values["editor_prompt_id"]), "service_id": changes.get("serviceID", values["service_id"]), "threshold": changes.get("threshold", values["threshold"]),
                            "scoring_strategy": changes.get("scoringStrategy", values["scoring_strategy"]), "body_strategy": changes.get("bodyStrategy", values["body_strategy"])})
             if values["processing_mode"] in {"normal", "important"}:
-                if not values["media_type"] or not values["curator_prompt_id"]:
+                if not values["media_type"] or not values["curator_prompt_id"] or not values["service_id"]:
                     raise ValueError("Enabled feed policy requires media and a Curator prompt")
                 for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
                     if prompt_id:

@@ -446,12 +446,12 @@ let appName = "NetNewsWire"
 				let body = current.first else { nativeArticleDrainActive = false; return }
 			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
 				guard let self else { return }
-				if case .failure = result {
-					self.nativeArticleDrainActive = false
+				if case .failure(let error) = result {
+					self.recordNativeArticleFailure(body, error: String(describing: error))
+					self.removeNativeArticleFromQueue(body)
+					sendNext()
 					return
 				}
-				self.removeNativeArticleFromQueue(body)
-				sendNext()
 			}
 		}
 		sendNext()
@@ -469,6 +469,14 @@ let appName = "NetNewsWire"
 	}
 
 
+	private func recordNativeArticleFailure(_ body: [String: Any], error: String) {
+		var failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
+		var entry = body
+		entry["failure"] = error
+		entry["failedAt"] = ISO8601DateFormatter().string(from: Date())
+		failed.append(entry)
+		UserDefaults.standard.set(failed, forKey: "NoNews.NativeSource.FailedArticles")
+	}
 	private func saveNativeArticleQueue(_ bodies: [[String: Any]]) {
 		guard let data = try? JSONSerialization.data(withJSONObject: bodies), let text = String(data: data, encoding: .utf8) else { return }
 		UserDefaults.standard.set(text, forKey: "NoNews.NativeSource.PendingArticles")

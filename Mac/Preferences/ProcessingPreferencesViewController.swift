@@ -143,9 +143,11 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	private let nativeThreshold = NSTextField(string: "")
 	private let nativeCuratorPicker = NSPopUpButton()
 	private let nativeEditorPicker = NSPopUpButton()
+	private let nativeServicePicker = NSPopUpButton()
 	private var nativeFeedRows: [[String: Any]] = []
 	private var nativeCuratorRows: [[String: Any]] = []
 	private var nativeEditorRows: [[String: Any]] = []
+	private var nativeServiceRows: [[String: Any]] = []
 	private var serviceRows: [[String: Any]] = []
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
@@ -275,7 +277,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		nativeThreshold.placeholderString = "Threshold 0–10"
 		let refresh = button("Refresh Sources", #selector(refreshNativeSources))
 		let save = button("Save Source Policy", #selector(saveSelectedNativeSource))
-		return NSStackView(views: [nativeSourceSummary, row("Source", nativeFeedPicker), row("Mode", nativeModePicker), row("Media", nativeMediaPicker), row("Curator", nativeCuratorPicker), row("Editor", nativeEditorPicker), row("Threshold", nativeThreshold), NSStackView(views: [refresh, save])])
+		return NSStackView(views: [nativeSourceSummary, row("Source", nativeFeedPicker), row("Mode", nativeModePicker), row("Media", nativeMediaPicker), row("Curator", nativeCuratorPicker), row("Editor", nativeEditorPicker), row("Service", nativeServicePicker), row("Threshold", nativeThreshold), NSStackView(views: [refresh, save])])
 	}
 
 	@objc private func refreshNativeSources() { loadNativeSourceSummary() }
@@ -288,6 +290,9 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		let media = ["", "news", "paper", "newsletter", "podcast", "video"]
 		nativeMediaPicker.selectItem(at: media.firstIndex(of: row["media_type"] as? String ?? "") ?? 0)
 		nativeThreshold.stringValue = row["threshold"].map { String(describing: $0) } ?? ""
+		if let id = row["curator_prompt_id"] as? String, let index = nativeCuratorRows.firstIndex(where: { $0["id"] as? String == id }) { nativeCuratorPicker.selectItem(at: index) }
+		if let id = row["editor_prompt_id"] as? String, let index = nativeEditorRows.firstIndex(where: { $0["id"] as? String == id }) { nativeEditorPicker.selectItem(at: index) }
+		if let id = row["service_id"] as? String, let index = nativeServiceRows.firstIndex(where: { $0["id"] as? String == id }) { nativeServicePicker.selectItem(at: index) }
 	}
 	@objc private func saveSelectedNativeSource() {
 		guard nativeFeedPicker.indexOfSelectedItem >= 0, nativeFeedPicker.indexOfSelectedItem < nativeFeedRows.count,
@@ -297,6 +302,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem]]
 		if nativeCuratorPicker.indexOfSelectedItem >= 0, nativeCuratorPicker.indexOfSelectedItem < nativeCuratorRows.count { body["curatorPromptID"] = nativeCuratorRows[nativeCuratorPicker.indexOfSelectedItem]["id"] ?? "" }
 		if nativeEditorPicker.indexOfSelectedItem >= 0, nativeEditorPicker.indexOfSelectedItem < nativeEditorRows.count { body["editorPromptID"] = nativeEditorRows[nativeEditorPicker.indexOfSelectedItem]["id"] ?? "" }
+		if nativeServicePicker.indexOfSelectedItem >= 0, nativeServicePicker.indexOfSelectedItem < nativeServiceRows.count { body["serviceID"] = nativeServiceRows[nativeServicePicker.indexOfSelectedItem]["id"] ?? "" }
 		if let threshold = Double(nativeThreshold.stringValue), 0...10 ~= threshold { body["threshold"] = threshold }
 
 		saveNativeSourcePolicy(body) { [weak self] result in
@@ -329,6 +335,12 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				self.nativeEditorRows = rows
 				self.nativeEditorPicker.removeAllItems()
 				self.nativeEditorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
+			}
+			self.request("GET", "/api/config/services", [:]) { value in
+				let rows = value["services"] as? [[String: Any]] ?? []
+				self.nativeServiceRows = rows
+				self.nativeServicePicker.removeAllItems()
+				self.nativeServicePicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
 			}
 		}
 	}

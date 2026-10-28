@@ -116,9 +116,10 @@ class NativeSourceTest(unittest.TestCase):
 
     def test_policy_batch_update_is_explicit_and_revisioned(self):
         self.db.execute("INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?)", ('nonews.prompt.curator', '{"role":"curator"}', 'now'))
+        self.db.execute("INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?)", ('nonews.service.service', '{"type":"magpie"}', 'now'))
         result = native_source.feeds(self.db, 'PUT', {
             'namespace': 'install-a', 'accountID': 'one', 'feedIDs': ['a', 'b'],
-            'mediaType': 'paper', 'processingMode': 'important', 'curatorPromptID': 'curator', 'threshold': 9,
+            'mediaType': 'paper', 'processingMode': 'important', 'curatorPromptID': 'curator', 'serviceID': 'service', 'threshold': 9,
         })
         self.assertEqual({item['feed_id'] for item in result['feeds']}, {'a', 'b'})
         self.assertEqual({item['processing_mode'] for item in result['feeds']}, {'important'})
