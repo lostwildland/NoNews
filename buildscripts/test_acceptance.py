@@ -41,7 +41,9 @@ class AcceptanceBuildPreservationTests(unittest.TestCase):
 import os, pathlib, sys, time
 project = pathlib.Path(sys.argv[sys.argv.index('-project') + 1]).resolve().parent
 cache = pathlib.Path(next(value.split('=', 1)[1] for value in sys.argv if value.startswith('CLANG_MODULE_CACHE_PATH='))).resolve()
+module_cache = pathlib.Path(next(value.split('=', 1)[1] for value in sys.argv if value.startswith('MODULE_CACHE_DIR='))).resolve()
 assert cache.parent == project
+assert module_cache == cache
 cache.mkdir()
 (cache / 'synthetic-module').write_bytes(b'synthetic module cache')
 generated = project / 'Modules/Secrets/Sources/Secrets/SecretKey.swift'
