@@ -9,7 +9,7 @@ import tempfile
 import time
 import threading
 import json
-from . import causes, settings, schema, configuration, magpie_migration
+from . import causes, settings, schema, configuration, magpie_migration, native_source
 from .core import InformationDB, utcnow, transaction
 from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
 
@@ -94,6 +94,16 @@ class Application:
                 return magpie_migration.command(db.db, path.rsplit('/', 1)[-1], body)
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
+            if path == '/api/native/observations':
+                if method == 'POST':
+                    return native_source.observe(db.db, body)
+                if method == 'GET':
+                    return native_source.list_observations(db.db, body)
+            if path == '/api/native/observation':
+                if method == 'GET':
+                    return native_source.observation(db.db, body.get('id'))
+            if path == '/api/settings/feeds':
+                return native_source.feeds(db.db, method, body)
             if path == '/api/settings/processing/probe' and method == 'POST':
                 db.db.execute('BEGIN IMMEDIATE')
                 try:

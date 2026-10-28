@@ -28,7 +28,8 @@ from contextlib import closing
 # 39: immutable Editor-only Magpie target pin on a processing job.
 # 40: Reject image cleanup progress and object deletion generations.
 # 41: daily deletion keeps no image backup paths.
-SCHEMA_VERSION = 41
+# 42: native source observations, processing contexts and feed policies.
+SCHEMA_VERSION = 42
 _VERSION_KEY = "schema_version"
 
 
@@ -148,7 +149,7 @@ def _ensure(db, *, artifacts=None) -> bool:
     require_supported_database(db)
     from . import (content_store, core, delivery, feed_settings, folders, jobs,
                    legacy_content_migration, literature, media_jobs, media_raw_activation,
-                   media_store, news_media, pipeline, projection, reading_notes,
+                   media_store, native_source, news_media, pipeline, projection, reading_notes,
                    reconciliation, reject_cleanup, service, settings, zotero)
     if version(db) == SCHEMA_VERSION:
         return False
@@ -177,6 +178,7 @@ def _ensure(db, *, artifacts=None) -> bool:
     media_store.ensure_schema(db)
     media_jobs.ensure_schema(db)
     media_raw_activation.ensure_schema(db)
+    native_source.ensure_schema(db)
     news_media.ensure_schema(db)
     reading_notes.ensure_schema(db)
     # Reject cleanup progress/audit and explicit maintenance backup records.

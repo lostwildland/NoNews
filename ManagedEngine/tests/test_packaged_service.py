@@ -65,7 +65,7 @@ class PackagedServiceTest(unittest.TestCase):
             self.assertEqual(first[3]['result']['next'], None)
             self.assertEqual(first[4]['result']['processors'], 3)
             with closing(sqlite3.connect(data / 'information.sqlite')) as db, db:
-                self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('41',))
+                self.assertEqual(db.execute("SELECT value FROM schema_meta WHERE key='schema_version'").fetchone(), ('42',))
                 names = {x[0] for x in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 self.assertTrue({'items', 'feeds', 'body_versions', 'processing_jobs', 'app_settings', 'editor_drafts'} <= names)
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','2026','2026','2026','2026')")

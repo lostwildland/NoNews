@@ -103,7 +103,7 @@ class JobsPagingTest(unittest.TestCase):
                 self.assertEqual((result['error'], result['title'], result['stage_error'], result['result_json']),
                                  (error, title, stage_error, None))
                 self.assertEqual(result['cause'], 'source_browser')
-                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'], 41)
+                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'], 42)
             finally:
                 process.stdin.close(); self.assertEqual(process.wait(timeout=10), 0)
                 process.stdout.close(); process.stderr.close()
@@ -321,7 +321,7 @@ class JobsPagingTest(unittest.TestCase):
                     self.assertEqual(records[name]['result_json'],value)
                     self.assertEqual(records[name]['resolved'],name=='valid')
                 self.assertLess(max(first_times),7)
-                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})[0]['result']['schemaVersion'],41)
+                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})[0]['result']['schemaVersion'],42)
             finally:
                 process.stdin.close()
                 try:
@@ -376,7 +376,7 @@ class JobsPagingTest(unittest.TestCase):
                 for name, value in values.items():
                     self.assertEqual(records[name]['result_json'], value)
                     self.assertEqual(records[name]['resolved'], name.startswith('valid') or name == 'spill')
-                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'], 41)
+                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'], 42)
             finally:
                 process.stdin.close(); self.assertEqual(process.wait(timeout=10),0)
                 process.stdout.close(); process.stderr.close()

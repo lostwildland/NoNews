@@ -293,6 +293,24 @@ final class ProcessingEngine {
 		}
 	}
 
+	func observeNativeArticle(_ body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		request(method: "POST", path: "/api/native/observations", body: body, completion: completion)
+	}
+
+	func nativeObservations(namespace: String? = nil, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		var body: [String: Any] = [:]
+		if let namespace { body["namespace"] = namespace }
+		request(method: "GET", path: "/api/native/observations", body: body, completion: completion)
+	}
+
+	func feedPolicies(namespace: String, accountID: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		request(method: "GET", path: "/api/settings/feeds", body: ["namespace": namespace, "accountID": accountID], completion: completion)
+	}
+
+	func saveFeedPolicies(_ body: [String: Any], completion: @escaping (Result<[String: Any], Error>) -> Void) {
+		request(method: "PUT", path: "/api/settings/feeds", body: body, completion: completion)
+	}
+
 	func request(method: String, path: String, query: [String: Any] = [:], body: [String: Any] = [:], completion: @escaping (Result<[String: Any], Error>) -> Void) {
 		guard state == .ready || state == .starting, process?.isRunning == true, pending.count < 32,
 			  [("POST", "/api/settings/processing/probe"), ("GET", "/api/status"), ("GET", "/api/jobs"), ("GET", "/api/settings/processing"), ("PUT", "/api/settings/processing"),
@@ -300,7 +318,8 @@ final class ProcessingEngine {
 			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
 			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
-			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation"), ("POST", "/api/config/migration/ack")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release"), ("POST", "/api/config/migration/operation"), ("POST", "/api/config/migration/ack"),
+			   ("GET", "/api/native/observations"), ("POST", "/api/native/observations"), ("GET", "/api/settings/feeds"), ("PUT", "/api/settings/feeds")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}

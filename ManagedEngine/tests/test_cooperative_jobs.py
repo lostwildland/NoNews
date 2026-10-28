@@ -45,7 +45,7 @@ class CooperativeJobsTest(unittest.TestCase):
                     self.assertTrue(timer.finished.is_set())
                     self.assertIsNone(app.preparation)
                     self.assertIsNone(app.preparation_timer)
-                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 41)
+                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 42)
                     page = app.handle('GET', '/api/jobs', {}, {})
                     chunks = bytearray()
                     while True:
@@ -94,7 +94,7 @@ class CooperativeJobsTest(unittest.TestCase):
                     self.assertTrue(page['next'])
                     cursor=page['next']; chunks=bytearray(); records=[]; progress=1
                     while cursor:
-                        self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],41)
+                        self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],42)
                         page=send({'id':3,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':cursor}})['result']
                         if page.get('preparing'):
                             progress+=1
@@ -139,7 +139,7 @@ class CooperativeJobsTest(unittest.TestCase):
                     clock[0] += 121
                     with self.assertRaises(ValueError):
                         app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
-                    self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],41)
+                    self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],42)
                 with closing(sqlite3.connect(data/'information.sqlite')) as db:
                     db.execute("UPDATE items SET title='changed'")
                     db.commit()
@@ -202,7 +202,7 @@ class CooperativeJobsTest(unittest.TestCase):
                 while new['next']:
                     new=app.handle('GET','/api/jobs',{'cursor':new['next']}, {})
                 self.assertTrue(new['recordComplete'])
-                self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],41)
+                self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],42)
             finally:
                 app.close()
 
@@ -292,7 +292,7 @@ sys.exit(stdio_service.main())
                     while 'result' in reply and reply['result'].get('preparing'):
                         reply=send({'id':1,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':reply['result']['next']}})
                     self.assertEqual(reply,{'id':1,'error':'operation failed'})
-                    self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],41)
+                    self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],42)
                     page=send({'id':3,'token':token,'method':'GET','path':'/api/jobs'})['result']
                     chunks=bytearray()
                     while True:
@@ -364,7 +364,7 @@ app.close()
                     clock[0]+=121
                     with self.assertRaises(ValueError):
                         app.handle('GET','/api/jobs',{'cursor':page['next']}, {})
-                    self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],41)
+                    self.assertEqual(app.handle('GET','/api/status',{}, {})['schemaVersion'],42)
             finally:
                 app.close()
 
@@ -399,7 +399,7 @@ sys.exit(stdio_service.main())
                 while 'result' in reply and reply['result'].get('preparing'):
                     reply=send({'id':1,'token':token,'method':'GET','path':'/api/jobs','query':{'cursor':reply['result']['next']}})
                 self.assertEqual(reply,{'id':1,'error':'job record is too large','code':'job_record_too_large'})
-                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],41)
+                self.assertEqual(send({'id':2,'token':token,'method':'GET','path':'/api/status'})['result']['schemaVersion'],42)
             finally:
                 process.stdin.close(); self.assertEqual(process.wait(timeout=10),0)
                 self.assertEqual(process.stderr.read(),'')
