@@ -2,7 +2,7 @@
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
   "candidate": "835cda3",
   "source": "835cda3",
-  "state": "Current source835cda3 passes the full macOS plan after provider/error propagation. The earlier106-path ledger remains pinned to R17; later corrections are pending fresh R24 paired review and ledger refresh.",
+  "state": "Current source835cda3 passes the full macOS plan after provider/error propagation. R24 Standards found two P2 provider compensation/gating issues; the paired Spec verdict remains pending. The earlier106-path ledger remains pinned to R17 and requires refresh after the worker checkpoint.",
   "groups": {
     "consumers": 27,
     "account-core": 7,
