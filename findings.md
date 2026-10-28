@@ -1,5 +1,9 @@
 # Execution findings
 
+2026-10-28 — Complete paired T03 R10 source review:
+- Both axes inspected61/61hunks and23/23paths at2ee43f0 and request changes. Standards2P1/2P2 plus3Spec-onlyP2 includes the overlapping recoveryP1, unsized text views, nested same-axis scrolling, fixed-width overflow, Magpie credential visibility, copy selection and missing-Keychain persisted state. No app/runtime proof was collected by reviewers.
+- Rechecked official Apple HIG Scroll views/Settings Markdown: avoid same-axis nested scrolling and size settings panes for contents with stable navigation. Repository AppKit/XIB guidance remains applicable. Original owner received the concrete layout/selection/state requirements; no new worktree or concurrent worker edit.
+
 2026-10-28 — Credential-order public probe and native test entry:
 - Exact2ee43f0 authenticated stdio: save serviceA, save/read back newerB, then replay the capturedA metadata with credentialState=verified. Public readback restoresA name/endpoint; B is lost. All three mutations reached durable completion; EOFexit0; synthetic temporary profile only. This is backend schedule reproduction, not AppKit/Keychain execution.
 - The pinned configuration native runner compiles Engine+ProcessingConfigurationChecks only. Fixed-object search finds no invocation of PreferencesControllerChecks in the workflow/build/test entries; the worker evidence records an earlier manual run. Full app compilation is separate. Original owner received the regression and reproducible current-controller check-entry requirement.

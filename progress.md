@@ -7,6 +7,8 @@
 
 ## 2026-10-28 — T03 durable correction and T30 provider propagation
 
+- T03 R10 Standards completed61hunks/23paths and requests changes:2P1/2P2 plus3Spec-onlyP2; one recoveryP1 overlaps Spec. Added the unsized text view, nested/fixed layout, Magpie credential, copy-selection and missing-Keychain state findings to the same owner's current correction. Rechecked official HIG scrolling/settings guidance; actual native interaction remains unverified.
+
 - Root independently reproduced the2ee43f0 stale-credential request consequence through authenticated stdio: saveA, saveB/readback, lateA verified-state PUT restoresA metadata. No Keychain/provider/AppKit execution; temporary source/profile removed and process exit0. The owner received this deterministic backend regression.
 - Native test-entry audit confirms the existing configuration runner compiles only Engine+ProcessingConfigurationChecks; PreferencesControllerChecks has no scripted invocation at the pin. Owner is to connect the strict controller check to reproducible validation before later Swift edits are accepted. No CI workflow or worker files changed by root.
 

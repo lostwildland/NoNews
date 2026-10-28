@@ -9,7 +9,19 @@ Spec reviewed all **61/61 hunks and 23/23 paths** plus controller, engine, stdio
 - **P1: unknown mutation recovery ID is still discarded.** The outer request callback at engine lines 299/304 drops IDs for `.outcomeUnknown` returned by polling. Retain the identity until a definitive result is durably acknowledged or the user explicitly resolves it; cover failed polling and restart.
 - **P2: recovery acknowledgement is shown before completion.** Controller line 139 hides the button and announces acknowledgement while its async request is still pending. The action remains enabled outside Ready. Observe the result, preserve retry on failure, and enable only in Ready.
 
-The paired Standards verdict is pending. Its running review has not been polled or treated as clearance. The coordinator's separate [authenticated receipt identity probe](t03-receipt-identity-probe.md) independently reproduces another current-source defect; it is not a reviewer runtime rerun.
+The paired Standards review also completed all **61/61 hunks and 23/23 paths**. It reports two P1s and two P2s on Standards, plus three Spec-only P2s. The unresolved-receipt P1 overlaps the Spec report above; counts from the two axes must not be added as independent findings.
+
+- **P1: unresolved mutation identity is discarded.** This is the same recovery defect described above.
+- **P1: text document views have no size.** Controller lines 194–202 and 230–237 assign `reportDetail` and `instructions` as scroll document views without a frame, autoresizing or constraints. Their usable content area can remain zero. Size them explicitly and verify actual editing/report display.
+- **P2: vertical scroll views are nested.** The outer form scrolls vertically, as do its editor/report children. Provide one predictable vertical scroll context or a separate detail surface.
+- **P2: fixed 530-point controls exceed the allowed minimum.** The Preferences minimum is 512 points and the outer scroll view has no horizontal scroller. Use adaptive sizing and verify the complete controls at the supported minimum.
+- **Spec-only P2: Magpie shows a credential field that Save ignores.** Hide/disable it and clear it on type changes.
+- **Spec-only P2: Save as Copy leaves the visible selection behind.** The controller stores the returned copy as `currentPrompt`, but its popup still identifies the original. Select the copy after list reload while preserving any newer user intent.
+- **Spec-only P2: a missing Keychain item leaves the service verified.** Persist `incomplete` through the same safe credential update boundary when a credential is absent.
+
+Both verdicts are source-derived. The coordinator's separate [authenticated receipt identity probe](t03-receipt-identity-probe.md) independently reproduces another current-source defect; it is not a reviewer runtime rerun. The credential-order probe below validates a backend consequence of the stale callback schedule without running that callback in AppKit.
+
+The coordinator rechecked Apple's official [Scroll views](https://developer.apple.com/design/human-interface-guidelines/scroll-views) and [Settings](https://developer.apple.com/design/human-interface-guidelines/settings) guidance on 2026-10-28, using their official Markdown versions after the HTML renderer returned a JavaScript shell. Apple discourages nesting scroll views along the same axis and describes settings panes that size for their contents with stable navigation. The layout correction must also follow this repository's AppKit/XIB guidance. Source citations do not replace a native layout, keyboard or VoiceOver check.
 
 No review execution covered native build/typecheck, app/UI, Keychain, current packaged payload, live providers, keyboard, VoiceOver, appearance, narrow layout or T11 continuity. These remain acceptance gates. The original implementation owner received the findings while retaining its existing worktree and unfinished changes.
 

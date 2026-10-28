@@ -79,7 +79,7 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Committed candidate 2ee43f0 has a complete 23-path blob ledger. Full-source R10 Spec requests changes (3 P1, 1 P2); paired Standards pending. Root authenticated stdio probe reproduces wrong-endpoint receipt success. Original owner correcting current source; app/Keychain/payload/HIG/T11 acceptance open.",
+      "implementation_state": "Committed2ee43f0 has a complete23-path ledger. Both R10 source axes read61hunks/23paths and request changes: Spec3P1/1P2; Standards2P1/2P2 plus3Spec-onlyP2, with overlap. Root public probes reproduce wrong-endpoint receipt success and stale-credential metadata overwrite. Original owner correcting source, controller check entry and native layout/state; app/Keychain/payload/HIG/T11 acceptance open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
