@@ -717,6 +717,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			do {
 				if !secret.isEmpty {
 					try self.storeCredential(secret, serviceID: id)
+					self.clearPendingCredentialDeletion(id)
 					freshCredentialStored = requiresFreshCredential
 				}
 				let present: Bool
