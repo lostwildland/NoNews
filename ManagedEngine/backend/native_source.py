@@ -268,7 +268,10 @@ def observe(db, body):
             identity_type, identity_value, raw_identity_value = identity
             if media_type:
                 prior_identity = (existing["identity_type"], existing["identity_value"]) if existing and existing["identity_type"] else None
-                if existing and existing["item_id"] and prior_identity and prior_identity != (identity_type, identity_value):
+                if existing and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
+                    state = "conflict"
+                    item_id = existing["item_id"]
+                elif existing and existing["item_id"] and prior_identity and prior_identity != (identity_type, identity_value):
                     state = "conflict"
                     item_id = existing["item_id"]
                 else:
@@ -288,7 +291,7 @@ def observe(db, body):
         if existing:
             if identity:
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
-                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
+                           (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else ("unresolved" if not media_type else "verified"), now))
             elif raw_identity_value:
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "unresolved", now))
             prior_state = existing["identity_state"]
