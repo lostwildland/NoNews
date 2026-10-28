@@ -97,9 +97,14 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	}
 
 	@objc private func nativeEngineDidChange() {
-		guard ProcessingEngine.shared.state == .ready, let article = currentWebViewController.article else { return }
+		guard ProcessingEngine.shared.state == .ready else {
+			currentWebViewController.setNativeSourceBinding(nil)
+			return
+		}
+		guard let article = currentWebViewController.article else { return }
 		ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak self] binding in
-			self?.currentWebViewController.setNativeSourceBinding(binding)
+			guard let self, ProcessingEngine.shared.state == .ready else { return }
+			self.currentWebViewController.setNativeSourceBinding(binding)
 		}
 	}
 

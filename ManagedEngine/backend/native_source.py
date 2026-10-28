@@ -274,13 +274,13 @@ def observe(db, body):
         if item_id:
             policy = db.execute("SELECT curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,revision FROM native_feed_policies WHERE namespace=? AND account_id=? AND feed_id=?",
                                 (namespace, account_id, feed_id)).fetchone()
-            existing_context = db.execute("SELECT id FROM native_processing_contexts WHERE item_id=? AND observation_id=?", (item_id, observation_id)).fetchone()
+            existing_context = db.execute("SELECT id,processing_mode FROM native_processing_contexts WHERE item_id=? AND observation_id=?", (item_id, observation_id)).fetchone()
             context_id = existing_context[0] if existing_context else uuid.uuid4().hex
             db.execute("INSERT OR IGNORE INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
-            if policy and policy[4] in {"normal", "important"}:
+            if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), "automatic", 0))
     return observation(db, observation_id)
 
