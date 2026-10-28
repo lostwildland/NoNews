@@ -402,6 +402,13 @@ final class ProcessingEngine {
 				} else if value["state"] as? String == "notSaved" {
 					self?.forgetMutation(identity)
 					completion(.failure(EngineError.mutationNotSaved))
+				} else if value["state"] as? String == "rejected" {
+					self?.forgetMutation(identity)
+					if value["code"] as? String == "invalid_configuration" {
+						completion(.failure(EngineError.invalidConfiguration))
+					} else {
+						completion(.failure(EngineError.operation))
+					}
 				} else if value["state"] as? String == "running" {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
 						guard let self else { completion(.failure(EngineError.unavailable)); return }

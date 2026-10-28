@@ -275,6 +275,8 @@ class Application:
                     outcome = None if result is not None else self._mutation_outcome(db.db, identity)
                 if result is not None:
                     return {'state': 'complete', 'operationId': identity, 'result': result}
+                if outcome and outcome.get('outcome') == 'rejected':
+                    return {'state': 'rejected', 'operationId': identity, **outcome}
                 return {'state': 'notSaved', 'operationId': identity, **outcome} if outcome else {'state': 'unknown', 'operationId': identity}
         with self.migration_lock:
             if 'operationId' not in body:
@@ -313,7 +315,9 @@ class Application:
             if operation['error']:
                 raise operation['error']
             if operation['action'] == 'mutation' and isinstance(operation.get('result'), dict) and operation['result'].get('_outcome'):
-                return {'state': 'notSaved', 'operationId': identity, **operation['result']['_outcome']}
+                outcome = operation['result']['_outcome']
+                state = 'rejected' if outcome.get('outcome') == 'rejected' else 'notSaved'
+                return {'state': state, 'operationId': identity, **outcome}
             if operation.get('render') and response_budget is not None:
                 encoded = json.dumps({'state': 'complete', 'operationId': operation['id'], 'result': operation['result']}, separators=(',', ':'), ensure_ascii=True)
                 if len(encoded) > response_budget:
@@ -339,7 +343,7 @@ class Application:
         row = db.execute('SELECT value FROM app_settings WHERE key=?', ('nonews.mutation-outcome.' + identity,)).fetchone()
         return json.loads(row[0]) if row else None
 
-    def _write_mutation_outcome(self, identity, outcome, reason=None):
+    def _write_mutation_outcome(self, identity, outcome, reason=None, code=None):
         with InformationDB(self.database) as db, transaction(db.db):
             existing = self._mutation_outcome(db.db, identity)
             if existing is None:
@@ -349,6 +353,8 @@ class Application:
                 value = {'outcome': outcome}
                 if reason:
                     value['reason'] = reason
+                if code:
+                    value['code'] = code
                 magpie_migration.save(db.db, 'nonews.mutation-outcome.' + identity, json.dumps(value))
             return existing or value
 
@@ -411,7 +417,13 @@ class Application:
                             magpie_migration.release_report(db.db, {'snapshotId': result['snapshotId']})
                             raise magpie_migration.SnapshotExpired('Migration operation cancelled')
         except Exception as error:
-            if operation['action'] == 'mutation' and not operation.get('render') and not isinstance(error, configuration.ConfigurationError):
+            if operation['action'] == 'mutation' and not operation.get('render') and isinstance(error, configuration.ConfigurationError):
+                try:
+                    result = {'_outcome': self._write_mutation_outcome(operation['id'], 'rejected', str(error), getattr(error, 'code', 'invalid_configuration'))}
+                    error = None
+                except Exception:
+                    pass
+            elif operation['action'] == 'mutation' and not operation.get('render'):
                 try:
                     result = {'_outcome': self._write_mutation_outcome(operation['id'], 'notCommitted', 'transaction_failed')}
                     error = None

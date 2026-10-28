@@ -298,10 +298,12 @@ def snapshot_report(db, report):
                 for position, item in enumerate(value):
                     if position:
                         yield ','
-                    row = ''.join(encoder.iterencode(item))
-                    if len(row.encode('ascii')) > SNAPSHOT_ROW_CAPACITY:
-                        raise SnapshotCapacity('Migration report row exceeds snapshot capacity')
-                    yield row
+                    row_bytes = 0
+                    for chunk in encoder.iterencode(item):
+                        row_bytes += len(chunk.encode('ascii'))
+                        if row_bytes > SNAPSHOT_ROW_CAPACITY:
+                            raise SnapshotCapacity('Migration report row exceeds snapshot capacity')
+                        yield chunk
                 yield ']'
             else:
                 yield from encoder.iterencode(value)
