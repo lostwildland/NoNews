@@ -119,6 +119,7 @@ class ConfigurationTest(unittest.TestCase):
             service = call('PUT', '/api/config/services', {'name': 'Gateway', 'type': 'magpie', 'endpoint': self.endpoint})
             call('POST', '/api/config/refresh', {'id': service['id']})
             with closing(sqlite3.connect(Path(root) / 'information.sqlite')) as db, db:
+                db.execute("INSERT INTO prompt_versions VALUES ('hole','unused','derived','Unused','2019')")
                 db.execute("INSERT INTO prompt_versions VALUES ('legacy-old','legacy-kit','editor','Legacy old','2020-01-01')")
                 db.execute("INSERT INTO prompt_versions VALUES ('legacy-current','legacy-kit','editor','Legacy current','2021-01-01')")
             self.assertEqual(call('GET', '/api/config/legacy', {})['prompts'],
@@ -130,6 +131,17 @@ class ConfigurationTest(unittest.TestCase):
             legacy_history = call('GET', '/api/config/history', {'id': imported['id']})['versions']
             self.assertEqual([(row['id'], row['createdAt']) for row in legacy_history],
                              [('legacy-current', '2021-01-01'), ('legacy-old', '2020-01-01')])
+            with closing(sqlite3.connect(Path(root) / 'information.sqlite')) as db:
+                db.execute("DELETE FROM prompt_versions WHERE id='hole'")
+                db.commit()
+                db.execute('VACUUM')
+                db.execute("UPDATE prompt_versions SET rowid=rowid+1000 WHERE id='legacy-current'")
+                db.execute("INSERT INTO prompt_versions VALUES ('later','legacy-kit','editor','Later source edit','2022')")
+                db.commit()
+            after_vacuum = call('GET', '/api/config/prompts', {'id': imported['id']})
+            self.assertEqual((after_vacuum['versionId'], after_vacuum['text']), ('legacy-current', 'Legacy current'))
+            self.assertEqual([x['id'] for x in call('GET', '/api/config/history', {'id': imported['id']})['versions']],
+                             ['legacy-current', 'legacy-old'])
             process.stdin.write(json.dumps({'id': 3, 'token': token, 'method': 'POST', 'path': '/api/config/bind',
                                             'body': {'id': imported['id']}}) + '\n')
             process.stdin.flush()
@@ -155,15 +167,26 @@ class ConfigurationTest(unittest.TestCase):
             self.assertEqual(call('GET', '/api/config/prompts', {'id': first['id']}), first)
             self.assertEqual(len(call('GET', '/api/config/history', {'id': first['id']})['versions']), 1)
             template = call('PUT', '/api/config/prompts', {**first, 'id': None, 'name': 'Template', 'text': '{{title}} {{description}}'})
-            rendered = call('POST', '/api/config/render', {'id': template['id'], 'versionId': template['versionId'],
+            rendered = call('POST', '/api/config/render', {'id': template['id'], 'versionId': template['versionId'], 'media': 'news',
                                                               'values': {'title': 'Title', 'content': '{{title}}'}})
             self.assertEqual(rendered['text'], 'Title {{title}}')
             call('PUT', '/api/config/prompts', {**template, 'text': '{{missing}}'})
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'POST', 'path': '/api/config/render',
-                'body': {'id': template['id'], 'values': {'title': 'Title'}}}) + '\n')
+                'body': {'id': template['id'], 'media': 'news', 'values': {'title': 'Title', 'missing': 'invented'}}}) + '\n')
             process.stdin.flush()
             error = json.loads(process.stdout.readline())
             self.assertEqual((error['code'], error.get('placeholders')), ('invalid_configuration', ['missing']))
+            paper = call('PUT', '/api/config/prompts', {**first, 'id': None, 'name': 'Paper', 'role': 'curator', 'text': '{{abstract}} / {{description}}'})
+            rendered_paper = call('POST', '/api/config/render', {'id': paper['id'], 'media': 'paper',
+                                 'values': {'title': 'T', 'abstract': '{{title}}'}})
+            self.assertEqual(rendered_paper['text'], '{{title}} / {{title}}')
+            for media in ('news', 'paper'):
+                target_id = paper['id'] if media == 'news' else template['id']
+                call('PUT', '/api/config/prompts', {**(paper if media == 'news' else template), 'text': '{{abstract}}'})
+                process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'POST', 'path': '/api/config/render',
+                    'body': {'id': target_id, 'media': media, 'values': {'title': 'T', 'abstract': 'wrong'}}}) + '\n')
+                process.stdin.flush()
+                self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
             renamed = call('PUT', '/api/config/prompts', {**first, 'name': 'Renamed', 'target': 'b'})
             self.assertEqual(renamed['versionId'], first['versionId'])
             changed = call('PUT', '/api/config/prompts', {**renamed, 'text': 'Revised'})
@@ -184,6 +207,13 @@ class ConfigurationTest(unittest.TestCase):
             reference = call('PUT', '/api/config/references', {'sourceId': 'synthetic-source', 'name': 'Source A',
                                                                'role': 'editor', 'promptId': first['id']})
             self.assertEqual(call('GET', '/api/config/references', {'promptId': first['id']})['references'], [reference])
+            for number in range(101):
+                call('PUT', '/api/config/references', {'sourceId': f'source-{number}', 'name': f'Name {number}',
+                                                        'role': 'editor', 'promptId': first['id']})
+            reference_page = call('GET', '/api/config/references', {'promptId': first['id']})
+            second_page = call('GET', '/api/config/references', {'promptId': first['id'], 'after': reference_page['next']})
+            self.assertEqual(len(reference_page['references']) + len(second_page['references']), 102)
+            self.assertIsNone(second_page['next'])
             self.assertEqual(call('GET', '/api/config/references', {'promptId': copy['id']})['references'], [])
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
                                             'body': {'id': service['id']}}) + '\n')
@@ -193,7 +223,8 @@ class ConfigurationTest(unittest.TestCase):
                                             'body': {'id': first['id']}}) + '\n')
             process.stdin.flush()
             self.assertEqual(json.loads(process.stdout.readline())['code'], 'invalid_configuration')
-            call('DELETE', '/api/config/references', {'id': reference['id']})
+            for row in reference_page['references'] + second_page['references']:
+                call('DELETE', '/api/config/references', {'id': row['id']})
             call('DELETE', '/api/config/prompts', {'id': first['id']})
             self.assertEqual(call('GET', '/api/config/prompts', {'id': copy['id']})['text'], 'Copy edits')
             self.assertEqual([row['kit'] for row in call('GET', '/api/config/legacy', {})['prompts']], ['legacy-kit'])

@@ -47,6 +47,30 @@ def _required(value, maximum=512):
     return value
 
 
+def _legacy_count(value):
+    if value.get('legacyKit') and 'legacyCount' not in value:
+        raise ConfigurationError('Legacy history requires verified recovery')
+    return value.get('legacyCount', 0)
+
+
+def _legacy_key(identity, position):
+    return f'nonews.legacy.{identity}.{position:020d}'
+
+
+def _current_text(db, value):
+    count = _legacy_count(value)
+    row = db.execute('SELECT id,content FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY rowid DESC LIMIT 1',
+                     (value['id'], value['role'])).fetchone()
+    if row is None and count:
+        member = db.execute('SELECT value FROM app_settings WHERE key=?', (_legacy_key(value['id'], count),)).fetchone()
+        if member:
+            row = db.execute('SELECT id,content FROM prompt_versions WHERE id=? AND kit_id=? AND role=?',
+                             (member[0], value['legacyKit'], value['role'])).fetchone()
+    if row is None:
+        raise ConfigurationError('Prompt version missing')
+    return row
+
+
 def service(db, method, body):
     if method == 'GET':
         if 'id' not in body:
@@ -57,6 +81,14 @@ def service(db, method, body):
         with transaction(db):
             if any(item['serviceId'] == value['id'] for item in _records(db, 'prompt')):
                 raise ConfigurationError('Service is in use')
+            for item in _records(db, 'migration-binding'):
+                if item['serviceId'] == value['id'] and db.execute(
+                        'SELECT 1 FROM model_configs WHERE kit_id=? AND role=?', (item['kit'], item['role'])).fetchone():
+                    raise ConfigurationError('Service is in use by legacy routing')
+            for item in _records(db, 'migration-job'):
+                if item['serviceId'] == value['id'] and db.execute(
+                        "SELECT 1 FROM processing_jobs WHERE id=? AND status IN ('pending','running')", (item['jobId'],)).fetchone():
+                    raise ConfigurationError('Service is in use by pending work')
             db.execute('DELETE FROM app_settings WHERE key=?', (f"nonews.service.{value['id']}",))
         return {'deleted': True}
     if set(body) - {'id', 'name', 'type', 'endpoint', 'targets', 'checkedAt', 'stale', 'error'}:
@@ -139,10 +171,7 @@ def prompt(db, method, body, *, copied=None):
             return _list(db, 'prompt', body)
         with transaction(db):
             value = _record(db, 'prompt', body.get('id'))
-            row = db.execute('SELECT id,content FROM prompt_versions WHERE role=? AND (kit_id=? OR (kit_id=? AND rowid<=?)) ORDER BY rowid DESC LIMIT 1',
-                             (value['role'], value['id'], value.get('legacyKit'), value.get('legacyMax', 0))).fetchone()
-            if row is None:
-                raise ConfigurationError('Prompt version missing')
+            row = _current_text(db, value)
             return {**value, 'versionId': row['id'], 'text': row['content']}
     if method == 'DELETE':
         value = _record(db, 'prompt', body.get('id'))
@@ -175,7 +204,8 @@ def prompt(db, method, body, *, copied=None):
              'serviceId': service_id, 'target': target, 'serviceEndpoint': connection['endpoint'],
              'serviceType': connection['type'], 'titleLanguage': title, 'typography': typography}
     if prior and prior.get('legacyKit'):
-        value.update({key: prior[key] for key in ('legacyKit', 'legacyMax', 'legacyOutputStatus')})
+        _legacy_count(prior)
+        value.update({key: prior[key] for key in ('legacyKit', 'legacyCount', 'legacyOutputStatus')})
     elif (prior or copied or {}).get('legacyOutputStatus') == 'needs_review':
         value['legacyOutputStatus'] = 'needs_review'
     if value.get('legacyOutputStatus') == 'needs_review' and body.get('confirmLegacyOutput') is True:
@@ -190,8 +220,7 @@ def prompt(db, method, body, *, copied=None):
             raise ConfigurationError('Service changed during save')
         if not unchanged and (connection['stale'] or target not in connection['targets']):
             raise ConfigurationError('Refresh directory and select an available target')
-        current = db.execute('SELECT content FROM prompt_versions WHERE role=? AND (kit_id=? OR (kit_id=? AND rowid<=?)) ORDER BY rowid DESC LIMIT 1',
-                             (role, value['id'], value.get('legacyKit'), value.get('legacyMax', 0))).fetchone()
+        current = _current_text(db, value) if prior else None
         if current is None or current['content'] != text:
             db.execute('INSERT INTO prompt_versions(id,kit_id,role,content,created_at) VALUES (?,?,?,?,?)',
                        (uuid.uuid4().hex, value['id'], role, text, utcnow()))
@@ -201,21 +230,45 @@ def prompt(db, method, body, *, copied=None):
 
 def history(db, body):
     value = _record(db, 'prompt', body.get('id'))
+    count = _legacy_count(value)
     version = body.get('versionId')
     if version is not None:
-        row = db.execute('SELECT id,content,created_at FROM prompt_versions WHERE role=? AND id=? AND (kit_id=? OR (kit_id=? AND rowid<=?))',
-                         (value['role'], version, value['id'], value.get('legacyKit'), value.get('legacyMax', 0))).fetchone()
+        member = db.execute('SELECT 1 FROM app_settings WHERE key>=? AND key<? AND value=? LIMIT 1',
+                            (_legacy_key(value['id'], 0), _legacy_key(value['id'], count + 1), version)).fetchone() if count else None
+        row = db.execute('SELECT id,content,created_at FROM prompt_versions WHERE role=? AND id=? AND kit_id=?',
+                         (value['role'], version, value['legacyKit'] if member else value['id'])).fetchone()
         if row is None:
             raise ConfigurationError('Prompt version not found')
         return {'id': row['id'], 'text': row['content'], 'createdAt': row['created_at']}
     before = body.get('before')
-    if before is not None and (type(before) is not int or before < 1):
+    if before is not None and (not isinstance(before, str) or not re.fullmatch(r'(?:o:[0-9a-f]{32}|l:[0-9]{1,20})', before)):
         raise ConfigurationError('Invalid history cursor')
-    rows = db.execute('SELECT rowid AS position,id,created_at FROM prompt_versions WHERE role=? '
-                      'AND (kit_id=? OR (kit_id=? AND rowid<=?)) AND rowid < ? ORDER BY rowid DESC LIMIT 101',
-                      (value['role'], value['id'], value.get('legacyKit'), value.get('legacyMax', 0), before or 2**63 - 1)).fetchall()
-    return {'versions': [{'id': row['id'], 'createdAt': row['created_at']} for row in rows[:100]],
-            'next': rows[99]['position'] if len(rows) > 100 else None}
+    rows = []
+    if before is None or before.startswith('o:'):
+        position = 2**63 - 1
+        if before:
+            cursor = db.execute('SELECT rowid FROM prompt_versions WHERE id=? AND kit_id=? AND role=?',
+                                (before[2:], value['id'], value['role'])).fetchone()
+            if cursor is None:
+                raise ConfigurationError('Invalid history cursor')
+            position = cursor[0]
+        rows = db.execute('SELECT id,created_at FROM prompt_versions WHERE kit_id=? AND role=? AND rowid<? ORDER BY rowid DESC LIMIT 101',
+                          (value['id'], value['role'], position)).fetchall()
+        if len(rows) > 100:
+            return {'versions': [{'id': row['id'], 'createdAt': row['created_at']} for row in rows[:100]], 'next': 'o:' + rows[99]['id']}
+    versions = [{'id': row['id'], 'createdAt': row['created_at']} for row in rows]
+    start = int(before[2:]) if before and before.startswith('l:') else count
+    if start > count:
+        raise ConfigurationError('Invalid history cursor')
+    while start > 0 and len(versions) < 100:
+        member = db.execute('SELECT value FROM app_settings WHERE key=?', (_legacy_key(value['id'], start),)).fetchone()
+        row = db.execute('SELECT id,created_at FROM prompt_versions WHERE id=? AND kit_id=? AND role=?',
+                         (member[0], value['legacyKit'], value['role'])).fetchone() if member else None
+        if row is None:
+            raise ConfigurationError('Legacy prompt version missing')
+        versions.append({'id': row['id'], 'createdAt': row['created_at']})
+        start -= 1
+    return {'versions': versions, 'next': 'l:' + str(start) if start else None}
 
 
 def copy_prompt(db, body):
@@ -238,14 +291,22 @@ def import_legacy(db, body):
         connection = _record(db, 'service', body.get('serviceId'))
         if connection['stale'] or target not in connection['targets']:
             raise ConfigurationError('Refresh directory and select an available target')
-        row = db.execute('SELECT rowid AS position,content FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY rowid DESC LIMIT 1', (kit, role)).fetchone()
-        if row is None:
+        rows = db.execute('SELECT id,content FROM prompt_versions WHERE kit_id=? AND role=? ORDER BY rowid', (kit, role))
+        identity = uuid.uuid4().hex
+        count = 0
+        content = None
+        for row in rows:
+            count += 1
+            content = row['content']
+            db.execute('INSERT INTO app_settings(key,value,updated_at) VALUES (?,?,?)',
+                       (_legacy_key(identity, count), row['id'], utcnow()))
+        if count == 0:
             raise ConfigurationError('Legacy prompt not found')
-        _required(row['content'], 200_000)
-        value = {'id': uuid.uuid4().hex, 'name': name, 'role': role, 'serviceId': connection['id'], 'target': target,
+        _required(content, 200_000)
+        value = {'id': identity, 'name': name, 'role': role, 'serviceId': connection['id'], 'target': target,
                  'serviceEndpoint': connection['endpoint'], 'serviceType': connection['type'],
                  'titleLanguage': 'chinese', 'typography': 'chinese', 'legacyKit': kit,
-                 'legacyMax': row['position'], 'legacyOutputStatus': 'needs_review'}
+                 'legacyCount': count, 'legacyOutputStatus': 'needs_review'}
         _store(db, 'prompt', value)
         return prompt(db, 'GET', {'id': value['id']})
 
@@ -281,15 +342,21 @@ def render(db, body):
     values = body.get('values')
     if not isinstance(values, dict) or any(not isinstance(key, str) or not isinstance(value, str) for key, value in values.items()):
         raise ConfigurationError('Invalid materials')
-    expanded = dict(values)
-    if 'content' in values:
-        expanded.setdefault('description', values['content'])
-    if 'abstract' in values:
-        expanded.setdefault('content', values['abstract'])
-        expanded.setdefault('description', values['abstract'])
+    media = body.get('media')
+    if media not in {'news', 'paper', 'newsletter', 'podcast', 'video'}:
+        raise ConfigurationError('Invalid media')
+    paper_curator = media == 'paper' and current['role'] == 'curator'
+    allowed = {'title', 'content', 'description'} | ({'abstract', 'tag_schema'} if paper_curator else set())
+    inputs = {'title', 'abstract' if paper_curator else 'content'}
+    expanded = {key: value for key, value in values.items() if key in inputs}
+    if 'content' in expanded:
+        expanded.setdefault('description', expanded['content'])
+    if 'abstract' in expanded:
+        expanded.setdefault('content', expanded['abstract'])
+        expanded.setdefault('description', expanded['abstract'])
     pattern = re.compile(r'\{\{([^{}]*)\}\}')
     names = pattern.findall(template)
-    unknown = sorted(set(name for name in names if name not in expanded))
+    unknown = sorted(set(name for name in names if name not in allowed or name not in expanded))
     if unknown:
         raise PlaceholderError([name[:256] for name in unknown[:100]])
     if len(template.encode()) + sum(len(expanded[name].encode()) for name in names) > 1_000_000:
@@ -330,7 +397,13 @@ def _list(db, kind, body):
 def references(db, method, body):
     if method == 'GET':
         value = _record(db, 'prompt', body.get('promptId'))
-        return {'references': [row for row in _records(db, 'reference') if row['promptId'] == value['id']]}
+        after = body.get('after', '')
+        if not isinstance(after, str) or (after and (len(after) != 32 or any(c not in '0123456789abcdef' for c in after))):
+            raise ConfigurationError('Invalid reference cursor')
+        rows = db.execute("SELECT value FROM app_settings WHERE key>? AND key<? AND json_extract(value,'$.promptId')=? ORDER BY key LIMIT 101",
+                          ('nonews.reference.' + after, 'nonews.reference/', value['id'])).fetchall()
+        items = [json.loads(row[0]) for row in rows[:100]]
+        return {'references': items, 'next': items[-1]['id'] if len(rows) > 100 else None}
     if method == 'DELETE':
         value = _record(db, 'reference', body.get('id'))
         db.execute('DELETE FROM app_settings WHERE key=?', (f"nonews.reference.{value['id']}",))

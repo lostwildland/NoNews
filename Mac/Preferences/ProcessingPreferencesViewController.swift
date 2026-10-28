@@ -380,6 +380,31 @@ final class ProcessingPreferencesViewController: NSViewController {
 		request("POST", "/api/config/migration/\(action)", ["serviceId": id, "choices": migrationChoices]) { [weak self] result in
 			guard let self else { return }
 			if action == "pause" { self.migrationStatus.stringValue = "Claims paused. Preview again while running work drains."; return }
+			if action == "apply" {
+				self.migrationStatus.stringValue = result["status"] as? String == "waiting" ? "Waiting for running work to finish." : "Mappings applied. Refreshing the routing report."
+				self.reviewedMigration = false
+				self.previewMigration()
+				return
+			}
+			self.loadMigrationReport(result, data: Data()) { [weak self] report in self?.showMigrationReport(report) }
+		}
+	}
+
+	private func loadMigrationReport(_ page: [String: Any], data: Data, then: @escaping ([String: Any]) -> Void) {
+		guard let encoded = page["chunk"] as? String else { then(page); return }
+		guard let chunk = Data(base64Encoded: encoded) else { feedback.stringValue = "Could not read the routing report."; return }
+		var accumulated = data
+		accumulated.append(chunk)
+		if let next = page["next"] as? [String: Any] {
+			request("POST", "/api/config/migration/preview", next) { [weak self] result in
+				self?.loadMigrationReport(result, data: accumulated, then: then)
+			}
+		} else if let result = try? JSONSerialization.jsonObject(with: accumulated) as? [String: Any] {
+			then(result)
+		} else { feedback.stringValue = "Could not read the routing report." }
+	}
+
+	private func showMigrationReport(_ result: [String: Any]) {
 			self.legacyRows = result["models"] as? [[String: Any]] ?? []
 			self.legacyBinding.removeAllItems()
 			for row in self.legacyRows {
@@ -397,8 +422,7 @@ final class ProcessingPreferencesViewController: NSViewController {
 				return "\(job["id"] as? String ?? "Unknown job"): \(reasons.isEmpty ? "ready for mapping" : reasons)"
 			}.joined(separator: "\n")
 			self.migrationStatus.stringValue = "\(state.capitalized): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
-			self.reviewedMigration = action == "preview"
-		}
+			self.reviewedMigration = true
 	}
 
 	@objc private func deleteService() {
@@ -447,8 +471,8 @@ final class ProcessingPreferencesViewController: NSViewController {
 			self.confirmLegacyOutput.state = .off
 			self.instructions.string = value["text"] as? String ?? ""
 			self.loadHistory(id, before: nil, collected: [])
-			self.request("GET", "/api/config/references", ["promptId": id]) { [weak self] refs in
-				let names = (refs["references"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+			self.loadReferences(id, after: nil, collected: []) { [weak self] refs in
+				let names = refs.compactMap { $0["name"] as? String }
 				self?.usedBy.stringValue = names.isEmpty ? "Used by: none" : "Used by: " + names.joined(separator: ", ")
 			}
 			if let serviceID = value["serviceId"] as? String,
@@ -588,16 +612,26 @@ final class ProcessingPreferencesViewController: NSViewController {
 		return body
 	}
 
-	private func loadHistory(_ id: String, before: Int?, collected: [[String: Any]]) {
+	private func loadHistory(_ id: String, before: String?, collected: [[String: Any]]) {
 		var body: [String: Any] = ["id": id]
 		if let before { body["before"] = before }
 		request("GET", "/api/config/history", body) { [weak self] result in
 			guard let self else { return }
 			let all = collected + (result["versions"] as? [[String: Any]] ?? [])
-			if let next = result["next"] as? Int { self.loadHistory(id, before: next, collected: all); return }
+			if let next = result["next"] as? String { self.loadHistory(id, before: next, collected: all); return }
 			self.versions = all
 			self.history.removeAllItems()
 			self.history.addItems(withTitles: all.map { $0["createdAt"] as? String ?? "Unknown date" })
+		}
+	}
+
+	private func loadReferences(_ id: String, after: String?, collected: [[String: Any]], then: @escaping ([[String: Any]]) -> Void) {
+		var body: [String: Any] = ["promptId": id]
+		if let after { body["after"] = after }
+		request("GET", "/api/config/references", body) { [weak self] result in
+			let rows = collected + (result["references"] as? [[String: Any]] ?? [])
+			if let next = result["next"] as? String { self?.loadReferences(id, after: next, collected: rows, then: then) }
+			else { then(rows) }
 		}
 	}
 
@@ -627,9 +661,8 @@ final class ProcessingPreferencesViewController: NSViewController {
 
 	@objc private func restoreHistory() {
 		guard let (id, version) = selectedVersion(), let body = promptBody() else { return }
-		request("GET", "/api/config/references", ["promptId": id]) { [weak self] result in
+		loadReferences(id, after: nil, collected: []) { [weak self] refs in
 			guard let self else { return }
-			let refs = result["references"] as? [[String: Any]] ?? []
 			if !refs.isEmpty {
 				let alert = NSAlert()
 				alert.messageText = "This prompt is shared by \(refs.count) sources."
@@ -665,9 +698,8 @@ final class ProcessingPreferencesViewController: NSViewController {
 	@objc private func savePrompt() {
 		guard let body = promptBody() else { return }
 		if let id = body["id"] as? String {
-			request("GET", "/api/config/references", ["promptId": id]) { [weak self] result in
+			loadReferences(id, after: nil, collected: []) { [weak self] refs in
 				guard let self else { return }
-				let refs = result["references"] as? [[String: Any]] ?? []
 				if !refs.isEmpty {
 					let alert = NSAlert()
 					alert.messageText = "This prompt is shared by \(refs.count) sources."
@@ -704,9 +736,9 @@ final class ProcessingPreferencesViewController: NSViewController {
 
 	@objc private func deletePrompt() {
 		guard let id = currentPrompt?["id"] as? String else { return }
-		request("GET", "/api/config/references", ["promptId": id]) { [weak self] result in
+		loadReferences(id, after: nil, collected: []) { [weak self] refs in
 			guard let self else { return }
-			let names = (result["references"] as? [[String: Any]] ?? []).compactMap { $0["name"] as? String }
+			let names = refs.compactMap { $0["name"] as? String }
 			guard names.isEmpty else { self.feedback.stringValue = "Prompt is used by: " + names.joined(separator: ", "); return }
 			let alert = NSAlert()
 			alert.messageText = "Remove this prompt?"

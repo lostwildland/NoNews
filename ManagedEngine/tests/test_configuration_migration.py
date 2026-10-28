@@ -1,5 +1,6 @@
 """Synthetic legacy data exercised through the authenticated migration commands."""
 import json
+import base64
 from contextlib import closing
 from pathlib import Path
 import sqlite3
@@ -15,7 +16,7 @@ class MigrationTest(unittest.TestCase):
     def test_pause_wait_apply_preserves_completed_and_pinned_editor(self):
         class Directory(BaseHTTPRequestHandler):
             def do_GET(self):
-                content = b'{"data":[{"id":"old/model"},{"id":"editor/new"}]}'
+                content = b'{"data":[{"id":"old/model"},{"id":"editor/new"},{"id":"route/A"},{"id":"route/B"}]}'
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(content)
@@ -45,35 +46,107 @@ class MigrationTest(unittest.TestCase):
                 db.execute("INSERT INTO model_configs VALUES ('news','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model'}),))
                 db.execute("INSERT INTO model_configs VALUES ('news','editor',?, 'now')", (json.dumps({'provider': 'old', 'model': 'other'}),))
                 db.execute("INSERT INTO model_configs VALUES ('paper','curator',?, 'now')", (json.dumps({'target': 'missing/route'}),))
+                db.execute("INSERT INTO model_configs VALUES ('alpha','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model', 'target': 'route/A'}),))
+                db.execute("INSERT INTO model_configs VALUES ('beta','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model', 'target': 'missing/route'}),))
+                db.execute("INSERT INTO model_configs VALUES ('unsupported','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model', 'api_key': 'synthetic-private-value'}),))
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','Synthetic','now','now','now','now')")
                 db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('paper','paper','Synthetic','now','now','now','now')")
+                db.execute("INSERT INTO feeds(id,freshrss_feed_id,title,first_seen_at,last_seen_at) VALUES ('feed','feed','Feed','now','now')")
+                db.execute("INSERT INTO entry_observations(freshrss_entry_id,feed_id,item_id,ingested_at) VALUES ('obs','feed','item','now')")
+                db.execute("INSERT INTO ai_feed_settings(freshrss_feed_id,media_type,kit_id,last_seen_at,updated_at) VALUES ('feed',NULL,'wrong','now','now')")
+                db.execute("INSERT INTO ai_kits(id,name,content_type,threshold,created_at,updated_at) VALUES ('news','News','news',7,'now','now')")
+                db.execute("INSERT INTO item_feed_contracts(item_id,media_type,kit_id,pinned_at) VALUES ('item','news','news','now')")
                 for ident, status, stage, pinned in [('running', 'running', 'curator', None), ('pending', 'pending', 'editor', 'explicit/target'), ('done', 'succeeded', 'editor', None)]:
                     db.execute('INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,editor_target) VALUES (?,?,?,?,?,?,?,?,?)',
                                (ident, 'item', stage, ident, status, 'now', 'now', 'now', pinned))
+                db.execute("UPDATE processing_jobs SET origin='automatic' WHERE id='pending'")
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('pending','item','editor','pending',?, 'now')", (json.dumps({'model': 'historic'}),))
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('pending','paper','curator','pending',?, 'now')", (json.dumps({'model': 'other item'}),))
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('done','item','editor','ready',?, 'now')", (json.dumps({'model': 'completed'}),))
+                db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,origin) VALUES ('mismatch','item','curator','mismatch','pending','now','now','now','user')")
+                db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,magpie_block_reason) VALUES ('maintenance','item','maintenance','maintenance','pending','now','now','now','existing')")
+                db.execute("INSERT INTO pipeline_stage_runs VALUES ('mismatch','item','curator','pending',?, 'now')", (json.dumps({'model': 'keep'}),))
                 db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at) VALUES ('unresolved','paper','curator','unresolved','pending','now','now','now')")
+                db.execute("INSERT INTO item_feed_contracts(item_id,media_type,kit_id,pinned_at) VALUES ('paper','paper','missing-kit','now')")
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('unresolved','paper','curator','pending',?, 'now')", (json.dumps({'model': 'original'}),))
             body = {'serviceId': service['id'], 'choices': {'news/editor': 'editor/new'}}
+            choice_report = session([call(9, '/api/config/migration/preview', {'serviceId': service['id'],
+                'choices': {'old/model': 'route/B', 'beta/curator': 'route/A'}})])[0]['result']
+            choices = {row['kit']: row for row in choice_report['models'] if row['kit'] in {'alpha', 'beta'}}
+            self.assertEqual((choices['alpha']['target'], choices['alpha']['basis']), ('route/B', 'explicit choice'))
+            self.assertEqual((choices['beta']['target'], choices['beta']['basis']), ('route/A', 'explicit choice'))
+            unsafe = next(row for row in choice_report['models'] if row['kit'] == 'unsupported')
+            self.assertTrue(unsafe['blocked'])
+            self.assertNotIn('synthetic-private-value', json.dumps(choice_report))
             preview, paused, waiting = session([call(3, '/api/config/migration/preview', body), call(4, '/api/config/migration/pause', {}), call(5, '/api/config/migration/apply', body)])
             self.assertEqual(preview['result']['running'], 1)
+            self.assertEqual(next(x for x in preview['result']['pending'] if x['id'] == 'pending')['kit'], 'news')
             self.assertEqual(paused['result']['paused'], True)
             self.assertEqual(waiting['result']['status'], 'waiting')
             with closing(sqlite3.connect(database)) as db, db:
                 db.execute("UPDATE processing_jobs SET status='succeeded' WHERE id='running'")
+                db.execute("UPDATE ai_feed_settings SET media_type='paper' WHERE freshrss_feed_id='feed'")
             applied = session([call(6, '/api/config/migration/apply', body)])[0]['result']
             self.assertEqual(applied['status'], 'applied')
             self.assertEqual(applied['running'], 0)
+            with closing(sqlite3.connect(database)) as db:
+                self.assertEqual(db.execute("SELECT magpie_block_reason FROM processing_jobs WHERE id='maintenance'").fetchone()[0], 'existing')
             later = session([call(7, '/api/config/migration/preview', body)])[0]['result']
             evidence = next(row for row in later['evidence'] if row['kit'] == 'news' and row['role'] == 'curator')
             self.assertEqual((evidence['old'], evidence['target'], evidence['serviceId']),
                              ({'provider': 'old', 'model': 'model'}, 'old/model', service['id']))
+            binding = next(row for row in later['models'] if row['kit'] == 'news' and row['role'] == 'curator')
+            self.assertEqual(binding['serviceId'], service['id'])
+            pinned = next(row for row in later['pending'] if row['id'] == 'pending')
+            self.assertEqual((pinned['editorTarget'], pinned['editorServiceId']), ('explicit/target', service['id']))
+            refused = session([{'id': 8, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
+                                'body': {'id': service['id']}}])[0]
+            self.assertEqual(refused['code'], 'invalid_configuration')
+            with closing(sqlite3.connect(database)) as db, db:
+                for index in range(1400):
+                    db.execute('INSERT INTO model_configs VALUES (?, ?, ?, ?)',
+                        (f'bulk-{index:04}-' + 'x' * 900, 'curator', json.dumps({'provider': 'old', 'model': 'model'}), 'now'))
+            first = session([call(10, '/api/config/migration/preview', body)])[0]['result']
+            chunks = [base64.b64decode(first['chunk'])]
+            cursor = first['next']
+            while cursor is not None:
+                page = session([call(11, '/api/config/migration/preview', cursor)])[0]['result']
+                chunks.append(base64.b64decode(page['chunk']))
+                cursor = page['next']
+            full = json.loads(b''.join(chunks))
+            self.assertEqual(len([row for row in full['models'] if row['kit'].startswith('bulk-')]), 1400)
+            session([call(12, '/api/config/migration/pause', {})])
+            large_apply = session([call(13, '/api/config/migration/apply', body)])[0]['result']
+            self.assertEqual(large_apply['status'], 'applied')
+            self.assertLess(len(json.dumps(large_apply)), 1024)
+            after = session([call(14, '/api/config/migration/preview', body)])[0]['result']
+            evidence_chunks = [base64.b64decode(after['chunk'])]
+            cursor = after['next']
+            while cursor is not None:
+                page = session([call(15, '/api/config/migration/preview', cursor)])[0]['result']
+                evidence_chunks.append(base64.b64decode(page['chunk']))
+                cursor = page['next']
+            report = json.loads(b''.join(evidence_chunks))
+            self.assertEqual({row['id'] for row in report['pending']}, {row['id'] for row in full['pending']})
+            self.assertEqual({row['kit'] for row in report['evidence'] if row['kit'].startswith('bulk-')},
+                             {f'bulk-{index:04}-' + 'x' * 900 for index in range(1400)})
             with closing(sqlite3.connect(database)) as db, db:
                 self.assertEqual(db.execute("SELECT editor_target FROM processing_jobs WHERE id='pending'").fetchone()[0], 'explicit/target')
                 self.assertEqual(json.loads(db.execute("SELECT result_json FROM pipeline_stage_runs WHERE job_id='pending' AND item_id='item'").fetchone()[0]), {'model': 'historic'})
                 self.assertEqual(json.loads(db.execute("SELECT result_json FROM pipeline_stage_runs WHERE job_id='pending' AND item_id='paper'").fetchone()[0]), {'model': 'other item'})
                 self.assertEqual(json.loads(db.execute("SELECT result_json FROM pipeline_stage_runs WHERE job_id='done'").fetchone()[0]), {'model': 'completed'})
                 self.assertEqual(json.loads(db.execute("SELECT result_json FROM pipeline_stage_runs WHERE job_id='unresolved'").fetchone()[0]), {'model': 'original'})
-                self.assertIn('paper/curator', db.execute("SELECT magpie_block_reason FROM processing_jobs WHERE id='unresolved'").fetchone()[0])
+                self.assertEqual(json.loads(db.execute("SELECT result_json FROM pipeline_stage_runs WHERE job_id='mismatch'").fetchone()[0]), {'model': 'keep'})
+                self.assertIn('Media mismatch', db.execute("SELECT magpie_block_reason FROM processing_jobs WHERE id='mismatch'").fetchone()[0])
+                self.assertIn('Kit unavailable', db.execute("SELECT magpie_block_reason FROM processing_jobs WHERE id='unresolved'").fetchone()[0])
                 self.assertEqual(json.loads(db.execute("SELECT config_json FROM model_configs WHERE kit_id='news' AND role='curator'").fetchone()[0]), {'target': 'old/model'})
+                self.assertIn('synthetic-private-value', db.execute("SELECT config_json FROM model_configs WHERE kit_id='unsupported'").fetchone()[0])
+                db.execute('DELETE FROM model_configs')
+            guarded = session([{'id': 16, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
+                                'body': {'id': service['id']}}])[0]
+            self.assertEqual(guarded['code'], 'invalid_configuration')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("UPDATE processing_jobs SET status='succeeded' WHERE id='pending'")
+            removed = session([{'id': 17, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
+                                'body': {'id': service['id']}}])[0]
+            self.assertTrue(removed['result']['deleted'])

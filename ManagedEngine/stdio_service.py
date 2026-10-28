@@ -8,6 +8,7 @@ import sys
 
 # 200,000 UTF-8 bytes can expand to 1,200,000 bytes when JSON-escaped.
 MAX_MESSAGE = 1_310_720
+MAX_REFUSAL_PARSE = 8 * 1024 * 1024
 ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/processing'),
            ('PUT', '/api/settings/processing'), ('POST', '/api/settings/processing/probe'),
            ('GET', '/api/config/services'), ('PUT', '/api/config/services'),
@@ -23,12 +24,32 @@ def read_message():
     line = sys.stdin.buffer.readline(MAX_MESSAGE + 1)
     if not line:
         return None
-    if len(line) > MAX_MESSAGE or not line.endswith(b'\n'):
-        raise ValueError('invalid message')
-    message = json.loads(line)
+    oversized = len(line) > MAX_MESSAGE or not line.endswith(b'\n')
+    if oversized:
+        data = bytearray(line)
+        while not line.endswith(b'\n'):
+            line = sys.stdin.buffer.readline(65536)
+            if not line:
+                raise ValueError('incomplete message')
+            if data is not None:
+                if len(data) + len(line) <= MAX_REFUSAL_PARSE:
+                    data.extend(line)
+                else:
+                    data = None
+        if data is None:
+            return (None, True)
+        line = data
+    try:
+        message = json.loads(line)
+    except (ValueError, UnicodeError, RecursionError):
+        if oversized:
+            return (None, True)
+        raise
     if not isinstance(message, dict):
+        if oversized:
+            return (None, True)
         raise ValueError('invalid message')
-    return message
+    return message, oversized
 
 
 def send(message):
@@ -46,7 +67,7 @@ def main():
         return 2
     try:
         bootstrap = read_message()
-        token = bootstrap.get('token') if bootstrap else None
+        token = bootstrap[0].get('token') if bootstrap and bootstrap[0] and not bootstrap[1] else None
         if not isinstance(token, str) or len(token) < 24 or not token.isascii():
             return 2
         for key in tuple(os.environ):
@@ -83,9 +104,13 @@ def main():
         send({'status': 'ready'})
         try:
             while True:
-                message = read_message()
-                if message is None:
+                frame = read_message()
+                if frame is None:
                     return 0
+                message, oversized = frame
+                if message is None:
+                    send({'error': 'invalid message'})
+                    continue
                 supplied = message.get('token')
                 if not isinstance(supplied, str) or not supplied.isascii() or not hmac.compare_digest(token, supplied):
                     send({'error': 'unauthorized'})
@@ -95,6 +120,9 @@ def main():
                     send({'error': 'invalid request id'})
                     continue
                 correlation = {} if request_id is None else {'id': request_id}
+                if oversized:
+                    send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration'})
+                    continue
                 method, path = message.get('method'), message.get('path')
                 body = message.get('body', {})
                 query = message.get('query', {})
