@@ -305,9 +305,9 @@ final class ProcessingEngine {
 
 	func nativeObservation(accountID: String, feedID: String, articleID: String, completion: @escaping ([String: Any]?) -> Void) {
 		let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") ?? ""
-		nativeObservations(namespace: namespace) { result in
-			guard case .success(let value) = result, let rows = value["observations"] as? [[String: Any]] else { completion(nil); return }
-			completion(rows.first { ($0["account_id"] as? String) == accountID && ($0["feed_id"] as? String) == feedID && ($0["article_id"] as? String) == articleID })
+		request(method: "GET", path: "/api/native/observation", body: ["namespace": namespace, "accountID": accountID, "feedID": feedID, "articleID": articleID]) { result in
+			guard case .success(let value) = result else { completion(nil); return }
+			completion(value["observation"] as? [String: Any])
 		}
 	}
 	func feedPolicies(namespace: String, accountID: String, completion: @escaping (Result<[String: Any], Error>) -> Void) {

@@ -141,7 +141,11 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	private let nativeModePicker = NSPopUpButton()
 	private let nativeMediaPicker = NSPopUpButton()
 	private let nativeThreshold = NSTextField(string: "")
+	private let nativeCuratorPicker = NSPopUpButton()
+	private let nativeEditorPicker = NSPopUpButton()
 	private var nativeFeedRows: [[String: Any]] = []
+	private var nativeCuratorRows: [[String: Any]] = []
+	private var nativeEditorRows: [[String: Any]] = []
 	private var serviceRows: [[String: Any]] = []
 	private var promptRows: [[String: Any]] = []
 	private var currentService: [String: Any]?
@@ -258,27 +262,43 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	}
 
 	private func nativeSourceForm() -> NSView {
+		nativeFeedPicker.target = self
+		nativeFeedPicker.action = #selector(nativeFeedChanged)
 		nativeSourceSummary.lineBreakMode = .byWordWrapping
 		nativeSourceSummary.maximumNumberOfLines = 0
 		nativeSourceSummary.setAccessibilityLabel("Native source policies")
 		nativeFeedPicker.setAccessibilityLabel("Native source")
+		nativeCuratorPicker.setAccessibilityLabel("Native Curator prompt")
+		nativeEditorPicker.setAccessibilityLabel("Native Editor prompt")
 		nativeModePicker.addItems(withTitles: ["Disabled", "Normal", "Important"])
 		nativeMediaPicker.addItems(withTitles: ["Unresolved", "News", "Paper", "Newsletter", "Podcast", "Video"])
 		nativeThreshold.placeholderString = "Threshold 0–10"
 		let refresh = button("Refresh Sources", #selector(refreshNativeSources))
 		let save = button("Save Source Policy", #selector(saveSelectedNativeSource))
-		return NSStackView(views: [nativeSourceSummary, row("Source", nativeFeedPicker), row("Mode", nativeModePicker), row("Media", nativeMediaPicker), row("Threshold", nativeThreshold), NSStackView(views: [refresh, save])])
+		return NSStackView(views: [nativeSourceSummary, row("Source", nativeFeedPicker), row("Mode", nativeModePicker), row("Media", nativeMediaPicker), row("Curator", nativeCuratorPicker), row("Editor", nativeEditorPicker), row("Threshold", nativeThreshold), NSStackView(views: [refresh, save])])
 	}
 
 	@objc private func refreshNativeSources() { loadNativeSourceSummary() }
 
+	@objc private func nativeFeedChanged() {
+		guard nativeFeedPicker.indexOfSelectedItem >= 0, nativeFeedPicker.indexOfSelectedItem < nativeFeedRows.count else { return }
+		let row = nativeFeedRows[nativeFeedPicker.indexOfSelectedItem]
+		let modes = ["disabled", "normal", "important"]
+		nativeModePicker.selectItem(at: modes.firstIndex(of: row["processing_mode"] as? String ?? "disabled") ?? 0)
+		let media = ["", "news", "paper", "newsletter", "podcast", "video"]
+		nativeMediaPicker.selectItem(at: media.firstIndex(of: row["media_type"] as? String ?? "") ?? 0)
+		nativeThreshold.stringValue = row["threshold"].map { String(describing: $0) } ?? ""
+	}
 	@objc private func saveSelectedNativeSource() {
 		guard nativeFeedPicker.indexOfSelectedItem >= 0, nativeFeedPicker.indexOfSelectedItem < nativeFeedRows.count,
 			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
 		let row = nativeFeedRows[nativeFeedPicker.indexOfSelectedItem]
 		let mediaTitles = ["", "news", "paper", "newsletter", "podcast", "video"]
 		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem]]
+		if nativeCuratorPicker.indexOfSelectedItem >= 0, nativeCuratorPicker.indexOfSelectedItem < nativeCuratorRows.count { body["curatorPromptID"] = nativeCuratorRows[nativeCuratorPicker.indexOfSelectedItem]["id"] ?? "" }
+		if nativeEditorPicker.indexOfSelectedItem >= 0, nativeEditorPicker.indexOfSelectedItem < nativeEditorRows.count { body["editorPromptID"] = nativeEditorRows[nativeEditorPicker.indexOfSelectedItem]["id"] ?? "" }
 		if let threshold = Double(nativeThreshold.stringValue), 0...10 ~= threshold { body["threshold"] = threshold }
+
 		saveNativeSourcePolicy(body) { [weak self] result in
 			if case .success = result { self?.loadNativeSourceSummary() }
 		}
@@ -291,11 +311,25 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		request("GET", "/api/settings/feeds", ["namespace": namespace, "accountID": accountID], onFailure: { [weak self] in
 			self?.nativeSourceSummary.stringValue = "Native source policies are unavailable while processing is stopped."
 		}) { [weak self] value in
+			guard let self else { return }
 			let feeds = value["feeds"] as? [[String: Any]] ?? []
-			self?.nativeFeedRows = feeds
-			self?.nativeFeedPicker.removeAllItems()
-			self?.nativeFeedPicker.addItems(withTitles: feeds.map { ($0["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? ($0["feed_id"] as? String ?? "") })
-			self?.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
+			self.nativeFeedRows = feeds
+			self.nativeFeedPicker.removeAllItems()
+			self.nativeFeedPicker.addItems(withTitles: feeds.map { ($0["title"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? ($0["feed_id"] as? String ?? "") })
+			if !feeds.isEmpty { self.nativeFeedPicker.selectItem(at: 0); self.nativeFeedChanged() }
+			self.nativeSourceSummary.stringValue = feeds.isEmpty ? "No native source policies are configured." : "Configured native sources: \(feeds.count). Changes apply only to future automatic processing; historical rerun requires an explicit preview."
+			self.request("GET", "/api/config/prompts", ["role": "curator"]) { value in
+				let rows = value["prompts"] as? [[String: Any]] ?? []
+				self.nativeCuratorRows = rows
+				self.nativeCuratorPicker.removeAllItems()
+				self.nativeCuratorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
+			}
+			self.request("GET", "/api/config/prompts", ["role": "editor"]) { value in
+				let rows = value["prompts"] as? [[String: Any]] ?? []
+				self.nativeEditorRows = rows
+				self.nativeEditorPicker.removeAllItems()
+				self.nativeEditorPicker.addItems(withTitles: rows.compactMap { $0["name"] as? String })
+			}
 		}
 	}
 

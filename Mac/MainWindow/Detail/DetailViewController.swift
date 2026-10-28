@@ -41,6 +41,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	}
 
 	private lazy var regularWebViewController = createWebViewController()
+	private var searchWebViewController: DetailWebViewController?
 	private var nativeSourceBinding: [String: Any]?
 
 	var windowState: DetailWindowState {

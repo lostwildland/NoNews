@@ -62,7 +62,7 @@ class NativeSourceTest(unittest.TestCase):
         repeated = native_source.observe(self.db, {key: value for key, value in body.items() if key not in {'mediaType', 'identityType', 'identityValue'}})
         self.assertEqual(repeated['identity_state'], 'verified')
         self.assertEqual(repeated['item_id'], original['item_id'])
-        self.assertEqual(len(repeated['identityEvidence']), 1)
+        self.assertEqual(len(repeated['identityEvidence']), 2)
         self.assertEqual(repeated['identityEvidence'][0]['raw_identity_value'], 'https://example.com/story')
 
     def test_ipv6_url_authority_remains_distinct(self):

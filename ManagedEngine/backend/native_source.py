@@ -170,7 +170,7 @@ def _observation_id(namespace, account_id, feed_id, article_id):
 
 
 def _feed_key(namespace, account_id, feed_id):
-    return f"{namespace}:{account_id}:{feed_id}"
+    return json.dumps([namespace, account_id, feed_id], ensure_ascii=True, separators=(",", ":"))
 
 
 def _item_for_identity(db, media_type, identity_type, identity_value, title, url, published):
@@ -212,9 +212,19 @@ def observe(db, body):
         media_type = policy[0] if policy and policy[0] else ""
     if media_type and media_type not in MEDIA_TYPES:
         raise ValueError("Unsupported media type")
-    identity = _verified_identity(body)
+    try:
+        identity = _verified_identity(body)
+    except ValueError:
+        if not body.get("allowUnresolved"):
+            raise
+        identity = None
+        identity_type = _text(body.get("identityType", ""), "identity type", maximum=64).lower()
+        identity_value = _text(body.get("identityValue", ""), "identity value", maximum=2048)
+        raw_identity_value = identity_value
+    else:
+        identity_type = identity_value = raw_identity_value = ""
     if identity:
-        identity_type = identity[0]
+        identity_type, identity_value, raw_identity_value = identity
         compatible = {"url": MEDIA_TYPES, "doi": {"paper", "news"}, "arxiv": {"paper"}, "video": {"video"}}
         if media_type and media_type not in compatible.get(identity_type, set()):
             raise ValueError("Identity is incompatible with media type")
@@ -222,9 +232,8 @@ def observe(db, body):
     now = utcnow()
     with transaction(db):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
-        item_id = existing["item_id"] if existing else None
         state = "unresolved"
-        identity_type = identity_value = raw_identity_value = ""
+        item_id = existing["item_id"] if existing else None
         if identity:
             identity_type, identity_value, raw_identity_value = identity
             if media_type:
@@ -243,11 +252,11 @@ def observe(db, body):
                     state = "conflict"
                     item_id = existing["item_id"] if existing else None
         if existing:
-            if identity and media_type:
+            if identity:
                 db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
             prior_state = existing["identity_state"]
-            if (not identity or not media_type) and (prior_state in {"verified", "conflict"} or existing["raw_identity_value"]):
+            if (not identity) and (prior_state in {"verified", "conflict"} or existing["raw_identity_value"]):
                 state = prior_state
                 identity_type = existing["identity_type"]
                 identity_value = existing["identity_value"]
@@ -259,7 +268,7 @@ def observe(db, body):
             db.execute("INSERT INTO native_source_observations(id,namespace,account_id,feed_id,article_id,unique_id,feed_url,title,original_url,published_at,item_id,identity_state,identity_type,identity_value,raw_identity_value,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        (observation_id, namespace, account_id, feed_id, article_id, unique_id, feed_url, title, original_url,
                         published, item_id, state, identity_type, identity_value, raw_identity_value, now, now))
-            if identity and media_type:
+            if identity:
                 db.execute("INSERT INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)",
                            (observation_id, media_type, identity_type, identity_value, raw_identity_value, state if state in {"verified", "conflict"} else "verified", now))
         if item_id:
@@ -306,6 +315,16 @@ def observation(db, identity):
     return result
 
 
+def observation_by_binding(db, body):
+    namespace = _namespace(body.get("namespace"))
+    account_id = _text(body.get("accountID"), "account ID", required=True, maximum=256)
+    feed_id = _text(body.get("feedID"), "feed ID", required=True, maximum=256)
+    article_id = _text(body.get("articleID"), "article ID", required=True, maximum=512)
+    row = db.execute("SELECT id FROM native_source_observations WHERE namespace=? AND account_id=? AND feed_id=? AND article_id=?", (namespace, account_id, feed_id, article_id)).fetchone()
+    if row is None:
+        return {"observation": None}
+    return {"observation": observation(db, row[0])}
+
 def list_observations(db, body):
     namespace = _namespace(body.get("namespace")) if body.get("namespace") else None
     sql = "SELECT * FROM native_source_observations"
@@ -327,6 +346,10 @@ def feeds(db, method, body):
     if method == "GET":
         rows = db.execute("SELECT * FROM native_feed_policies WHERE namespace=? AND account_id=? ORDER BY title,feed_id",
                           (namespace, account_id)).fetchall()
+        known = {row["feed_id"] for row in rows}
+        for observation_row in db.execute("SELECT feed_id,MAX(feed_url) AS feed_url,MAX(title) AS title FROM native_source_observations WHERE namespace=? AND account_id=? GROUP BY feed_id ORDER BY feed_id", (namespace, account_id)):
+            if observation_row["feed_id"] not in known:
+                rows.append({"namespace": namespace, "account_id": account_id, "feed_id": observation_row["feed_id"], "title": observation_row["title"] or observation_row["feed_id"], "media_type": None, "processing_mode": "disabled", "curator_prompt_id": None, "editor_prompt_id": None, "service_id": None, "threshold": None, "scoring_strategy": None, "body_strategy": None, "revision": 0, "created_at": None, "updated_at": None})
         return {"feeds": [_policy_row(row) for row in rows]}
     feed_ids = body.get("feedIDs") if isinstance(body.get("feedIDs"), list) else [body.get("feedID")]
     feed_ids = [_text(value, "feed ID", required=True, maximum=256) for value in feed_ids]
@@ -375,6 +398,8 @@ def feeds(db, method, body):
                 raise ValueError("Feed policy changed during save")
             db.execute("INSERT INTO native_feed_policies(namespace,account_id,feed_id,title,media_type,processing_mode,curator_prompt_id,editor_prompt_id,service_id,threshold,scoring_strategy,body_strategy,revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(namespace,account_id,feed_id) DO UPDATE SET title=excluded.title,media_type=excluded.media_type,processing_mode=excluded.processing_mode,curator_prompt_id=excluded.curator_prompt_id,editor_prompt_id=excluded.editor_prompt_id,service_id=excluded.service_id,threshold=excluded.threshold,scoring_strategy=excluded.scoring_strategy,body_strategy=excluded.body_strategy,revision=excluded.revision,updated_at=excluded.updated_at",
                        (namespace, account_id, feed_id, values["title"], values["media_type"], values["processing_mode"], values["curator_prompt_id"], values["editor_prompt_id"], values["service_id"], values["threshold"], values["scoring_strategy"], values["body_strategy"], (prior["revision"] + 1 if prior else 1), now, now))
+            for role in ("curator", "editor"):
+                db.execute("DELETE FROM app_settings WHERE key LIKE 'nonews.reference.%' AND json_extract(value,'$.sourceId')=? AND json_extract(value,'$.role' )=?", (_feed_key(namespace, account_id, feed_id), role))
             for prompt_id, role in ((values["curator_prompt_id"], "curator"), (values["editor_prompt_id"], "editor")):
                 if prompt_id:
                     from . import configuration
