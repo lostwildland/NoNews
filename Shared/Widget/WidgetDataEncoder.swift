@@ -25,7 +25,11 @@ import Account
 
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "WidgetDataEncoder")
 
-	init?() {
+	#if DEBUG
+	var fetchWidgetDataForTesting: (() async throws -> WidgetData)?
+	#endif
+
+	convenience init?() {
 		guard let appGroup = Bundle.main.object(forInfoDictionaryKey: "AppGroup") as? String else {
 			Self.logger.error("WidgetDataEncoder: unable to create appGroup")
 			return nil
@@ -35,6 +39,10 @@ import Account
 			return nil
 		}
 
+		self.init(containerURL: containerURL)
+	}
+
+	init?(containerURL: URL) {
 		self.imageContainer = containerURL.appendingPathComponent("widgetImages", isDirectory: true)
 		self.dataURL = containerURL.appendingPathComponent("widget-data.json")
 
@@ -78,11 +86,18 @@ import Account
 	private func performEncode() async {
 		defer { isRunning = false }
 
-		removeStaleFaviconsFromSharedContainer()
 
 		let latestData: WidgetData
 		do {
+			#if DEBUG
+			if let fetchWidgetDataForTesting {
+				latestData = try await fetchWidgetDataForTesting()
+			} else {
+				latestData = try await fetchWidgetData()
+			}
+			#else
 			latestData = try await fetchWidgetData()
+			#endif
 		} catch {
 			return
 		}
@@ -96,8 +111,10 @@ import Account
 		}
 
 		do {
-			let existingData = try? WidgetDataDecoder.decodeWidgetData()
+			let existingData = (try? Data(contentsOf: dataURL)).flatMap { try? JSONDecoder().decode(WidgetData.self, from: $0) }
 			try encodedData.write(to: dataURL, options: [.atomic])
+			let referencedIcons = Set((latestData.unreadArticles + latestData.starredArticles + latestData.todayArticles).compactMap(\.feedIconPath))
+			removeStaleFaviconsFromSharedContainer(protecting: referencedIcons)
 			reloadTimelines(newData: latestData, existingData: existingData)
 			Self.logger.debug("WidgetDataEncoder: finished refreshing widget data")
 		} catch {
@@ -194,7 +211,7 @@ import Account
 		}
 	}
 
-	func removeStaleFaviconsFromSharedContainer() {
+	func removeStaleFaviconsFromSharedContainer(protecting paths: Set<String>) {
 		let fm = FileManager.default
 		if !fm.fileExists(atPath: imageContainer.path) {
 			try? fm.createDirectory(at: imageContainer, withIntermediateDirectories: true, attributes: nil)
@@ -216,7 +233,7 @@ import Account
 			for url in urls {
 				let values = try url.resourceValues(forKeys: resourceKeys)
 				// Skip directories; we only store files in this container
-				if values.isDirectory == true { continue }
+				if values.isDirectory == true || paths.contains(url.path) { continue }
 
 				// Prefer last access date; fall back to modification date if needed
 				let lastAccess = values.contentAccessDate ?? values.contentModificationDate
