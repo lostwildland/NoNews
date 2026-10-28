@@ -99,7 +99,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	@objc private func nativeEngineDidChange() {
 		guard ProcessingEngine.shared.state == .ready else {
 			regularWebViewController.setNativeSourceBinding(nil)
-			searchWebViewController.setNativeSourceBinding(nil)
+			searchWebViewController?.setNativeSourceBinding(nil)
 			return
 		}
 		guard let article = currentWebViewController.article else { return }

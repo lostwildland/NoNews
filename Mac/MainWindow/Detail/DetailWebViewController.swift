@@ -393,8 +393,9 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
 		}
 
-		let nativeContextID = (nativeSourceBinding?["context_id"] as? String) ?? ((nativeSourceBinding?["contexts"] as? [[String: Any]])?.count == 1 ? ((nativeSourceBinding?["contexts"] as? [[String: Any]])?.first?["id"] as? String) : nil)
-		let nativeContextLabel = nativeContextID.map { " Native context: \($0.prefix(8))" } ?? ""
+		let nativeContexts = nativeSourceBinding?["contexts"] as? [[String: Any]] ?? []
+		let nativeContextID = (nativeSourceBinding?["context_id"] as? String) ?? (nativeContexts.count == 1 ? (nativeContexts.first?["id"] as? String) : nil)
+		let nativeContextLabel = nativeContextID.map { " Native context: \($0.prefix(8))" } ?? (nativeContexts.count > 1 ? " Contexts: " + nativeContexts.compactMap { $0["id"] as? String }.map { String($0.prefix(8)) }.joined(separator: ", ") : "")
 		let nativeBanner = nativeSourceBinding.map { binding in
 			let state = binding["identity_state"] as? String ?? "unresolved"
 			let label = ["verified": "Verified", "conflict": "Conflicting identity", "unresolved": "Unresolved"][state] ?? "Unresolved"
