@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Correction bd4fffa adds direct mutation receipt recovery, persisted credential state, bounded report capacity, bounded unknown recovery IDs and an Advanced disclosure. Focused source suite16/1skip passed; fresh paired correction review is running. Full app/UI/Keychain/signed bundle/T11/HIG layout acceptance remain open.",
+      "implementation_state": "Correction8525300 makes credential-state persistence observable and preserves legacy service recovery; Focused source suite16/1skip passed; fresh paired correction review is running. Full app/UI/Keychain/signed bundle/T11/HIG layout acceptance remain open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "bd4fffa",
+      "last_reported_head": "8525300",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -572,9 +572,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Correction d0b9db7 propagates provider/CloudKit queue insertion, selection and post-send deletion failures with captured errors and shared status mutation gating. Latest macOS plan passed with zero failures/skips; fresh R22 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
+      "implementation_state": "Correction60e1f5c compensates local status changes when outbox insertion fails, preserves original dequeue errors and holds CloudKit claim/send/delete under one gate. Latest macOS plan passed with zero failures/skips; fresh R23 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "d0b9db7",
+      "last_reported_head": "60e1f5c",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [
