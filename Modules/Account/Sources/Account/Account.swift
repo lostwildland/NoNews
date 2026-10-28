@@ -133,6 +133,9 @@ public enum FetchType {
 			settings.name
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			let currentNameForDisplay = nameForDisplay
 			if newValue != settings.name {
 				settings.name = newValue
@@ -149,6 +152,9 @@ public enum FetchType {
 			settings.isActive
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			if newValue != settings.isActive {
 				settings.isActive = newValue
 				var userInfo = [AnyHashable: Any]()
@@ -170,6 +176,9 @@ public enum FetchType {
 			settings.externalID
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			settings.externalID = newValue
 		}
 	}
@@ -206,6 +215,9 @@ public enum FetchType {
 			settings.username
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			if newValue != settings.username {
 				settings.username = newValue
 			}
@@ -217,6 +229,9 @@ public enum FetchType {
 			settings.lastArticleFetchStartTime
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			settings.lastArticleFetchStartTime = newValue
 		}
 	}
@@ -226,6 +241,9 @@ public enum FetchType {
 			settings.lastRefreshCompletedDate
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			settings.lastRefreshCompletedDate = newValue
 		}
 	}
@@ -235,6 +253,9 @@ public enum FetchType {
 			settings.endpointURL
 		}
 		set {
+			guard acceptsFixtureWork else {
+				return
+			}
 			if newValue != settings.endpointURL {
 				settings.endpointURL = newValue
 			}
@@ -287,6 +308,10 @@ public enum FetchType {
 
     public var unreadCount = 0 {
         didSet {
+			guard acceptsFixtureWork else {
+				unreadCount = oldValue
+				return
+			}
             if unreadCount != oldValue {
                 postUnreadCountDidChangeNotification()
             }
@@ -299,6 +324,10 @@ public enum FetchType {
 
 	public var refreshInProgress = false {
 		didSet {
+			guard acceptsFixtureWork else {
+				refreshInProgress = oldValue
+				return
+			}
 			if refreshInProgress != oldValue {
 				if refreshInProgress {
 					NotificationCenter.default.post(name: .AccountRefreshDidBegin, object: self)
@@ -312,6 +341,10 @@ public enum FetchType {
 
 	public var progressInfo = ProgressInfo() {
 		didSet {
+			guard acceptsFixtureWork else {
+				progressInfo = oldValue
+				return
+			}
 			if progressInfo != oldValue {
 				postProgressInfoDidChangeNotification()
 			}

@@ -34,6 +34,9 @@ import RSParser
 	}
 
 	func markAsDirty() {
+		guard let account, account.acceptsFixtureWork, !account.isDeleted else {
+			return
+		}
 		pendingAccount = account
 		isDirty = true
 	}
@@ -62,11 +65,16 @@ import RSParser
 	}
 
 	@objc func saveToDiskIfNeeded() {
-		_ = flush()
+		if !flush() { queueSaveToDiskIfNeeded() }
 	}
 
 	func flush() -> Bool {
 		guard isDirty else { return true }
+		if account?.isDeleted == true {
+			isDirty = false
+			pendingAccount = nil
+			return true
+		}
 		guard save() else { return false }
 		isDirty = false
 		pendingAccount = nil

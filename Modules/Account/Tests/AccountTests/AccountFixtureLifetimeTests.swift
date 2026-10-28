@@ -305,7 +305,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		if failFirst {
 			#expect(owner != nil)
 			try FileManager.default.removeItem(atPath: opml)
-			owner?.saveIfNeeded()
+			queue.performCallsImmediately()
 		}
 		let saved = try? String(contentsOfFile: opml, encoding: .utf8)
 		#expect(saved?.contains("Queued folder") == true && saved?.contains(feed.url) == true)
@@ -319,6 +319,114 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		let closedSettings = await settings.close()
 		guard closedArticles && closedSettings else { Issue.record("Could not close fixture databases"); return }
 		try FileManager.default.removeItem(atPath: path)
+	}
+
+	@Test func committedDeletionReleasesQueuedOPMLOwnerWithoutSaving() async throws {
+		let manager = TestAccountManager()
+		var account: Account? = manager.createAccount(type: .onMyMac)
+		let path = try #require(account).dataFolder
+		let articles = try #require(account).database
+		let settings = try #require(account).feedSettingsDatabaseForTesting
+		await account?.waitForFixtureBackgroundWorkForTesting()
+		account?.saveIfNeeded()
+		let opml = path + "/Subscriptions.opml"
+		let previous = try? Data(contentsOf: URL(fileURLWithPath: opml))
+		let queue = try #require(account).opmlSaveQueueForTesting
+		_ = try #require(account?.ensureFolder(with: "Pending deletion"))
+		account?.isDeleted = true
+		weak var owner = account
+		account = nil
+		queue.performCallsImmediately()
+		#expect(owner == nil)
+		#expect((try? Data(contentsOf: URL(fileURLWithPath: opml))) == previous)
+		if let owner {
+			owner.isDeleted = false
+			try await manager.deleteAccount(owner)
+			return
+		}
+		let articlesClosed = await articles.close()
+		let settingsClosed = await settings.close()
+		guard articlesClosed && settingsClosed else {
+			Issue.record("Could not close deleted fixture databases")
+			return
+		}
+		try FileManager.default.removeItem(atPath: path)
+	}
+
+	@Test func retainedAccountSettingsRejectDuringCloseBusyRetryAndAfterClose() async throws {
+		let manager = TestAccountManager()
+		var retained: Account? = manager.createAccount(type: .onMyMac)
+		weak var owner = retained
+		try await exerciseRetainedAccountSettings(try #require(retained), manager: manager)
+		retained = nil
+		#expect(owner == nil)
+	}
+
+	private func exerciseRetainedAccountSettings(_ account: Account, manager: TestAccountManager) async throws {
+		await account.waitForFixtureBackgroundWorkForTesting()
+		account.name = "Initial"
+		account.externalID = "initial-id"
+		account.username = "fixture-user"
+		account.refreshInProgress = true
+		account.saveIfNeeded()
+		var destination: OpaquePointer?
+		guard sqlite3_open(":memory:", &destination) == SQLITE_OK else { throw CocoaError(.fileWriteUnknown) }
+		defer { sqlite3_close(destination) }
+		let backup = try #require(account.feedSettingsDatabaseForTesting.withDatabaseForTesting { database in
+			guard let source = database.sqliteHandle() else { return nil as OpaquePointer? }
+			return sqlite3_backup_init(destination, "main", OpaquePointer(source), "main")
+		})
+		let (started, startedSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		let (closing, closingSignal) = AsyncStream<Void>.makeStream()
+		account.onFixtureClosingForTesting = { closingSignal.yield(()) }
+		account.startBackground {
+			startedSignal.yield(())
+			for await _ in release { break }
+			account.name = "Admitted during close"
+			account.refreshInProgress = false
+		}
+		for await _ in started { break }
+		let close = Task { await account.closeForFixtureRemoval() }
+		for await _ in closing { break }
+		expectAccountChangesRejected(account)
+		releaseSignal.finish()
+		#expect(!(await close.value))
+		expectAccountChangesRejected(account)
+		#expect(sqlite3_backup_finish(backup) == SQLITE_OK)
+		#expect(await account.closeForFixtureRemoval())
+		#expect(account.name == "Admitted during close" && !account.refreshInProgress)
+		expectAccountChangesRejected(account)
+		try await manager.deleteAccount(account)
+	}
+
+	private func expectAccountChangesRejected(_ account: Account) {
+		let prefix = account.accountID + "-"
+		let before = UserDefaults.standard.dictionaryRepresentation().filter { $0.key.hasPrefix(prefix) }
+		let progress = account.progressInfo
+		let refresh = account.refreshInProgress
+		let unread = account.unreadCount
+		let notifications = NotificationCounter()
+		let observer = NotificationCenter.default.addObserver(forName: nil, object: account, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		account.name = "Rejected"
+		account.isActive.toggle()
+		account.externalID = "rejected-id"
+		account.username = "rejected-user"
+		account.lastArticleFetchStartTime = Date(timeIntervalSince1970: 1)
+		account.lastRefreshCompletedDate = Date(timeIntervalSince1970: 2)
+		account.endpointURL = URL(string: "https://fixture.invalid/rejected")
+		account.unreadCount += 1
+		account.refreshInProgress = !refresh
+		account.refreshInProgress = refresh
+		account.progressInfo = ProgressInfo(numberOfTasks: 3, numberCompleted: 1, numberRemaining: 2)
+		let after = UserDefaults.standard.dictionaryRepresentation().filter { $0.key.hasPrefix(prefix) }
+		#expect(NSDictionary(dictionary: before).isEqual(to: after))
+		#expect(account.progressInfo == progress && account.refreshInProgress == refresh)
+		#expect(account.unreadCount == unread)
+		#expect(notifications.count.withLock { $0 } == 0)
+		NotificationCenter.default.removeObserver(observer)
 	}
 
 	@Test func admittedVacuumCompletesAllStagesBeforeClose() async throws {
