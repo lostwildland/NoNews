@@ -120,4 +120,44 @@ import Articles
 		try FileManager.default.removeItem(at: root)
 	}
 
+	@Test func redoWaitsForAnInFlightUndo() async throws {
+		let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+		let account = Account(dataFolder: root.path, type: .onMyMac, accountID: UUID().uuidString)
+		await account.waitForFixtureBackgroundWorkForTesting()
+		await account.createStatusesIfNeededAsync(articleIDs: ["fixture"])
+		try await account.markArticles(articleIDs: ["fixture"], statusKey: .read, flag: false)
+		let status = ArticleStatus(articleID: "fixture", read: false, starred: false, dateArrived: Date())
+		let article = Article(accountID: account.accountID, articleID: "fixture", feedID: "fixture", uniqueID: "fixture", title: nil, contentHTML: nil, contentText: nil, markdown: nil, url: nil, externalURL: nil, summary: nil, imageURL: nil, datePublished: nil, dateModified: nil, authors: nil, status: status)
+		let undo = UndoManager()
+		undo.groupsByEvent = false
+		let command = try #require(MarkStatusCommand(initialArticles: [article], markingRead: true, undoManager: undo))
+		command.accountResolverForTesting = { _ in account }
+		let (finished, finishSignal) = AsyncStream<Void>.makeStream()
+		let (started, startSignal) = AsyncStream<Void>.makeStream()
+		let (release, releaseSignal) = AsyncStream<Void>.makeStream()
+		var results = [ArticleMarkResult]()
+		command.onMarkFinishedForTesting = { results.append($0); finishSignal.yield(()) }
+		command.beforeMarkForTesting = { flag in
+			if !flag { startSignal.yield(()); for await _ in release { break } }
+		}
+		var iterator = finished.makeAsyncIterator()
+		undo.beginUndoGrouping()
+		command.perform()
+		_ = await iterator.next()
+		undo.endUndoGrouping()
+		undo.undo()
+		for await _ in started { break }
+		#expect(undo.canRedo)
+		undo.redo()
+		releaseSignal.finish()
+		_ = await iterator.next()
+		_ = await iterator.next()
+		#expect(results.count == 3 && results.allSatisfy { $0.succeeded[account.accountID] == ["fixture"] })
+		#expect(!(try await account.fetchUnreadArticleIDsAsync()).contains("fixture"))
+		#expect(await account.closeForFixtureRemoval())
+		account.deleteSettings()
+		try FileManager.default.removeItem(at: root)
+	}
+
 }

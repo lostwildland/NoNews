@@ -2123,14 +2123,21 @@ private extension SceneCoordinator {
 	func setTimelineFeed(_ sidebarItem: SidebarItem?, animated: Bool, completion: ((Result<Void, Error>) -> Void)? = nil) {
 		let previousFeed = timelineFeed
 		timelineFeed = sidebarItem
+		var requestID: Int?
 		fetchAndReplaceArticlesAsync(animated: animated) { [weak self] result in
+			guard let self else { completion?(.failure(CancellationError())); return }
+			guard requestID == nil || requestID == self.fetchSerialNumber else {
+				completion?(.failure(CancellationError()))
+				return
+			}
 			if case .success = result {
-				self?.mainTimelineViewController?.reinitializeArticles(resetScroll: true)
-			} else if (self?.timelineFeed as AnyObject?) === (sidebarItem as AnyObject?) {
-				self?.timelineFeed = previousFeed
+				self.mainTimelineViewController?.reinitializeArticles(resetScroll: true)
+			} else {
+				self.timelineFeed = previousFeed
 			}
 			completion?(result)
 		}
+		requestID = fetchSerialNumber
 	}
 
 	func updateShowNamesAndIcons() {

@@ -26,6 +26,7 @@ import Account
 	#if DEBUG
 	var accountResolverForTesting: ((String) -> Account?)?
 	var onMarkFinishedForTesting: ((ArticleMarkResult) -> Void)?
+	var beforeMarkForTesting: ((Bool) async -> Void)?
 	#endif
 	// Called after every mark, with the flag that was applied, so undo and redo can update
 	// the UI in the right direction. Unlike completion, it’s not one-shot.
@@ -79,6 +80,9 @@ import Account
 		self.completion = nil
 		let task = Task { @MainActor [self] in
 			let ids = await previous?.value ?? initialIDs
+			#if DEBUG
+			await beforeMarkForTesting?(flag)
+			#endif
 			let outcome: ArticleMarkResult
 			if ids.isEmpty {
 				outcome = ArticleMarkResult()
