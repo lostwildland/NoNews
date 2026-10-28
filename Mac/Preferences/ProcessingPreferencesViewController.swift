@@ -305,11 +305,11 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			let namespace = UserDefaults.standard.string(forKey: "NoNews.NativeSource.InstallationNamespace") else { return }
 		let row = nativeFeedRows[nativeFeedPicker.indexOfSelectedItem]
 		let mediaTitles = ["", "news", "paper", "newsletter", "podcast", "video"]
-		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem], "revision": row["revision"] ?? 0]
+		var body: [String: Any] = ["namespace": namespace, "accountID": AccountManager.shared.defaultAccount.accountID, "feedID": row["feed_id"] ?? "", "processingMode": ["disabled", "normal", "important"][nativeModePicker.indexOfSelectedItem], "mediaType": mediaTitles[nativeMediaPicker.indexOfSelectedItem].isEmpty ? NSNull() : mediaTitles[nativeMediaPicker.indexOfSelectedItem], "revision": row["revision"] ?? 0]
 		body["curatorPromptID"] = nativeCuratorPicker.indexOfSelectedItem >= 0 && nativeCuratorPicker.indexOfSelectedItem < nativeCuratorRows.count ? nativeCuratorRows[nativeCuratorPicker.indexOfSelectedItem]["id"] : NSNull()
 		body["editorPromptID"] = nativeEditorPicker.indexOfSelectedItem >= 0 && nativeEditorPicker.indexOfSelectedItem < nativeEditorRows.count ? nativeEditorRows[nativeEditorPicker.indexOfSelectedItem]["id"] : NSNull()
 		body["serviceID"] = nativeServicePicker.indexOfSelectedItem >= 0 && nativeServicePicker.indexOfSelectedItem < nativeServiceRows.count ? nativeServiceRows[nativeServicePicker.indexOfSelectedItem]["id"] : NSNull()
-		if let threshold = Double(nativeThreshold.stringValue), 0...10 ~= threshold { body["threshold"] = threshold }
+		body["threshold"] = (Double(nativeThreshold.stringValue).flatMap { 0...10 ~= $0 ? $0 : nil } ?? NSNull())
 
 		saveNativeSourcePolicy(body) { [weak self] result in
 			if case .success = result { self?.loadNativeSourceSummary() }
@@ -379,6 +379,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		nativeModePicker.selectItem(at: 0)
 		nativeMediaPicker.selectItem(at: 0)
 		nativeThreshold.stringValue = ""
+		nativeSourceSummary.stringValue = "Native source policies are unavailable."
 	}
 	func saveNativeSourcePolicy(_ body: [String: Any], completion: ((Result<[String: Any], Error>) -> Void)? = nil) {
 		requestClient.request(method: "PUT", path: "/api/settings/feeds", body: body, completion: { result in
