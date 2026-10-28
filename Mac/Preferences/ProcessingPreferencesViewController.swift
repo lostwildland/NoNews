@@ -340,7 +340,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				guard self.nativeSourceGeneration == generation else { return }
 				let rows = (value["prompts"] as? [[String: Any]] ?? []).filter { ($0["role"] as? String) == "curator" }
 				self.nativeCuratorRows = rows
-				self.nativeCuratorPicker.removeAllItems()
+				self.nativeCuratorPicker.addItems(withTitles: rows.map { ($0["name"] as? String) ?? ($0["id"] as? String ?? "") })
 				self.nativeFeedChanged()
 			})
 			self.request("GET", "/api/config/prompts", ["role": "editor"], onFailure: {
@@ -350,7 +350,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				guard self.nativeSourceGeneration == generation else { return }
 				let rows = (value["prompts"] as? [[String: Any]] ?? []).filter { ($0["role"] as? String) == "editor" }
 				self.nativeEditorRows = rows
-				self.nativeEditorPicker.removeAllItems()
+				self.nativeEditorPicker.addItems(withTitles: rows.map { ($0["name"] as? String) ?? ($0["id"] as? String ?? "") })
 				self.nativeFeedChanged()
 			})
 			self.request("GET", "/api/config/services", [:], onFailure: {

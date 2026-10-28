@@ -258,9 +258,11 @@ def observe(db, body):
         existing = db.execute("SELECT * FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
         was_unresolved = bool(existing and existing["identity_state"] == "unresolved")
         if existing and raw_identity_value and existing["raw_identity_value"] and existing["raw_identity_value"] != raw_identity_value:
-            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", existing["raw_identity_value"], existing["raw_identity_value"], "conflict", now))
+            db.execute("INSERT OR IGNORE INTO native_observation_identities(observation_id,media_type,identity_type,identity_value,raw_identity_value,evidence_state,observed_at) VALUES (?,?,?,?,?,?,?)", (observation_id, media_type, "raw", raw_identity_value, raw_identity_value, "conflict", now))
         state = "unresolved"
         item_id = existing["item_id"] if existing else None
+        if existing and existing["identity_state"] == "conflict":
+            state = "conflict"
         if identity:
             identity_type, identity_value, raw_identity_value = identity
             if media_type:
@@ -328,7 +330,7 @@ def replay(db, body):
         raise ValueError("Context not found")
     if row[8] not in {"normal", "important"} or row[12] is None:
         raise ValueError("Current source policy is unavailable or disabled for replay")
-    observation_state
+    observation_state = db.execute("SELECT o.identity_state FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id WHERE c.id=? AND o.namespace=?", (context_id, namespace)).fetchone()
     if observation_state is None or observation_state[0] != "verified":
         raise ValueError("Conflicting or unresolved observation cannot be replayed")
     service_available = True
