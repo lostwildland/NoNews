@@ -1,6 +1,6 @@
 # T30 native fixture and cancellation candidate
 
-Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current connected R17 source `49d80d051e9f199f290191bc4d2b986bee1e9d26`, evidence HEAD `51d169e477d96bf103c5dd98a673786a50bd363c`, followed by coordinator shared-helper correction `9ab2069afc779bb8a1cdf6b858c40e45164db017`. The [coverage ledger](t30-review-coverage.json) pins106 logical changed paths. Root verified that only the ticket evidence document differs between source and evidence commits; code/test blobs match. The helper correction is not yet compiled or reviewed. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current connected R17 source `49d80d051e9f199f290191bc4d2b986bee1e9d26`, evidence HEAD `51d169e477d96bf103c5dd98a673786a50bd363c`, followed by coordinator shared-helper correction `9ab2069afc779bb8a1cdf6b858c40e45164db017`. The [coverage ledger](t30-review-coverage.json) pins106 logical changed paths. Root verified that only the ticket evidence document differs between source and evidence commits; code/test blobs match. R19 found a new P1 in SyncStatusTable.insertStatuses; the original owner is correcting it. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
 
 ## Current evidence
 

@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Checkpoint cf95ccd adds transactional queued-save receipts and native recovery. Focused14passes/1optional skip; strict native check predates final missing-receipt change. Missing receipt after restart remains explicit unknown, so P1 open. Fresh review, controller wiring, payload, full app/Keychain/HIG acceptance pending.",
+      "implementation_state": "Checkpoint6e9dac9 adds durable complete/cancelled/notCommitted/unknown queued-save outcomes and native recovery. Root independently ran4 migration tests/30.319s; final native run predates tombstone source. Fresh review, controller wiring, payload, app/Keychain/HIG gates open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
+      "last_reported_head": "6e9dac94933a136d93495b0b8e869f0eb9b2b361",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -572,7 +572,7 @@
         "28",
         "29"
       ],
-      "implementation_state": "R18 paired review at source49d80d/evidence51d169 found2SpecP1 risks: failed article lookup success-empty and remote deletion discarding pending read. Coordinator9ab2069 shared helper fixes failed BEGIN/COMMIT rollback and first batch error, with tests not compiled/run. Fresh R19 review and original-owner behavioral validation pending; no full T30 acceptance.",
+      "implementation_state": "R19 Standards review of shared helper9ab2069 found no Standards issue but1SpecP1: SyncStatusTable.insertStatuses leaves failed BEGIN/COMMIT transaction open and callers can report queued success. Original owner must fix and test through SyncDatabase. R18 lookup/pending-read P1s also remain. No full T30 acceptance.",
       "implementation_branch": "t3/native-fixture-lifetime",
       "last_reported_head": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",

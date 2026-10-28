@@ -1,7 +1,7 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
-  "state": "21 paths at cf95ccd. Transactional queued receipts, native recovery and controller polling are implemented; missing receipt after restart remains explicit unknown, so P1 is open. Focused 14 pass/1 optional skip; strict native run predates final missing-receipt change. Fresh review and full UI/runtime gates pending.",
+  "candidate": "6e9dac94933a136d93495b0b8e869f0eb9b2b361",
+  "state": "21 paths at 6e9dac9. Durable complete/cancelled/notCommitted/unknown mutation outcomes are implemented; root independently ran 4 migration tests. Final native proof and fresh review pending.",
   "groups": {
     "native": 2,
     "backend": 4,
@@ -15,14 +15,14 @@
     {
       "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
       "group": "native",
-      "blob": "4d0f81127a41cf84c91bec3e4b675a8bb46a2bd9",
+      "blob": "80f3bf4699b8673e903509a2f3fc730748dc1289",
       "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
       "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
     },
     {
       "path": "Mac/Processing/ProcessingEngine.swift",
       "group": "native",
-      "blob": "436d33056e8268cf85b6abcbaeddaf2ca1fc0727",
+      "blob": "943631f2a411fd0000863d2620a933d5d99dbf5c",
       "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
       "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
     },
@@ -43,7 +43,7 @@
     {
       "path": "ManagedEngine/backend/server.py",
       "group": "backend",
-      "blob": "fb954d2d6ca2ed9e3e5a1e3e2e75f0a265e9a30e",
+      "blob": "fe24cc2dd6cb26ed925a0a9ed080e97ac5fe0b64",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -127,7 +127,7 @@
     {
       "path": "ManagedEngine/tests/test_configuration_migration.py",
       "group": "python-checks",
-      "blob": "5f997d983a42e570aeec791ec840846fa55076ee",
+      "blob": "a0477d8e4ffe5bb126df9f628a01b29e8e19aeb2",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -148,7 +148,7 @@
     {
       "path": "docs/acceptance/t03-native-processing-configuration.md",
       "group": "evidence",
-      "blob": "34195c4125e78d157acc84b77094b491d6ad504c",
+      "blob": "8a23aeef1d5e2f24b216b851f25651c787efed2f",
       "standards": "Changed at partial R5f96d605; source recheck pending.",
       "spec": "Owner claims render budget/cancelled snapshot cleanup correction; queued-save P1 still open and cancellation acknowledgement branch needs verification. No native acceptance."
     },
@@ -189,11 +189,11 @@
       "result": "Final public test reproduces migration_busy at extracted baseline; error/retry/continued-settings test plus large-report case2passed14.057s, ResourceWarning error/systemPython. Not native timing/payload acceptance."
     },
     "latest_checkpoint": {
-      "head": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
-      "focused": "14passed/1optional skip; strict Swift6 client/typecheck was before final missing-receipt source change; no native proof of final source."
+      "head": "6e9dac94933a136d93495b0b8e869f0eb9b2b361",
+      "independent_test": "MigrationTest module:4 passed in30.319s, ResourceWarning as error; no native proof of final tombstone source."
     }
   },
-  "previous_candidate": "f96d605107231383ae07f3aa8eb976d2dca97251",
+  "previous_candidate": "cf95ccd1ba0c8829b14835dd306d509e378eac1e",
   "review_reports": {
     "cooperative_r5": "docs/acceptance/t03-cooperative-review-r5.md",
     "editor_intent": "docs/acceptance/t03-native-interaction-source-audit.md"
