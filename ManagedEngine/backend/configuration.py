@@ -20,6 +20,10 @@ class PlaceholderError(ConfigurationError):
         super().__init__('Unavailable prompt placeholder')
 
 
+class RenderCapacityError(ValueError):
+    code = 'render_too_large'
+
+
 def _record(db, kind, identity):
     if not isinstance(identity, str) or len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity):
         raise ConfigurationError('Invalid identity')
@@ -335,7 +339,7 @@ def restore(db, body):
         return prompt(db, 'PUT', {**current, **edits, 'id': current['id'], 'text': old['text']})
 
 
-def render(db, body):
+def render(db, body, *, wire_budget=1_310_680):
     current = prompt(db, 'GET', {'id': body.get('id')})
     version = body.get('versionId')
     template = history(db, {'id': current['id'], 'versionId': version})['text'] if version else current['text']
@@ -359,9 +363,26 @@ def render(db, body):
     unknown = sorted(set(name for name in names if name not in allowed or name not in expanded))
     if unknown:
         raise PlaceholderError([name[:256] for name in unknown[:100]])
-    if len(template.encode()) + sum(len(expanded[name].encode()) for name in names) > 1_000_000:
-        raise ConfigurationError('Material exceeds transport capacity')
-    return {'text': pattern.sub(lambda match: expanded[match.group(1)], template)}
+    parts = []
+    position = 0
+    size = 0
+    encoded_sizes = {}
+    for match in pattern.finditer(template):
+        literal = template[position:match.start()]
+        name = match.group(1)
+        if name not in encoded_sizes:
+            encoded_sizes[name] = len(json.dumps(expanded[name], ensure_ascii=True)) - 2
+        size += len(json.dumps(literal, ensure_ascii=True)) - 2 + encoded_sizes[name]
+        if size > wire_budget:
+            raise RenderCapacityError('Rendered response exceeds transport capacity')
+        parts.extend((literal, expanded[name]))
+        position = match.end()
+    tail = template[position:]
+    size += len(json.dumps(tail, ensure_ascii=True)) - 2
+    if size > wire_budget:
+        raise RenderCapacityError('Rendered response exceeds transport capacity')
+    parts.append(tail)
+    return {'text': ''.join(parts)}
 
 
 def bind(db, body):

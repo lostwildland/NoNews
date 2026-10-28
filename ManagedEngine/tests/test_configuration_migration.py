@@ -4,6 +4,7 @@ import base64
 from contextlib import closing
 from pathlib import Path
 import sqlite3
+import uuid
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,7 @@ class MigrationTest(unittest.TestCase):
     def test_pause_wait_apply_preserves_completed_and_pinned_editor(self):
         class Directory(BaseHTTPRequestHandler):
             def do_GET(self):
-                content = b'{"data":[{"id":"old/model"},{"id":"editor/new"},{"id":"route/A"},{"id":"route/B"}]}'
+                content = b'{"data":[{"id":"old/model"},{"id":"editor/new"},{"id":"route/A"},{"id":"route/B"},{"id":"explicit/target"}]}'
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(content)
@@ -40,7 +41,10 @@ class MigrationTest(unittest.TestCase):
                 return {'id': number, 'token': token, 'method': 'POST', 'path': path, 'body': body}
             service = session([{'id': 1, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
                 'body': {'name': 'Gateway', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}}])[0]['result']
+            other = session([{'id': 1, 'token': token, 'method': 'PUT', 'path': '/api/config/services',
+                'body': {'name': 'Other Gateway', 'type': 'magpie', 'endpoint': f'http://127.0.0.1:{server.server_port}'}}])[0]['result']
             session([call(2, '/api/config/refresh', {'id': service['id']})])
+            session([call(2, '/api/config/refresh', {'id': other['id']})])
             database = Path(root) / 'information.sqlite'
             with closing(sqlite3.connect(database)) as db, db:
                 db.execute("INSERT INTO model_configs VALUES ('news','curator',?, 'now')", (json.dumps({'provider': 'old', 'model': 'model'}),))
@@ -56,10 +60,15 @@ class MigrationTest(unittest.TestCase):
                 db.execute("INSERT INTO ai_feed_settings(freshrss_feed_id,media_type,kit_id,last_seen_at,updated_at) VALUES ('feed',NULL,'wrong','now','now')")
                 db.execute("INSERT INTO ai_kits(id,name,content_type,threshold,created_at,updated_at) VALUES ('news','News','news',7,'now','now')")
                 db.execute("INSERT INTO item_feed_contracts(item_id,media_type,kit_id,pinned_at) VALUES ('item','news','news','now')")
-                for ident, status, stage, pinned in [('running', 'running', 'curator', None), ('pending', 'pending', 'editor', 'explicit/target'), ('done', 'succeeded', 'editor', None)]:
+                for ident, status, stage, pinned in [('running', 'running', 'curator', None), ('pending', 'pending', 'editor', 'explicit/target'), ('proven', 'pending', 'editor', 'explicit/target'), ('done', 'succeeded', 'editor', None)]:
                     db.execute('INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,editor_target) VALUES (?,?,?,?,?,?,?,?,?)',
                                (ident, 'item', stage, ident, status, 'now', 'now', 'now', pinned))
                 db.execute("UPDATE processing_jobs SET origin='automatic' WHERE id='pending'")
+                db.execute("UPDATE processing_jobs SET origin='automatic' WHERE id='proven'")
+                proven_id = uuid.uuid5(uuid.NAMESPACE_URL, 'proven').hex
+                db.execute('INSERT INTO app_settings VALUES (?,?,?)', ('nonews.migration-job.' + proven_id,
+                    json.dumps({'id': proven_id, 'jobId': 'proven', 'target': 'explicit/target',
+                                'serviceId': other['id'], 'endpoint': other['endpoint']}), 'now'))
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('pending','item','editor','pending',?, 'now')", (json.dumps({'model': 'historic'}),))
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('pending','paper','curator','pending',?, 'now')", (json.dumps({'model': 'other item'}),))
                 db.execute("INSERT INTO pipeline_stage_runs VALUES ('done','item','editor','ready',?, 'now')", (json.dumps({'model': 'completed'}),))
@@ -80,6 +89,10 @@ class MigrationTest(unittest.TestCase):
             self.assertNotIn('synthetic-private-value', json.dumps(choice_report))
             preview, paused, waiting = session([call(3, '/api/config/migration/preview', body), call(4, '/api/config/migration/pause', {}), call(5, '/api/config/migration/apply', body)])
             self.assertEqual(preview['result']['running'], 1)
+            unknown = next(row for row in preview['result']['pending'] if row['id'] == 'pending')
+            self.assertIsNone(unknown['editorServiceId'])
+            self.assertEqual(unknown['proposedEditorServiceId'], service['id'])
+            self.assertIn('Editor service association required', unknown['blocked'])
             self.assertEqual(next(x for x in preview['result']['pending'] if x['id'] == 'pending')['kit'], 'news')
             self.assertEqual(paused['result']['paused'], True)
             self.assertEqual(waiting['result']['status'], 'waiting')
@@ -98,15 +111,62 @@ class MigrationTest(unittest.TestCase):
             binding = next(row for row in later['models'] if row['kit'] == 'news' and row['role'] == 'curator')
             self.assertEqual(binding['serviceId'], service['id'])
             pinned = next(row for row in later['pending'] if row['id'] == 'pending')
-            self.assertEqual((pinned['editorTarget'], pinned['editorServiceId']), ('explicit/target', service['id']))
+            self.assertEqual((pinned['editorTarget'], pinned['editorServiceId']), ('explicit/target', None))
+            self.assertIn('Editor service association required', pinned['blocked'])
+            proven = next(row for row in later['pending'] if row['id'] == 'proven')
+            self.assertEqual(proven['editorServiceId'], other['id'])
+            self.assertEqual(proven['proposedEditorServiceId'], other['id'])
+            conflict = session([call(28, '/api/config/migration/preview',
+                {**body, 'editorServices': {'proven': service['id']}})])[0]['result']
+            self.assertIn('Existing Editor association conflicts with this proposal',
+                          next(row for row in conflict['pending'] if row['id'] == 'proven')['blocked'])
+            explicit = {**body, 'editorServices': {'pending': service['id']}}
+            reviewed = session([call(23, '/api/config/migration/preview', explicit)])[0]['result']
+            self.assertEqual(next(row for row in reviewed['pending'] if row['id'] == 'pending')['proposedEditorServiceId'], service['id'])
+            session([call(24, '/api/config/migration/pause', {})])
+            unreviewed = session([call(25, '/api/config/migration/apply', explicit)])[0]
+            self.assertEqual(unreviewed['code'], 'invalid_configuration')
+            approved = {**explicit, 'reviewToken': reviewed['editorReviewToken']}
+            changed = {**approved, 'choices': {**body['choices'], 'alpha/curator': 'route/B'}}
+            self.assertEqual(session([call(29, '/api/config/migration/apply', changed)])[0]['code'], 'invalid_configuration')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("UPDATE processing_jobs SET editor_target='changed/target' WHERE id='pending'")
+            self.assertEqual(session([call(30, '/api/config/migration/apply', approved)])[0]['code'], 'invalid_configuration')
+            with closing(sqlite3.connect(database)) as db, db:
+                db.execute("UPDATE processing_jobs SET editor_target='explicit/target' WHERE id='pending'")
+            self.assertEqual(session([call(25, '/api/config/migration/apply', approved)])[0]['result']['status'], 'applied')
+            later = session([call(26, '/api/config/migration/preview', body)])[0]['result']
+            self.assertEqual(next(row for row in later['pending'] if row['id'] == 'pending')['editorServiceId'], service['id'])
+            self.assertEqual(next(row for row in later['pending'] if row['id'] == 'proven')['editorServiceId'], other['id'])
             refused = session([{'id': 8, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
                                 'body': {'id': service['id']}}])[0]
             self.assertEqual(refused['code'], 'invalid_configuration')
+            refused_other = session([{'id': 27, 'token': token, 'method': 'DELETE', 'path': '/api/config/services',
+                                      'body': {'id': other['id']}}])[0]
+            self.assertEqual(refused_other['code'], 'invalid_configuration')
             with closing(sqlite3.connect(database)) as db, db:
                 for index in range(1400):
                     db.execute('INSERT INTO model_configs VALUES (?, ?, ?, ?)',
                         (f'bulk-{index:04}-' + 'x' * 900, 'curator', json.dumps({'provider': 'old', 'model': 'model'}), 'now'))
             first = session([call(10, '/api/config/migration/preview', body)])[0]['result']
+            recent = []
+            for index in range(5):
+                alternative = {**body, 'choices': {**body['choices'], 'alpha/curator': 'route/A' if index % 2 else 'route/B'}}
+                recent.append(session([call(18, '/api/config/migration/preview', alternative)])[0]['result'])
+            second, third = recent[-2:]
+            expired = session([call(20, '/api/config/migration/preview', first['next'])])[0]
+            self.assertEqual(expired['code'], 'snapshot_expired')
+            retry1 = session([call(21, '/api/config/migration/preview', second['next'])])[0]['result']
+            retry2 = session([call(22, '/api/config/migration/preview', second['next'])])[0]['result']
+            self.assertEqual(retry1, retry2)
+            with closing(sqlite3.connect(database)) as db:
+                roots = db.execute("SELECT count(*) FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%.count'").fetchone()[0]
+                stored = db.execute("SELECT sum(length(value)) FROM app_settings WHERE key LIKE 'nonews.migration-snapshot.%'").fetchone()[0]
+                self.assertEqual(roots, 2)
+                self.assertLess(stored, 46 * 1024 * 1024)
+            self.assertTrue(session([call(31, '/api/config/migration/release', {'snapshotId': second['snapshotId']})])[0]['result']['released'])
+            self.assertEqual(session([call(32, '/api/config/migration/preview', second['next'])])[0]['code'], 'snapshot_expired')
+            first = third
             chunks = [base64.b64decode(first['chunk'])]
             cursor = first['next']
             while cursor is not None:

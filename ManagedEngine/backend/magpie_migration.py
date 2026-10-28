@@ -2,9 +2,23 @@
 import json
 import uuid
 import base64
+import re
+import hashlib
+import hmac
 
 from . import configuration, settings
 from .core import transaction, utcnow
+
+SNAPSHOT_CAPACITY = 16 * 1024 * 1024
+SNAPSHOT_KEEP = 2
+
+
+class SnapshotExpired(ValueError):
+    code = 'snapshot_expired'
+
+
+class SnapshotCapacity(ValueError):
+    code = 'snapshot_capacity'
 
 
 def save(db, key, value):
@@ -57,7 +71,7 @@ def job_kit(db, job):
     return kit or media[0], None
 
 
-def preview(db, catalog, choices):
+def preview(db, catalog, choices, service_id, editor_services):
     rows = []
     for row in db.execute('SELECT kit_id,role,config_json FROM model_configs ORDER BY kit_id,role'):
         raw = json.loads(row['config_json'])
@@ -84,13 +98,36 @@ def preview(db, catalog, choices):
                      'blocked': reason})
     by_role = {(row['kit'], row['role']): row for row in rows}
     pending = []
+    seen_editor_jobs = set()
     for job in db.execute("SELECT * FROM processing_jobs WHERE status='pending'"):
         kit, refusal = job_kit(db, job) if roles(job['stage']) else (None, None)
         blocked = [refusal] if refusal else [f'{kit}/{role}' for role in roles(job['stage'])
                    if not (role == 'editor' and job['editor_target']) and not by_role.get((kit, role), {}).get('target')]
         _, binding = association(db, 'migration-job', job['id'])
+        proposed = editor_services.get(job['id'])
+        if job['editor_target']:
+            seen_editor_jobs.add(job['id'])
+            if proposed is not None:
+                chosen = configuration._record(db, 'service', proposed)
+                if chosen['type'] != 'magpie':
+                    raise configuration.ConfigurationError('Pinned Editor service must be Magpie')
+            if binding and (binding.get('target') != job['editor_target'] or (proposed is not None and proposed != binding.get('serviceId'))):
+                blocked.append('Existing Editor association conflicts with this proposal')
+            elif binding:
+                try:
+                    known = configuration._record(db, 'service', binding.get('serviceId'))
+                    if known['type'] != 'magpie' or known['endpoint'] != binding.get('endpoint'):
+                        blocked.append('Existing Editor gateway is unavailable or changed')
+                except configuration.ConfigurationError:
+                    blocked.append('Existing Editor gateway is unavailable or changed')
+            elif not binding and proposed is None:
+                blocked.append('Editor service association required')
         pending.append({'id': job['id'], 'kit': kit, 'stage': job['stage'], 'blocked': blocked,
-                        'editorTarget': job['editor_target'], 'editorServiceId': binding['serviceId'] if binding else None})
+                        'editorTarget': job['editor_target'], 'editorServiceId': binding.get('serviceId') if binding else None,
+                        'proposedEditorServiceId': (proposed or (binding.get('serviceId') if binding else service_id)) if job['editor_target'] else None,
+                        'editorAssociationExplicit': bool(binding or proposed)})
+    if set(editor_services) - seen_editor_jobs:
+        raise configuration.ConfigurationError('Pinned Editor job is unavailable')
     return {'models': rows, 'pending': pending,
             'running': db.execute("SELECT count(*) FROM processing_jobs WHERE status='running'").fetchone()[0],
             'paused': settings._read(db, 'magpie_claims_paused') == '1',
@@ -104,12 +141,27 @@ def report_page(db, body):
         raise configuration.ConfigurationError('Invalid migration cursor')
     prefix = f'nonews.migration-snapshot.{identity}.'
     meta = db.execute('SELECT value FROM app_settings WHERE key=?', (prefix + 'count',)).fetchone()
-    if meta is None or offset >= int(meta[0]):
+    if meta is None:
+        raise SnapshotExpired('Migration report expired')
+    if offset >= int(meta[0]):
         raise configuration.ConfigurationError('Invalid migration cursor')
     row = db.execute('SELECT value FROM app_settings WHERE key=?', (prefix + str(offset),)).fetchone()
     if row is None:
         raise configuration.ConfigurationError('Migration snapshot incomplete')
-    return {'chunk': row[0], 'next': {'snapshotId': identity, 'offset': offset + 1} if offset + 1 < int(meta[0]) else None}
+    return {'snapshotId': identity, 'chunk': row[0], 'next': {'snapshotId': identity, 'offset': offset + 1} if offset + 1 < int(meta[0]) else None}
+
+
+def release_report(db, body):
+    identity = body.get('snapshotId')
+    if not isinstance(identity, str) or not re.fullmatch(r'[0-9a-f]{32}', identity):
+        raise configuration.ConfigurationError('Invalid migration cursor')
+    prefix = f'nonews.migration-snapshot.{identity}.'
+    with transaction(db):
+        if db.execute('SELECT 1 FROM app_settings WHERE key=?', (prefix + 'count',)).fetchone() is None:
+            raise SnapshotExpired('Migration report expired')
+        db.execute('DELETE FROM app_settings WHERE key=? OR (key>=? AND key<?)',
+                   (prefix + 'count', prefix + '0', prefix + ':'))
+    return {'released': True}
 
 
 def snapshot_report(db, report):
@@ -120,6 +172,8 @@ def snapshot_report(db, report):
     count = 0
     with transaction(db):
         for piece in encoder.iterencode(report):
+            if count * 48_000 + len(data) + len(piece) > SNAPSHOT_CAPACITY:
+                raise SnapshotCapacity('Migration report exceeds snapshot capacity')
             data.extend(piece.encode('ascii'))
             while len(data) >= 48_000:
                 save(db, prefix + str(count), base64.b64encode(data[:48_000]).decode('ascii'))
@@ -131,7 +185,24 @@ def snapshot_report(db, report):
             save(db, prefix + str(count), base64.b64encode(data).decode('ascii'))
             count += 1
         save(db, prefix + 'count', str(count))
+        roots = db.execute("SELECT key FROM app_settings WHERE key>=? AND key<? AND key LIKE '%.count' ORDER BY rowid DESC",
+                           ('nonews.migration-snapshot.', 'nonews.migration-snapshot/')).fetchall()
+        valid = [row[0] for row in roots if re.fullmatch(r'nonews\.migration-snapshot\.[0-9a-f]{32}\.count', row[0])]
+        for key in valid[SNAPSHOT_KEEP:]:
+            old_prefix = key[:-5]
+            db.execute('DELETE FROM app_settings WHERE key=? OR (key>=? AND key<?)',
+                       (key, old_prefix + '0', old_prefix + ':'))
     return report_page(db, {'snapshotId': identity, 'offset': 0})
+
+
+def editor_review_digest(db, connection, choices, editor_services, report):
+    services = {identity: configuration._record(db, 'service', identity)['endpoint'] for identity in editor_services.values()}
+    jobs = [{key: row[key] for key in ('id', 'kit', 'blocked', 'editorTarget', 'editorServiceId', 'proposedEditorServiceId')}
+            for row in report['pending'] if row['editorTarget']]
+    payload = {'serviceId': connection['id'], 'endpoint': connection['endpoint'], 'checkedAt': connection['checkedAt'],
+               'targets': connection['targets'], 'choices': choices, 'models': report['models'],
+               'editorServices': editor_services, 'services': services, 'jobs': sorted(jobs, key=lambda row: row['id'])}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
 
 
 def command(db, action, body):
@@ -141,13 +212,27 @@ def command(db, action, body):
         return {'paused': True}
     if action == 'preview' and 'snapshotId' in body:
         return report_page(db, body)
+    if action == 'release':
+        return release_report(db, body)
     connection = configuration._record(db, 'service', body.get('serviceId'))
     choices = body.get('choices', {})
+    editor_services = body.get('editorServices', {})
     if connection['type'] != 'magpie' or connection['stale'] or not isinstance(choices, dict) or any(
-            not isinstance(key, str) or not isinstance(value, str) for key, value in choices.items()):
+            not isinstance(key, str) or not isinstance(value, str) for key, value in choices.items()) or not isinstance(editor_services, dict) or any(
+            not isinstance(key, str) or not isinstance(value, str) for key, value in editor_services.items()):
         raise configuration.ConfigurationError('A current Magpie directory and valid choices are required')
     if action == 'preview':
-        return snapshot_report(db, preview(db, connection['targets'], choices))
+        with transaction(db):
+            connection = configuration._record(db, 'service', body.get('serviceId'))
+            if connection['stale'] or connection['type'] != 'magpie':
+                raise configuration.ConfigurationError('Magpie directory is stale')
+            report = preview(db, connection['targets'], choices, connection['id'], editor_services)
+            receipt = {'token': uuid.uuid4().hex,
+                       'digest': editor_review_digest(db, connection, choices, editor_services, report)} if editor_services else {}
+            save(db, 'nonews.migration-editor-review', json.dumps(receipt))
+            if receipt:
+                report['editorReviewToken'] = receipt['token']
+            return snapshot_report(db, report)
     if action != 'apply':
         raise configuration.ConfigurationError('Invalid migration action')
     with transaction(db):
@@ -156,7 +241,13 @@ def command(db, action, body):
             raise configuration.ConfigurationError('Magpie directory is stale')
         if settings._read(db, 'magpie_claims_paused') != '1':
             raise configuration.ConfigurationError('Pause claims before migration')
-        report = preview(db, connection['targets'], choices)
+        report = preview(db, connection['targets'], choices, connection['id'], editor_services)
+        if editor_services:
+            receipt = json.loads(settings._read(db, 'nonews.migration-editor-review') or '{}')
+            supplied = body.get('reviewToken')
+            digest = editor_review_digest(db, connection, choices, editor_services, report)
+            if not isinstance(supplied, str) or not isinstance(receipt.get('token'), str) or not hmac.compare_digest(supplied, receipt['token']) or receipt.get('digest') != digest:
+                raise configuration.ConfigurationError('Review pinned Editor associations again')
         if report['running']:
             return {'status': 'waiting', 'running': report['running'], 'paused': True}
         evidence = json.loads(settings._read(db, 'magpie_migration_evidence') or '[]')
@@ -180,11 +271,12 @@ def command(db, action, body):
             if not roles(job['stage']):
                 continue
             blocked = pending[job['id']]['blocked']
-            if job['editor_target'] and pending[job['id']]['kit'] is not None:
+            if job['editor_target'] and pending[job['id']]['kit'] is not None and job['id'] in editor_services:
                 identity, existing = association(db, 'migration-job', job['id'])
                 if existing is None:
+                    selected = configuration._record(db, 'service', editor_services[job['id']])
                     configuration._store(db, 'migration-job', {'id': identity, 'jobId': job['id'],
-                        'serviceId': connection['id'], 'target': job['editor_target'], 'endpoint': connection['endpoint']})
+                        'serviceId': selected['id'], 'target': job['editor_target'], 'endpoint': selected['endpoint']})
             db.execute('UPDATE processing_jobs SET magpie_block_reason=? WHERE id=?',
                        ('Magpie mapping required: ' + ', '.join(blocked) if blocked else None, job['id']))
             for checkpoint in db.execute("SELECT stage,result_json FROM pipeline_stage_runs WHERE job_id=? AND item_id=? AND status!='ready' AND stage IN ('curator','editor')", (job['id'], job['item_id'])).fetchall():

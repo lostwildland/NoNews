@@ -1,6 +1,37 @@
 import Foundation
 import Darwin
 
+struct MigrationReviewState {
+	struct Input: Equatable {
+		let serviceID: String
+		let choices: [String: String]
+		let editorServices: [String: String]
+	}
+	struct Ticket {
+		let generation: UInt
+		let input: Input
+	}
+	private var generation: UInt = 0
+	private(set) var reviewed: Input?
+	mutating func invalidate() { generation &+= 1; reviewed = nil }
+	mutating func begin(_ input: Input) -> Ticket {
+		invalidate()
+		return Ticket(generation: generation, input: input)
+	}
+	func accepts(_ ticket: Ticket, current: Input?) -> Bool {
+		ticket.generation == generation && ticket.input == current
+	}
+	mutating func complete(_ ticket: Ticket, current: Input?) -> Bool {
+		guard accepts(ticket, current: current) else { return false }
+		reviewed = ticket.input
+		return true
+	}
+	static func status(paused: Bool, waiting: Bool) -> String {
+		if paused && waiting { return "Waiting; claims paused" }
+		return paused ? "Claims paused" : "Claims active"
+	}
+}
+
 @MainActor
 final class ProcessingEngine {
 	enum State: Equatable {
@@ -176,7 +207,7 @@ final class ProcessingEngine {
 			   ("GET", "/api/config/history"), ("POST", "/api/config/copy"), ("POST", "/api/config/restore"), ("POST", "/api/config/refresh"),
 			   ("DELETE", "/api/config/services"), ("DELETE", "/api/config/prompts"), ("GET", "/api/config/references"),
 			   ("PUT", "/api/config/references"), ("DELETE", "/api/config/references"), ("POST", "/api/config/render"), ("POST", "/api/config/bind"), ("POST", "/api/config/import-legacy"), ("GET", "/api/config/legacy"),
-			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply")].contains(where: { $0.0 == method && $0.1 == path }) else {
+			   ("POST", "/api/config/migration/preview"), ("POST", "/api/config/migration/pause"), ("POST", "/api/config/migration/apply"), ("POST", "/api/config/migration/release")].contains(where: { $0.0 == method && $0.1 == path }) else {
 			completion(.failure(EngineError.unavailable))
 			return
 		}
@@ -254,6 +285,9 @@ final class ProcessingEngine {
 					switch value["code"] as? String {
 					case "job_record_too_large": error = .jobRecordTooLarge
 					case "invalid_configuration": error = .invalidConfiguration
+					case "render_too_large": error = .renderTooLarge
+					case "snapshot_expired": error = .snapshotExpired
+					case "snapshot_capacity": error = .snapshotCapacity
 					default: error = .operation
 					}
 					completion(.failure(error))
@@ -330,5 +364,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge, invalidRequest, invalidConfiguration, renderTooLarge, snapshotExpired, snapshotCapacity }
 }

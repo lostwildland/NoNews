@@ -17,7 +17,7 @@ ALLOWED = {('GET', '/api/status'), ('GET', '/api/jobs'), ('GET', '/api/settings/
            ('POST', '/api/config/refresh'), ('DELETE', '/api/config/services'), ('DELETE', '/api/config/prompts'),
            ('GET', '/api/config/references'), ('PUT', '/api/config/references'), ('DELETE', '/api/config/references'),
            ('POST', '/api/config/render'), ('POST', '/api/config/bind'), ('POST', '/api/config/import-legacy'), ('GET', '/api/config/legacy'), ('POST', '/api/config/migration/preview'),
-           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply')}
+           ('POST', '/api/config/migration/pause'), ('POST', '/api/config/migration/apply'), ('POST', '/api/config/migration/release')}
 
 
 def read_message():
@@ -134,13 +134,24 @@ def main():
                     send({**correlation, 'error': 'invalid query'})
                     continue
                 try:
-                    send({**correlation, 'result': app.handle(method, path, query, body)})
+                    if path == '/api/config/render':
+                        envelope = json.dumps({**correlation, 'result': {'text': ''}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1)
+                    else:
+                        result = app.handle(method, path, query, body)
+                    send({**correlation, 'result': result})
                 except ValueError as error:
                     if getattr(error, 'code', None) == 'job_record_too_large':
                         send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
                     elif getattr(error, 'code', None) == 'invalid_configuration':
                         details = {'placeholders': error.names} if hasattr(error, 'names') else {}
                         send({**correlation, 'error': 'invalid configuration', 'code': 'invalid_configuration', **details})
+                    elif getattr(error, 'code', None) == 'render_too_large':
+                        send({**correlation, 'error': 'rendered response is too large', 'code': 'render_too_large'})
+                    elif getattr(error, 'code', None) == 'snapshot_expired':
+                        send({**correlation, 'error': 'migration report expired', 'code': 'snapshot_expired'})
+                    elif getattr(error, 'code', None) == 'snapshot_capacity':
+                        send({**correlation, 'error': 'migration report exceeds snapshot capacity', 'code': 'snapshot_capacity'})
                     else:
                         send({**correlation, 'error': 'invalid query'})
                 except Exception:

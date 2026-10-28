@@ -1,7 +1,7 @@
 import AppKit
 import Secrets
 
-final class ProcessingPreferencesViewController: NSViewController {
+final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDelegate {
 	private let statusLabel = NSTextField(labelWithString: "")
 	private let actionButton = NSButton(title: "", target: nil, action: nil)
 	private let services = NSPopUpButton()
@@ -30,10 +30,17 @@ final class ProcessingPreferencesViewController: NSViewController {
 	private var versions: [[String: Any]] = []
 	private let legacyBinding = NSPopUpButton()
 	private let legacyTarget = NSPopUpButton()
+	private let legacyJob = NSPopUpButton()
+	private let editorGateway = NSPopUpButton()
 	private let migrationStatus = NSTextField(wrappingLabelWithString: "Review legacy routing only when migrating existing settings.")
 	private var legacyRows: [[String: Any]] = []
+	private var legacyJobs: [[String: Any]] = []
+	private var editorGatewayRows: [[String: Any]] = []
 	private var migrationChoices: [String: String] = [:]
-	private var reviewedMigration = false
+	private var editorServices: [String: String] = [:]
+	private var migrationReview = MigrationReviewState()
+	private var migrationWaiting = false
+	private var editorReviewToken: String?
 
 	override func loadView() {
 		view = NSView(frame: NSRect(x: 0, y: 0, width: 640, height: 620))
@@ -113,14 +120,22 @@ final class ProcessingPreferencesViewController: NSViewController {
 		services.target = self
 		services.action = #selector(selectService)
 		serviceType.addItems(withTitles: ["Magpie", "OpenAI-compatible"])
+		serviceType.target = self
+		serviceType.action = #selector(migrationInputChanged)
+		for field in [serviceName, endpoint, credential] { field.delegate = self }
+		for popup in [legacyBinding, legacyTarget, legacyJob, editorGateway] {
+			popup.target = self
+			popup.action = #selector(migrationInputChanged)
+		}
 		credential.placeholderString = "Stored in Keychain"
 		let actions = NSStackView(views: [button("New", #selector(newService)), button("Save", #selector(saveService)), button("Refresh Models or Targets", #selector(refreshService)), button("Delete", #selector(deleteService))])
 		let mapping = NSStackView(views: [legacyBinding, legacyTarget, button("Choose Mapping", #selector(chooseMapping))])
+		let editorMapping = NSStackView(views: [legacyJob, editorGateway, button("Confirm Editor Gateway", #selector(chooseEditorGateway))])
 		let migration = NSStackView(views: [button("Preview Routing", #selector(previewMigration)), button("Pause Claims", #selector(pauseMigration)), button("Apply Mappings", #selector(applyMigration))])
 		return form([NSTextField(wrappingLabelWithString: "Reading works without AI. Refresh checks the directory only."),
 			row("Service", services), row("Name", serviceName), row("Type", serviceType), row("Endpoint", endpoint),
 			row("Bearer credential", credential), actions, NSTextField(labelWithString: "Advanced: Legacy Magpie Routing"),
-			migrationStatus, mapping, migration])
+			migrationStatus, mapping, editorMapping, migration])
 	}
 
 	private func promptForm() -> NSView {
@@ -189,7 +204,11 @@ final class ProcessingPreferencesViewController: NSViewController {
 			switch result {
 			case .success(let value): then(value)
 			case .failure(let error):
-				if error as? ProcessingEngine.EngineError == .invalidConfiguration {
+				if error as? ProcessingEngine.EngineError == .snapshotExpired {
+					self?.feedback.stringValue = "The routing report expired. Preview again."
+				} else if error as? ProcessingEngine.EngineError == .snapshotCapacity {
+					self?.feedback.stringValue = "The routing report is too large to retain. No mappings were applied."
+				} else if error as? ProcessingEngine.EngineError == .invalidConfiguration {
 					self?.feedback.stringValue = "Configuration is invalid or in use. Check the binding, directory, and source references."
 				} else { self?.feedback.stringValue = "Could not save or load configuration. Check the processing component and try again." }
 			}
@@ -200,6 +219,9 @@ final class ProcessingPreferencesViewController: NSViewController {
 		loadPage("services", after: nil, collected: []) { [weak self] rows in
 			guard let self else { return }
 			self.serviceRows = rows
+			self.editorGatewayRows = rows.filter { $0["type"] as? String == "magpie" }
+			self.editorGateway.removeAllItems()
+			self.editorGateway.addItems(withTitles: self.editorGatewayRows.map { $0["name"] as? String ?? "Unavailable service" })
 			self.services.removeAllItems()
 			self.binding.removeAllItems()
 			for row in rows {
@@ -240,6 +262,7 @@ final class ProcessingPreferencesViewController: NSViewController {
 	}
 
 	@objc private func selectService() {
+		migrationReview.invalidate()
 		let index = services.indexOfSelectedItem
 		guard serviceRows.indices.contains(index), let id = serviceRows[index]["id"] as? String else { return }
 		if currentService?["id"] as? String != id, !confirmDiscardService() {
@@ -248,9 +271,12 @@ final class ProcessingPreferencesViewController: NSViewController {
 		}
 		request("GET", "/api/config/services", ["id": id]) { [weak self] value in
 			guard let self else { return }
+			guard self.serviceRows.indices.contains(self.services.indexOfSelectedItem),
+				  self.serviceRows[self.services.indexOfSelectedItem]["id"] as? String == id else { return }
 			self.currentService = value
 			self.migrationChoices = [:]
-			self.reviewedMigration = false
+			self.editorServices = [:]
+			self.migrationWaiting = false
 			self.legacyRows = []
 			self.legacyBinding.removeAllItems()
 			self.legacyTarget.removeAllItems()
@@ -270,6 +296,8 @@ final class ProcessingPreferencesViewController: NSViewController {
 	}
 
 	private func resetService() {
+		migrationReview.invalidate()
+		migrationWaiting = false
 		currentService = nil
 		serviceName.stringValue = ""
 		endpoint.stringValue = ""
@@ -291,6 +319,7 @@ final class ProcessingPreferencesViewController: NSViewController {
 	}
 
 	@objc private func saveService() {
+		migrationReview.invalidate()
 		var body: [String: Any] = ["name": serviceName.stringValue, "type": serviceType.indexOfSelectedItem == 0 ? "magpie" : "openai-compatible", "endpoint": endpoint.stringValue]
 		if let id = currentService?["id"] as? String { body["id"] = id }
 		let secret = credential.stringValue
@@ -326,6 +355,7 @@ final class ProcessingPreferencesViewController: NSViewController {
 	}
 
 	@objc private func refreshService() {
+		migrationReview.invalidate()
 		guard let service = currentService, let id = service["id"] as? String else { feedback.stringValue = "Save a service first."; return }
 		var body: [String: Any] = ["id": id]
 		if service["type"] as? String == "openai-compatible" {
@@ -338,29 +368,69 @@ final class ProcessingPreferencesViewController: NSViewController {
 			} catch { feedback.stringValue = "Could not read the service credential from Keychain."; return }
 		}
 		request("POST", "/api/config/refresh", body) { [weak self] value in
-			self?.currentService = value
-			self?.reviewedMigration = false
-			self?.legacyTarget.removeAllItems()
-			self?.legacyTarget.addItems(withTitles: value["targets"] as? [String] ?? [])
+			guard let self, self.currentService?["id"] as? String == id else { return }
+			self.currentService = value
+			self.migrationReview.invalidate()
+			self.legacyTarget.removeAllItems()
+			self.legacyTarget.addItems(withTitles: value["targets"] as? [String] ?? [])
 			switch value["error"] as? String {
-			case "authentication": self?.feedback.stringValue = "Authentication failed. Check the credential; the previous directory is stale."
-			case "network": self?.feedback.stringValue = "Could not reach the directory. The previous directory is stale."
-			case "invalid_output": self?.feedback.stringValue = "The directory returned an invalid response. The previous directory is stale."
-			default: self?.feedback.stringValue = "Directory checked. This does not test generation."
+			case "authentication": self.feedback.stringValue = "Authentication failed. Check the credential; the previous directory is stale."
+			case "network": self.feedback.stringValue = "Could not reach the directory. The previous directory is stale."
+			case "invalid_output": self.feedback.stringValue = "The directory returned an invalid response. The previous directory is stale."
+			default: self.feedback.stringValue = "Directory checked. This does not test generation."
 			}
 		}
 	}
 
-	@objc private func previewMigration() { runMigration("preview") }
-	@objc private func pauseMigration() { runMigration("pause") }
+	func controlTextDidChange(_ notification: Notification) { migrationReview.invalidate() }
+	@objc private func migrationInputChanged() { migrationReview.invalidate() }
+
+	private func currentMigrationInput() -> MigrationReviewState.Input? {
+		let index = services.indexOfSelectedItem
+		guard serviceRows.indices.contains(index), let id = currentService?["id"] as? String,
+			  serviceRows[index]["id"] as? String == id, currentService?["type"] as? String == "magpie" else { return nil }
+		return .init(serviceID: id, choices: migrationChoices, editorServices: editorServices)
+	}
+
+	@objc private func previewMigration() {
+		guard let input = currentMigrationInput() else { migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."; return }
+		let ticket = migrationReview.begin(input)
+		editorReviewToken = nil
+		request("POST", "/api/config/migration/preview", ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices]) { [weak self] result in
+			guard let self, self.migrationReview.accepts(ticket, current: self.currentMigrationInput()) else { return }
+			self.loadMigrationReport(result, data: Data(), ticket: ticket) { [weak self] report in
+				guard let self, self.migrationReview.complete(ticket, current: self.currentMigrationInput()) else { return }
+				self.editorReviewToken = report["editorReviewToken"] as? String
+				self.showMigrationReport(report)
+			}
+		}
+	}
+
+	@objc private func pauseMigration() {
+		guard currentMigrationInput() != nil else { migrationStatus.stringValue = "Select a Magpie service first."; return }
+		migrationReview.invalidate()
+		request("POST", "/api/config/migration/pause", [:]) { [weak self] _ in
+			self?.migrationWaiting = false
+			self?.previewMigration()
+		}
+	}
 	@objc private func applyMigration() {
-		guard reviewedMigration else { migrationStatus.stringValue = "Preview and review the current mappings first."; return }
+		guard let input = migrationReview.reviewed, input == currentMigrationInput() else { migrationStatus.stringValue = "Preview and review the current mappings first."; return }
 		let alert = NSAlert()
 		alert.messageText = "Apply the reviewed legacy mappings?"
 		alert.informativeText = "Claims must be paused and running work must finish. Unresolved work remains blocked."
 		alert.addButton(withTitle: "Apply Mappings")
 		alert.addButton(withTitle: "Cancel")
-		if alert.runModal() == .alertFirstButtonReturn { runMigration("apply") }
+		guard alert.runModal() == .alertFirstButtonReturn, migrationReview.reviewed == input, currentMigrationInput() == input else { return }
+		if !input.editorServices.isEmpty && editorReviewToken == nil { migrationStatus.stringValue = "Review the Editor gateway associations again."; return }
+		var body: [String: Any] = ["serviceId": input.serviceID, "choices": input.choices, "editorServices": input.editorServices]
+		if let token = editorReviewToken { body["reviewToken"] = token }
+		migrationReview.invalidate()
+		request("POST", "/api/config/migration/apply", body) { [weak self] result in
+			guard let self else { return }
+			self.migrationWaiting = result["status"] as? String == "waiting"
+			if self.currentMigrationInput() == input { self.previewMigration() }
+		}
 	}
 
 	@objc private func chooseMapping() {
@@ -368,39 +438,35 @@ final class ProcessingPreferencesViewController: NSViewController {
 		guard legacyRows.indices.contains(index), let kit = legacyRows[index]["kit"] as? String,
 			  let role = legacyRows[index]["role"] as? String, let chosen = legacyTarget.selectedItem?.title else { return }
 		migrationChoices["\(kit)/\(role)"] = chosen
-		reviewedMigration = false
+		migrationReview.invalidate()
 		previewMigration()
 	}
 
-	private func runMigration(_ action: String) {
-		guard let id = currentService?["id"] as? String, currentService?["type"] as? String == "magpie" else {
-			migrationStatus.stringValue = "Select a saved Magpie service and refresh its directory."
-			return
-		}
-		request("POST", "/api/config/migration/\(action)", ["serviceId": id, "choices": migrationChoices]) { [weak self] result in
-			guard let self else { return }
-			if action == "pause" { self.migrationStatus.stringValue = "Claims paused. Preview again while running work drains."; return }
-			if action == "apply" {
-				self.migrationStatus.stringValue = result["status"] as? String == "waiting" ? "Waiting for running work to finish." : "Mappings applied. Refreshing the routing report."
-				self.reviewedMigration = false
-				self.previewMigration()
-				return
-			}
-			self.loadMigrationReport(result, data: Data()) { [weak self] report in self?.showMigrationReport(report) }
-		}
+	@objc private func chooseEditorGateway() {
+		let jobIndex = legacyJob.indexOfSelectedItem
+		let gatewayIndex = editorGateway.indexOfSelectedItem
+		guard legacyJobs.indices.contains(jobIndex), editorGatewayRows.indices.contains(gatewayIndex),
+			  let job = legacyJobs[jobIndex]["id"] as? String, let service = editorGatewayRows[gatewayIndex]["id"] as? String else { return }
+		editorServices[job] = service
+		migrationReview.invalidate()
+		previewMigration()
 	}
 
-	private func loadMigrationReport(_ page: [String: Any], data: Data, then: @escaping ([String: Any]) -> Void) {
+	private func loadMigrationReport(_ page: [String: Any], data: Data, ticket: MigrationReviewState.Ticket, then: @escaping ([String: Any]) -> Void) {
+		guard migrationReview.accepts(ticket, current: currentMigrationInput()) else { return }
 		guard let encoded = page["chunk"] as? String else { then(page); return }
 		guard let chunk = Data(base64Encoded: encoded) else { feedback.stringValue = "Could not read the routing report."; return }
 		var accumulated = data
 		accumulated.append(chunk)
 		if let next = page["next"] as? [String: Any] {
 			request("POST", "/api/config/migration/preview", next) { [weak self] result in
-				self?.loadMigrationReport(result, data: accumulated, then: then)
+				self?.loadMigrationReport(result, data: accumulated, ticket: ticket, then: then)
 			}
 		} else if let result = try? JSONSerialization.jsonObject(with: accumulated) as? [String: Any] {
 			then(result)
+			if let snapshot = page["snapshotId"] as? String {
+				request("POST", "/api/config/migration/release", ["snapshotId": snapshot]) { _ in }
+			}
 		} else { feedback.stringValue = "Could not read the routing report." }
 	}
 
@@ -416,13 +482,29 @@ final class ProcessingPreferencesViewController: NSViewController {
 			let jobs = result["pending"] as? [[String: Any]] ?? []
 			let blocked = jobs.filter { !($0["blocked"] as? [String] ?? []).isEmpty }.count
 			let running = result["running"] as? Int ?? 0
-			let state = result["status"] as? String ?? "preview"
+			let paused = result["paused"] as? Bool == true
+			if !paused { migrationWaiting = false }
+			let state = MigrationReviewState.status(paused: paused, waiting: migrationWaiting)
+			self.legacyJobs = jobs.filter { $0["editorTarget"] is String }
+			self.legacyJob.removeAllItems()
+			self.legacyJob.addItems(withTitles: self.legacyJobs.map { $0["id"] as? String ?? "Unknown job" })
 			let details = jobs.map { job in
 				let reasons = (job["blocked"] as? [String] ?? []).joined(separator: ", ")
-				return "\(job["id"] as? String ?? "Unknown job"): \(reasons.isEmpty ? "ready for mapping" : reasons)"
+				let target = job["editorTarget"] as? String
+				func gatewayName(_ id: String?) -> String {
+					guard let id else { return "unknown" }
+					return self.serviceRows.first { $0["id"] as? String == id }?["name"] as? String ?? "Unavailable (\(id))"
+				}
+				let known = gatewayName(job["editorServiceId"] as? String)
+				let proposed = gatewayName(job["proposedEditorServiceId"] as? String)
+				let knownID = job["editorServiceId"] as? String
+				let proposedID = job["proposedEditorServiceId"] as? String
+				let confirmation = knownID != nil ? (knownID == proposedID ? "existing association" : "conflicting proposal") :
+					(job["editorAssociationExplicit"] as? Bool == true ? "selected for review" : "not confirmed")
+				let editor = target.map { " Editor target: \($0); known gateway: \(known); proposed gateway: \(proposed) (\(confirmation))." } ?? ""
+				return "\(job["id"] as? String ?? "Unknown job"): \(reasons.isEmpty ? "ready for mapping" : reasons).\(editor)"
 			}.joined(separator: "\n")
-			self.migrationStatus.stringValue = "\(state.capitalized): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
-			self.reviewedMigration = true
+			self.migrationStatus.stringValue = "\(state): \(running) running, \(jobs.count) pending, \(blocked) unresolved. Select a binding and target to choose a mapping.\n\(details)"
 	}
 
 	@objc private func deleteService() {

@@ -33,7 +33,7 @@ class Application:
         with InformationDB(database):
             pass
 
-    def handle(self, method: str, path: str, query: dict, body: dict):
+    def handle(self, method: str, path: str, query: dict, body: dict, *, response_budget=None):
         cursor = query.get('cursor') if path == '/api/jobs' else None
         if cursor and cursor.startswith('s:'):
             match = re.fullmatch(r's:([0-9a-f]{32}):([0-9]{1,12})', cursor)
@@ -58,7 +58,7 @@ class Application:
             if path == '/api/config/references':
                 return configuration.references(db.db, method, body)
             if path == '/api/config/render':
-                return configuration.render(db.db, body)
+                return configuration.render(db.db, body, **({'wire_budget': response_budget} if response_budget is not None else {}))
             if path == '/api/config/bind':
                 return configuration.bind(db.db, body)
             if path == '/api/config/import-legacy':

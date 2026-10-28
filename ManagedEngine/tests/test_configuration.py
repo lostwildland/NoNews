@@ -170,6 +170,19 @@ class ConfigurationTest(unittest.TestCase):
             rendered = call('POST', '/api/config/render', {'id': template['id'], 'versionId': template['versionId'], 'media': 'news',
                                                               'values': {'title': 'Title', 'content': '{{title}}'}})
             self.assertEqual(rendered['text'], 'Title {{title}}')
+            expanded_template = call('PUT', '/api/config/prompts', {**template, 'text': '{{content}}' * 6})
+            content = 'a' * 180_000
+            expanded = call('POST', '/api/config/render', {'id': template['id'], 'media': 'news', 'values': {'content': content}})
+            self.assertEqual(expanded['text'], content * 6)
+            escaped = '😀"' * 10_000
+            self.assertEqual(call('POST', '/api/config/render', {'id': template['id'], 'media': 'news',
+                'values': {'content': escaped}})['text'], escaped * 6)
+            process.stdin.write(json.dumps({'id': 99, 'token': token, 'method': 'POST', 'path': '/api/config/render',
+                'body': {'id': template['id'], 'media': 'news', 'values': {'content': '\u0001' * 100_000}}}) + '\n')
+            process.stdin.flush()
+            overflow = json.loads(process.stdout.readline())
+            self.assertEqual((overflow['id'], overflow['code']), (99, 'render_too_large'))
+            self.assertEqual(call('GET', '/api/status', {})['schemaVersion'], 41)
             call('PUT', '/api/config/prompts', {**template, 'text': '{{missing}}'})
             process.stdin.write(json.dumps({'id': 2, 'token': token, 'method': 'POST', 'path': '/api/config/render',
                 'body': {'id': template['id'], 'media': 'news', 'values': {'title': 'Title', 'missing': 'invented'}}}) + '\n')
@@ -180,6 +193,11 @@ class ConfigurationTest(unittest.TestCase):
             rendered_paper = call('POST', '/api/config/render', {'id': paper['id'], 'media': 'paper',
                                  'values': {'title': 'T', 'abstract': '{{title}}'}})
             self.assertEqual(rendered_paper['text'], '{{title}} / {{title}}')
+            paper = call('PUT', '/api/config/prompts', {**paper, 'text': '{{tag_schema}}'})
+            process.stdin.write(json.dumps({'id': 98, 'token': token, 'method': 'POST', 'path': '/api/config/render',
+                'body': {'id': paper['id'], 'media': 'paper', 'values': {'tag_schema': 'caller schema'}}}) + '\n')
+            process.stdin.flush()
+            self.assertEqual(json.loads(process.stdout.readline())['placeholders'], ['tag_schema'])
             for media in ('news', 'paper'):
                 target_id = paper['id'] if media == 'news' else template['id']
                 call('PUT', '/api/config/prompts', {**(paper if media == 'news' else template), 'text': '{{abstract}}'})
