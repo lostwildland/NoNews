@@ -159,6 +159,9 @@ import Darwin
 				guard let object = try JSONSerialization.jsonObject(with: frame) as? [String: Any],
 					  let chunk = object["chunk"] as? String, let data = Data(base64Encoded: chunk),
 					  let complete = object["recordComplete"] as? Bool else { fatalError("Invalid jobs frame") }
+				if object["preparing"] as? Bool == true {
+					precondition(data.isEmpty && !complete && object["next"] is String)
+				}
 				bytes.append(data)
 				if complete {
 					guard let job = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], let id = job["id"] as? String else { fatalError("Invalid job") }

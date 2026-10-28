@@ -45,7 +45,7 @@ class SnapshotWriter:
     def value(self, value):
         self.write(json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
 
-    def text_column(self, db, table, column, rowid):
+    def text_column_steps(self, db, table, column, rowid):
         """Write a TEXT cell, with bounded UTF-8 decoding and JSON escaping."""
         with db.blobopen(table, column, rowid, readonly=True) as blob:
             # Even without JSON escaping, these bytes and the quotes must fit.
@@ -58,10 +58,15 @@ class SnapshotWriter:
                 text = decoder.decode(chunk)
                 if text:
                     self.write(json.dumps(text, ensure_ascii=False)[1:-1].encode('utf-8'))
+                yield None
             tail = decoder.decode(b'', final=True)
             if tail:
                 self.write(json.dumps(tail, ensure_ascii=False)[1:-1].encode('utf-8'))
             self.write(b'"')
+
+    def text_column(self, db, table, column, rowid):
+        for _ in self.text_column_steps(db, table, column, rowid):
+            pass
 
 
 class _AggregateJSON:
@@ -90,16 +95,26 @@ class _AggregateJSON:
             self.pos += 1
         return char
 
-    def whitespace(self):
+    def whitespace_steps(self):
+        steps = 0
         while self.peek() and self.peek() in ' \t\r\n':
             self.pos += 1
+            steps += 1
+            if steps == 4096:
+                steps = 0
+                yield None
 
-    def string(self, capture):
+    def string_steps(self, capture):
         if self.take() != '"':
             raise ValueError('invalid JSON string')
         raw = ['"'] if capture else None
         length = 1
+        steps = 0
         while self.peek():
+            steps += 1
+            if steps == 4096:
+                steps = 0
+                yield None
             match = self._special.search(self.buffer, self.pos)
             end = match.start() if match else len(self.buffer)
             segment = self.buffer[self.pos:end]
@@ -137,21 +152,22 @@ class _AggregateJSON:
                     raw = None
         raise ValueError('unterminated JSON string')
 
-    def scalar(self, role):
-        self.whitespace()
+    def scalar_steps(self, role):
+        yield from self.whitespace_steps()
         char = self.peek()
         if char == '"':
-            value = self.string(role == 3)
+            value = yield from self.string_steps(role == 3)
             return value if role == 3 else None
         for literal in ('true', 'false', 'null', 'NaN', 'Infinity'):
             if char == literal[0]:
                 if ''.join(self.take() for _ in literal) != literal:
                     raise ValueError('invalid JSON literal')
                 return None
-        self.number()
+        yield from self.number_steps()
         return None
 
-    def number(self):
+    def number_steps(self):
+        steps = 0
         if self.peek() == '-':
             self.take()
             if self.peek() == 'I':
@@ -163,6 +179,10 @@ class _AggregateJSON:
         elif self.peek() and self.peek() in '123456789':
             while self.peek() and self.peek() in '0123456789':
                 self.take()
+                steps += 1
+                if steps == 4096:
+                    steps = 0
+                    yield None
         else:
             raise ValueError('invalid JSON number')
         if self.peek() == '.':
@@ -171,6 +191,10 @@ class _AggregateJSON:
                 raise ValueError('invalid JSON fraction')
             while self.peek() and self.peek() in '0123456789':
                 self.take()
+                steps += 1
+                if steps == 4096:
+                    steps = 0
+                    yield None
         if self.peek() and self.peek() in 'eE':
             self.take()
             if self.peek() and self.peek() in '+-':
@@ -179,8 +203,12 @@ class _AggregateJSON:
                 raise ValueError('invalid JSON exponent')
             while self.peek() and self.peek() in '0123456789':
                 self.take()
+                steps += 1
+                if steps == 4096:
+                    steps = 0
+                    yield None
 
-    def failed_stages(self):
+    def failed_stages_steps(self):
         # Container state uses one byte per nesting level and spills beyond 64 KiB.
         with tempfile.SpooledTemporaryFile(max_size=65536, mode='w+b', dir=self.directory) as stack:
             depth = 0
@@ -243,7 +271,7 @@ class _AggregateJSON:
                 deliver(value)
 
             def begin_value(role):
-                self.whitespace()
+                yield from self.whitespace_steps()
                 char = self.peek()
                 if char == '{':
                     self.take()
@@ -252,13 +280,18 @@ class _AggregateJSON:
                     self.take()
                     push(5, 4)
                 else:
-                    deliver(self.scalar(role))
+                    deliver((yield from self.scalar_steps(role)))
 
             try:
-                begin_value(0)
+                yield from begin_value(0)
+                steps = 0
                 while not complete:
+                    steps += 1
+                    if steps == 4096:
+                        steps = 0
+                        yield None
                     state, role = get_state()
-                    self.whitespace()
+                    yield from self.whitespace_steps()
                     char = self.peek()
                     if state in (0, 1):
                         if state == 0 and char == '}':
@@ -266,9 +299,9 @@ class _AggregateJSON:
                             close_container()
                         else:
                             if role in (0, 1, 2):
-                                keys[depth] = self.string(True)
+                                keys[depth] = yield from self.string_steps(True)
                             else:
-                                self.string(False)
+                                yield from self.string_steps(False)
                             set_state(2, role)
                     elif state == 2:
                         if self.take() != ':':
@@ -279,7 +312,7 @@ class _AggregateJSON:
                         child_role = (1 if role == 0 and key == 'stages' else
                                       2 if role == 1 and key in self._stages else
                                       3 if role == 2 and key == 'status' else 4)
-                        begin_value(child_role)
+                        yield from begin_value(child_role)
                     elif state == 4:
                         separator = self.take()
                         if separator == '}':
@@ -293,7 +326,7 @@ class _AggregateJSON:
                             self.take()
                             close_container()
                         else:
-                            begin_value(4)
+                            yield from begin_value(4)
                     else:
                         separator = self.take()
                         if separator == ']':
@@ -302,7 +335,7 @@ class _AggregateJSON:
                             set_state(6, role)
                         else:
                             raise ValueError('invalid JSON array separator')
-                self.whitespace()
+                yield from self.whitespace_steps()
                 if self.peek():
                     raise ValueError('trailing JSON')
             except ValueError:
@@ -314,5 +347,14 @@ class _AggregateJSON:
                      if isinstance(detail, dict) and detail.get('status') == 'failed')
 
 
+def aggregate_failed_stages_steps(chunks, directory=None):
+    return (yield from _AggregateJSON(chunks, directory).failed_stages_steps())
+
+
 def aggregate_failed_stages(chunks, directory=None):
-    return _AggregateJSON(chunks, directory).failed_stages()
+    steps = aggregate_failed_stages_steps(chunks, directory)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as result:
+            return result.value

@@ -10,7 +10,7 @@ import unittest
 
 
 class LargeSnapshotTest(unittest.TestCase):
-    def test_large_first_frame_has_bounded_python_allocations(self):
+    def test_large_full_read_has_bounded_python_allocations(self):
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp) / 'data'
@@ -25,6 +25,7 @@ from backend.server import Application
 root=Path(sys.argv[2]); app=Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
 tracemalloc.start()
 frame=app.handle('GET','/api/jobs',{}, {})
+while frame['next']: frame=app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
 print(tracemalloc.get_traced_memory()[1])
 app._clear_snapshot()
 """
@@ -50,7 +51,8 @@ from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 from backend.server import Application
 root=Path(sys.argv[2]); app=Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
-tracemalloc.start(); app.handle('GET','/api/jobs',{}, {})
+tracemalloc.start(); frame=app.handle('GET','/api/jobs',{}, {})
+while frame['next']: frame=app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
 print(tracemalloc.get_traced_memory()[1]); app._clear_snapshot()
 """
                 result = subprocess.run([sys.executable, '-c', code, str(root), str(data)],
@@ -74,7 +76,8 @@ from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 from backend.server import Application
 root=Path(sys.argv[2]); app=Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
-tracemalloc.start(); app.handle('GET','/api/jobs',{}, {})
+tracemalloc.start(); frame=app.handle('GET','/api/jobs',{}, {})
+while frame['next']: frame=app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
 print(tracemalloc.get_traced_memory()[1]); app._clear_snapshot()
 """
             result = subprocess.run([sys.executable,'-c',code,str(root),str(data)], text=True,
@@ -97,7 +100,8 @@ from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 from backend.server import Application
 root=Path(sys.argv[2]); app=Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
-tracemalloc.start(); app.handle('GET','/api/jobs',{}, {})
+tracemalloc.start(); frame=app.handle('GET','/api/jobs',{}, {})
+while frame['next']: frame=app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
 print(tracemalloc.get_traced_memory()[1]); app._clear_snapshot()
 """
             result = subprocess.run([sys.executable, '-c', code, str(root), str(data)],
@@ -119,7 +123,8 @@ from pathlib import Path
 sys.path.insert(0,sys.argv[1])
 from backend.server import Application
 root=Path(sys.argv[2]); app=Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
-tracemalloc.start(); app.handle('GET','/api/jobs',{}, {})
+tracemalloc.start(); frame=app.handle('GET','/api/jobs',{}, {})
+while frame['next']: frame=app.handle('GET','/api/jobs',{'cursor':frame['next']}, {})
 print(tracemalloc.get_traced_memory()[1]); app._clear_snapshot()
 """
             result = subprocess.run([sys.executable, '-c', code, str(root), str(data)],
@@ -246,14 +251,14 @@ sys.exit(stdio_service.main())
             code = """import sys
 sys.path.insert(0,sys.argv[1])
 import backend.server
-original=backend.server.SnapshotWriter.text_column
+original=backend.server.SnapshotWriter.text_column_steps
 count=0
 def failing(self,*args):
  global count
  count += 1
  if count == 1: raise OSError('synthetic private diagnostic')
- return original(self,*args)
-backend.server.SnapshotWriter.text_column=failing
+ yield from original(self,*args)
+backend.server.SnapshotWriter.text_column_steps=failing
 import stdio_service
 sys.argv=[sys.argv[0],sys.argv[2]]
 sys.exit(stdio_service.main())
@@ -328,9 +333,12 @@ sys.path.insert(0,sys.argv[1])
 import backend.server as server
 from pathlib import Path
 original=server.threading.Timer
+clock=server.time.monotonic
+offset=0
+server.time.monotonic=lambda: clock()+offset
 server.threading.Timer=lambda interval,fn,args: original(0.05,fn,args=args)
 root=Path(sys.argv[2]); app=server.Application(root/'information.sqlite',root/'raw',root/'artifacts',token='a'*32,write_scope='settings')
-frame=app.handle('GET','/api/jobs',{},{}); time.sleep(0.2)
+frame=app.handle('GET','/api/jobs',{},{}); offset=121; time.sleep(0.2)
 try: app.handle('GET','/api/jobs',{'cursor':frame['next']},{})
 except ValueError: print('expired')
 '''

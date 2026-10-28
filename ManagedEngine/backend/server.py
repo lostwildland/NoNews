@@ -10,7 +10,7 @@ import time
 import threading
 from . import causes, settings, schema
 from .core import InformationDB, utcnow
-from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages, text_chunks
+from .job_stream import SnapshotWriter, SnapshotTooLarge, SNAPSHOT_CAPACITY, aggregate_failed_stages_steps, text_chunks
 
 
 class Application:
@@ -22,6 +22,8 @@ class Application:
         self.snapshot = None
         self.snapshot_lock = threading.RLock()
         self.snapshot_timer = None
+        self.preparation = None
+        self.preparation_timer = None
         database.parent.mkdir(parents=True, exist_ok=True)
         if database.exists():
             with closing(sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True)) as db:
@@ -38,6 +40,8 @@ class Application:
             if not match:
                 raise ValueError('invalid cursor')
             return self._frame(int(match[2]), match[1])
+        if path == '/api/jobs' and method == 'GET':
+            return self._jobs(query)
         with InformationDB(self.database) as db:
             if path == '/api/status' and method == 'GET':
                 return {'schemaVersion': schema.version(db.db)}
@@ -62,146 +66,228 @@ class Application:
                         value = int(value.strip())
                     return {'processors': settings.save_processors(db.db, value, at=utcnow())}
                 raise ValueError('Unsupported processing settings method')
-            if path == '/api/jobs' and method == 'GET':
-                cursor = query.get('cursor')
-                if cursor is None:
-                    row_id, offset, digest = 2**63 - 1, 0, '-'
-                else:
-                    match = re.fullmatch(r'(-?(?:0|[1-9][0-9]{0,18})):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
-                    if not match:
-                        raise ValueError('invalid cursor')
-                    row_id, offset, digest = int(match[1]), int(match[2]), match[3]
-                    if not -2**63 <= row_id <= 2**63-1 or (offset == 0) != (digest == '-'):
-                        raise ValueError('invalid cursor')
-                self._clear_snapshot()
-                db.db.execute('BEGIN')
-                rows = db.db.execute('''
-                    SELECT j.rowid AS cursor_rowid,NULL AS id,NULL AS item_id,NULL AS stage,NULL AS status,NULL AS attempts,
-                           NULL AS error, NULL AS batch_id, NULL AS created_at,NULL AS updated_at,NULL AS available_at,
-                           CASE WHEN j.stage IN ('auto','acquisition','curator','editor','tags','maintenance','media','historical_curator','scoring') THEN j.stage END AS semantic_stage,
-                           j.status='failed' AS is_failed,
-                           NULL AS result_json,
-                           j.result_json IS NOT NULL AS has_result,
-                           NULL AS title,NULL AS media_type,i.rowid AS item_rowid,i.id IS NULL AS item_unavailable,
-                           (SELECT s.rowid FROM stage_state s
-                             WHERE s.item_id=j.item_id AND s.status='failed'
-                               AND s.stage=j.stage
-                             ORDER BY s.updated_at DESC LIMIT 1) AS stage_rowid,
-                           CASE WHEN d.id IS NULL THEN 0 ELSE 1 END AS dismissed
-                    FROM processing_jobs j LEFT JOIN items i ON i.id=j.item_id
-                    LEFT JOIN failure_dismissals d
-                           ON d.kind='job' AND d.id=j.id AND d.stamp=j.updated_at
-                    WHERE j.rowid <= ? ORDER BY j.rowid DESC LIMIT 1''', (row_id,)).fetchall()
-                if cursor is not None and rows and rows[0]['cursor_rowid'] != row_id:
-                    raise ValueError('stale cursor')
-                if not rows:
-                    if cursor is not None: raise ValueError('invalid cursor')
-                    return {'chunk': '', 'recordComplete': False, 'next': None}
-                jobs = []
-                for row in rows:
-                    job = dict(row)
-                    row_id = job.pop('cursor_rowid')
-                    has_result = job.pop('has_result')
-                    stage = job.pop('semantic_stage')
-                    failed = bool(job.pop('is_failed'))
-                    item_rowid = job.pop('item_rowid')
-                    stage_rowid = job.pop('stage_rowid')
-                    if stage_rowid is not None:
-                        stage_kind = db.db.execute('SELECT typeof(error) FROM stage_state WHERE rowid=?', (stage_rowid,)).fetchone()[0]
-                        if stage_kind == 'null':
-                            stage_rowid = None
-                        elif stage_kind == 'text':
-                            with db.db.blobopen('stage_state', 'error', stage_rowid, readonly=True) as error_blob:
-                                if len(error_blob) == 0:
-                                    stage_rowid = None
-                    job['stage_error'] = None
-                    columns = {name: ('processing_jobs', name, row_id) for name in ('id', 'item_id', 'stage', 'status', 'attempts', 'updated_at', 'error', 'batch_id', 'created_at', 'available_at', 'result_json')}
-                    columns.update(title=('items', 'title', item_rowid), media_type=('items', 'media_type', item_rowid), stage_error=('stage_state', 'error', stage_rowid))
-                    kinds = {}
-                    raw_size = 0
-                    utf8_database = db.db.execute('PRAGMA encoding').fetchone()[0] == 'UTF-8'
-                    for name, (table, column, source_rowid) in columns.items():
-                        if source_rowid is None:
-                            kinds[name] = 'null'
-                            continue
-                        kind = db.db.execute(f'SELECT typeof({column}) FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0]
-                        kinds[name] = kind
-                        if kind == 'blob':
-                            raise TypeError('unsupported job value')
-                        if kind == 'text':
-                            with db.db.blobopen(table, column, source_rowid, readonly=True) as blob:
-                                raw_size += len(blob) if utf8_database else (len(blob) + 1) // 2
-                            if raw_size > SNAPSHOT_CAPACITY:
-                                raise SnapshotTooLarge('record exceeds snapshot capacity')
-                    unavailable = bool(job.pop('item_unavailable'))
-                    if unavailable or not failed:
-                        resolved = False
-                    elif stage == 'auto':
-                        if kinds['result_json'] == 'text':
-                            with closing(text_chunks(db.db, 'processing_jobs', 'result_json', row_id)) as chunks:
-                                failed_stages = aggregate_failed_stages(chunks, self.database.parent)
-                        else:
-                            failed_stages = ()
-                        resolved = bool(failed_stages) and all(self._resolved_job(db.db, row_id, part) for part in failed_stages)
-                    else:
-                        resolved = self._resolved_job(db.db, row_id, stage)
-                    retryable = not unavailable and failed and stage in {'auto', 'acquisition', 'curator', 'editor', 'tags', 'maintenance', 'media'} and not resolved
-                    retry_blocked = None
-                    if unavailable:
-                        retry_blocked = 'The original item is unavailable; restore its verified record before retrying'
-                    elif failed and not resolved:
-                        if not retryable:
-                            retry_blocked = 'This processing stage requires its guarded runner and cannot be retried here'
-                        else:
-                            retryable = False
-                            retry_blocked = 'Settings-write server only accepts settings mutations'
-                    job.update(dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
-                               resolved=resolved, retryable=retryable, retryBlocked=retry_blocked,
-                               cause=causes.classify_chunks(text_chunks(db.db, 'processing_jobs', 'error', row_id))
-                               if kinds['error'] == 'text' else causes.classify(db.db.execute('SELECT error FROM processing_jobs WHERE rowid=?', (row_id,)).fetchone()[0]))
-                    jobs.append(job)
-                following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
-                next_cursor = f'{following[0]}:0:-' if following else None
-                spool = tempfile.TemporaryFile(dir=self.database.parent)
-                try:
-                    writer = SnapshotWriter(spool)
-                    writer.write(b'{')
-                    for index, (key, value) in enumerate(jobs[0].items()):
-                        if index:
-                            writer.write(b',')
-                        writer.value(key)
-                        writer.write(b':')
-                        if key == 'result_json' and has_result and stage != 'auto':
-                            writer.text_column(db.db, 'processing_jobs', 'result_json', row_id)
-                        elif key in columns and columns[key][2] is not None:
-                            table, column, source_rowid = columns[key]
-                            kind = kinds[key]
-                            if kind == 'null':
-                                writer.value(None)
-                            elif kind == 'text':
-                                writer.text_column(db.db, table, column, source_rowid)
-                            else:
-                                writer.value(db.db.execute(f'SELECT {column} FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0])
-                        else:
-                            writer.value(value)
-                    writer.write(b'}')
-                    db.db.execute('COMMIT')
-                except BaseException:
-                    spool.close()
-                    raise
-                try:
-                    token = secrets.token_hex(16)
-                    with self.snapshot_lock:
-                        self.snapshot = (token, spool, writer.size, next_cursor, time.monotonic() + 120)
-                        self.snapshot_timer = threading.Timer(120, self._expire_snapshot, args=(token,))
-                        self.snapshot_timer.daemon = True
-                        self.snapshot_timer.start()
-                except BaseException:
-                    self._clear_snapshot()
-                    spool.close()
-                    raise
-                return self._frame(0, token)
             raise ValueError('Unsupported operation')
+
+    def _jobs(self, query):
+        cursor = query.get('cursor')
+        if cursor and cursor.startswith('p:'):
+            match = re.fullmatch(r'p:([0-9a-f]{32}):([0-9]{1,12})', cursor)
+            if not match:
+                raise ValueError('invalid cursor')
+            with self.snapshot_lock:
+                state = self.preparation
+                if not state or state['token'] != match[1] or state['sequence'] != int(match[2]) or time.monotonic() > state['deadline']:
+                    if state and state['token'] == match[1] and time.monotonic() > state['deadline']:
+                        self._clear_snapshot()
+                    raise ValueError('expired cursor')
+                state['deadline'] = time.monotonic() + 120
+                return self._advance_preparation(state)
+        if cursor is not None:
+            match = re.fullmatch(r'(-?(?:0|[1-9][0-9]{0,18})):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
+            if not match or not -2**63 <= int(match[1]) <= 2**63-1 or (int(match[2]) == 0) != (match[3] == '-'):
+                raise ValueError('invalid cursor')
+        with self.snapshot_lock:
+            self._clear_snapshot()
+            state = {'token': secrets.token_hex(16), 'sequence': 0,
+                     'deadline': time.monotonic() + 120, 'iterator': self._prepare_job(query)}
+            self.preparation = state
+            self.preparation_timer = threading.Timer(120, self._expire_preparation, args=(state['token'],))
+            self.preparation_timer.daemon = True
+            self.preparation_timer.start()
+            return self._advance_preparation(state)
+
+    def _advance_preparation(self, state):
+        self.preparation = None
+        try:
+            next(state['iterator'])
+        except StopIteration as result:
+            self.preparation = None
+            if self.preparation_timer:
+                self.preparation_timer.cancel()
+                self.preparation_timer = None
+            return result.value
+        except BaseException:
+            self._clear_snapshot()
+            raise
+        self.preparation = state
+        state['sequence'] += 1
+        state['deadline'] = time.monotonic() + 120
+        return {'chunk': '', 'recordComplete': False, 'next': f"p:{state['token']}:{state['sequence']}", 'preparing': True}
+
+    def _expire_preparation(self, token):
+        with self.snapshot_lock:
+            state = self.preparation
+            if not state or state['token'] != token:
+                return
+            remaining = state['deadline'] - time.monotonic()
+            if remaining > 0:
+                self.preparation_timer = threading.Timer(remaining, self._expire_preparation, args=(token,))
+                self.preparation_timer.daemon = True
+                self.preparation_timer.start()
+            else:
+                self._clear_snapshot()
+
+    def close(self):
+        self._clear_snapshot()
+
+    @staticmethod
+    def _steps(iterator, cooperative):
+        try:
+            while True:
+                try:
+                    next(iterator)
+                except StopIteration as result:
+                    return result.value
+                if cooperative:
+                    yield None
+        finally:
+            iterator.close()
+
+    def _prepare_job(self, query):
+        with InformationDB(self.database, read_only=True, cross_thread=True) as db:
+            cursor = query.get('cursor')
+            if cursor is None:
+                row_id, offset, digest = 2**63 - 1, 0, '-'
+            else:
+                match = re.fullmatch(r'(-?(?:0|[1-9][0-9]{0,18})):([0-9]{1,12}):(-|[0-9a-f]{64})', cursor)
+                if not match:
+                    raise ValueError('invalid cursor')
+                row_id, offset, digest = int(match[1]), int(match[2]), match[3]
+                if not -2**63 <= row_id <= 2**63-1 or (offset == 0) != (digest == '-'):
+                    raise ValueError('invalid cursor')
+            db.db.execute('BEGIN')
+            rows = db.db.execute('''
+                SELECT j.rowid AS cursor_rowid,NULL AS id,NULL AS item_id,NULL AS stage,NULL AS status,NULL AS attempts,
+                       NULL AS error, NULL AS batch_id, NULL AS created_at,NULL AS updated_at,NULL AS available_at,
+                       CASE WHEN j.stage IN ('auto','acquisition','curator','editor','tags','maintenance','media','historical_curator','scoring') THEN j.stage END AS semantic_stage,
+                       j.status='failed' AS is_failed,
+                       NULL AS result_json,
+                       j.result_json IS NOT NULL AS has_result,
+                       NULL AS title,NULL AS media_type,i.rowid AS item_rowid,i.id IS NULL AS item_unavailable,
+                       (SELECT s.rowid FROM stage_state s
+                         WHERE s.item_id=j.item_id AND s.status='failed'
+                           AND s.stage=j.stage
+                         ORDER BY s.updated_at DESC LIMIT 1) AS stage_rowid,
+                       CASE WHEN d.id IS NULL THEN 0 ELSE 1 END AS dismissed
+                FROM processing_jobs j LEFT JOIN items i ON i.id=j.item_id
+                LEFT JOIN failure_dismissals d
+                       ON d.kind='job' AND d.id=j.id AND d.stamp=j.updated_at
+                WHERE j.rowid <= ? ORDER BY j.rowid DESC LIMIT 1''', (row_id,)).fetchall()
+            if cursor is not None and rows and rows[0]['cursor_rowid'] != row_id:
+                raise ValueError('stale cursor')
+            if not rows:
+                if cursor is not None: raise ValueError('invalid cursor')
+                return {'chunk': '', 'recordComplete': False, 'next': None}
+            jobs = []
+            for row in rows:
+                job = dict(row)
+                row_id = job.pop('cursor_rowid')
+                has_result = job.pop('has_result')
+                stage = job.pop('semantic_stage')
+                failed = bool(job.pop('is_failed'))
+                item_rowid = job.pop('item_rowid')
+                stage_rowid = job.pop('stage_rowid')
+                if stage_rowid is not None:
+                    stage_kind = db.db.execute('SELECT typeof(error) FROM stage_state WHERE rowid=?', (stage_rowid,)).fetchone()[0]
+                    if stage_kind == 'null':
+                        stage_rowid = None
+                    elif stage_kind == 'text':
+                        with db.db.blobopen('stage_state', 'error', stage_rowid, readonly=True) as error_blob:
+                            if len(error_blob) == 0:
+                                stage_rowid = None
+                job['stage_error'] = None
+                columns = {name: ('processing_jobs', name, row_id) for name in ('id', 'item_id', 'stage', 'status', 'attempts', 'updated_at', 'error', 'batch_id', 'created_at', 'available_at', 'result_json')}
+                columns.update(title=('items', 'title', item_rowid), media_type=('items', 'media_type', item_rowid), stage_error=('stage_state', 'error', stage_rowid))
+                kinds = {}
+                raw_size = 0
+                utf8_database = db.db.execute('PRAGMA encoding').fetchone()[0] == 'UTF-8'
+                for name, (table, column, source_rowid) in columns.items():
+                    if source_rowid is None:
+                        kinds[name] = 'null'
+                        continue
+                    kind = db.db.execute(f'SELECT typeof({column}) FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0]
+                    kinds[name] = kind
+                    if kind == 'blob':
+                        raise TypeError('unsupported job value')
+                    if kind == 'text':
+                        with db.db.blobopen(table, column, source_rowid, readonly=True) as blob:
+                            raw_size += len(blob) if utf8_database else (len(blob) + 1) // 2
+                        if raw_size > SNAPSHOT_CAPACITY:
+                            raise SnapshotTooLarge('record exceeds snapshot capacity')
+                cooperative = raw_size >= 262144
+                if cooperative:
+                    yield None
+                unavailable = bool(job.pop('item_unavailable'))
+                if unavailable or not failed:
+                    resolved = False
+                elif stage == 'auto':
+                    if kinds['result_json'] == 'text':
+                        with closing(text_chunks(db.db, 'processing_jobs', 'result_json', row_id)) as chunks:
+                            failed_stages = yield from self._steps(aggregate_failed_stages_steps(chunks, self.database.parent), cooperative)
+                    else:
+                        failed_stages = ()
+                    resolved = bool(failed_stages) and all(self._resolved_job(db.db, row_id, part) for part in failed_stages)
+                else:
+                    resolved = self._resolved_job(db.db, row_id, stage)
+                retryable = not unavailable and failed and stage in {'auto', 'acquisition', 'curator', 'editor', 'tags', 'maintenance', 'media'} and not resolved
+                retry_blocked = None
+                if unavailable:
+                    retry_blocked = 'The original item is unavailable; restore its verified record before retrying'
+                elif failed and not resolved:
+                    if not retryable:
+                        retry_blocked = 'This processing stage requires its guarded runner and cannot be retried here'
+                    else:
+                        retryable = False
+                        retry_blocked = 'Settings-write server only accepts settings mutations'
+                if kinds['error'] == 'text':
+                    with closing(text_chunks(db.db, 'processing_jobs', 'error', row_id)) as chunks:
+                        cause = yield from self._steps(causes.classify_chunks_steps(chunks), cooperative)
+                else:
+                    cause = causes.classify(db.db.execute('SELECT error FROM processing_jobs WHERE rowid=?', (row_id,)).fetchone()[0])
+                job.update(dismissed=bool(row['dismissed']), itemUnavailable=unavailable,
+                           resolved=resolved, retryable=retryable, retryBlocked=retry_blocked, cause=cause)
+                jobs.append(job)
+            following = db.db.execute('SELECT rowid FROM processing_jobs WHERE rowid < ? ORDER BY rowid DESC LIMIT 1', (row_id,)).fetchone()
+            next_cursor = f'{following[0]}:0:-' if following else None
+            spool = tempfile.TemporaryFile(dir=self.database.parent)
+            try:
+                writer = SnapshotWriter(spool)
+                writer.write(b'{')
+                for index, (key, value) in enumerate(jobs[0].items()):
+                    if index:
+                        writer.write(b',')
+                    writer.value(key)
+                    writer.write(b':')
+                    if key == 'result_json' and has_result and stage != 'auto':
+                        yield from self._steps(writer.text_column_steps(db.db, 'processing_jobs', 'result_json', row_id), cooperative)
+                    elif key in columns and columns[key][2] is not None:
+                        table, column, source_rowid = columns[key]
+                        kind = kinds[key]
+                        if kind == 'null':
+                            writer.value(None)
+                        elif kind == 'text':
+                            yield from self._steps(writer.text_column_steps(db.db, table, column, source_rowid), cooperative)
+                        else:
+                            writer.value(db.db.execute(f'SELECT {column} FROM {table} WHERE rowid=?', (source_rowid,)).fetchone()[0])
+                    else:
+                        writer.value(value)
+                writer.write(b'}')
+                db.db.execute('COMMIT')
+            except BaseException:
+                spool.close()
+                raise
+            try:
+                token = secrets.token_hex(16)
+                with self.snapshot_lock:
+                    self.snapshot = (token, spool, writer.size, next_cursor, time.monotonic() + 120)
+                    self.snapshot_timer = threading.Timer(120, self._expire_snapshot, args=(token,))
+                    self.snapshot_timer.daemon = True
+                    self.snapshot_timer.start()
+            except BaseException:
+                self._clear_snapshot()
+                spool.close()
+                raise
+            return self._frame(0, token)
 
     @staticmethod
     def _resolved_job(db, row_id, stage):
@@ -231,11 +317,25 @@ class Application:
 
     def _expire_snapshot(self, token):
         with self.snapshot_lock:
-            if self.snapshot and self.snapshot[0] == token:
+            if not self.snapshot or self.snapshot[0] != token:
+                return
+            remaining = self.snapshot[4] - time.monotonic()
+            if remaining > 0:
+                self.snapshot_timer = threading.Timer(remaining, self._expire_snapshot, args=(token,))
+                self.snapshot_timer.daemon = True
+                self.snapshot_timer.start()
+            else:
                 self._clear_snapshot()
 
     def _clear_snapshot(self):
         with self.snapshot_lock:
+            if self.preparation_timer:
+                self.preparation_timer.cancel()
+                self.preparation_timer = None
+            if self.preparation:
+                iterator = self.preparation['iterator']
+                self.preparation = None
+                iterator.close()
             if self.snapshot_timer:
                 self.snapshot_timer.cancel()
                 self.snapshot_timer = None
@@ -252,6 +352,7 @@ class Application:
             token, spool, size, following, deadline = self.snapshot
             if offset < 0 or offset >= size or offset % 24000:
                 raise ValueError('invalid cursor')
+            self.snapshot = (token, spool, size, following, time.monotonic() + 120)
             spool.seek(offset)
             chunk = spool.read(24000)
             end = offset + len(chunk)

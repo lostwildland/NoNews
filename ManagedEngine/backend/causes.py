@@ -110,7 +110,7 @@ class _CredentialPattern:
                 return
 
 
-def classify_chunks(chunks) -> str:
+def classify_chunks_steps(chunks):
     """Classify a stream without retaining the original message."""
     special = ('papererror:', 'publisher:', 'source fetch', 'http 403',
                'paper abstract lookup', 'http 429')
@@ -127,6 +127,7 @@ def classify_chunks(chunks) -> str:
         text = tail + value
         found.update(needle for needle in needles if needle in text)
         tail = text[-overlap:]
+        yield None
     if any(source in found for source in special[:3]) and 'http 403' in found:
         return SOURCE_BROWSER
     if 'paper abstract lookup' in found and 'http 429' in found:
@@ -137,6 +138,15 @@ def classify_chunks(chunks) -> str:
         if any(needle in found for needle in terms):
             return cause
     return UNKNOWN
+
+
+def classify_chunks(chunks) -> str:
+    steps = classify_chunks_steps(chunks)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as result:
+            return result.value
 
 
 def classify(error: str | None) -> str:

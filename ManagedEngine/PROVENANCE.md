@@ -50,3 +50,5 @@ Extraction correction: the shared `core.transaction` generator retains its sourc
 Schema admission follow-up: canonical schema41 uses BINARY comparisons and unshadowed SQLite row identifiers. The gate conservatively refuses non-BINARY COLLATE declarations and columns named rowid, _rowid_ or oid on canonical tables; unknown data and schema remain untouched for verified migration. Explicit BINARY declarations and ordinary additional columns/tables remain supported. The matching snapshot validator is updated separately.
 
 NoNews deep-history performance correction: the iterative one-byte-per-container state stack caches a bounded 64 KiB block and accesses its spill file at block boundaries rather than on each state transition.
+
+NoNews bounded-history correction: preparation advances the existing authenticated cursor in bounded cooperative slices, retaining a read snapshot until the spool is complete. Progress cursors and snapshot frames use idle expiry and explicit cleanup; no persistent processing job or integration is started.

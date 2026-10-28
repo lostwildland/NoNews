@@ -282,14 +282,14 @@ def transaction(db: sqlite3.Connection) -> Iterator[sqlite3.Connection]:
 
 class InformationDB:
 
-    def __init__(self, path: str | Path=':memory:', *, clock: Callable[[], str]=utcnow, read_only: bool=False) -> None:
+    def __init__(self, path: str | Path=':memory:', *, clock: Callable[[], str]=utcnow, read_only: bool=False, cross_thread: bool=False) -> None:
         self.path = str(path)
         self.clock = clock
         self._selection_schema_ready = False
         if read_only:
-            self.db = sqlite3.connect(f'file:{Path(path).resolve()}?mode=ro', uri=True, timeout=30, isolation_level=None)
+            self.db = sqlite3.connect(Path(path).resolve().as_uri() + '?mode=ro', uri=True, timeout=30, isolation_level=None, check_same_thread=not cross_thread)
         else:
-            self.db = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+            self.db = sqlite3.connect(self.path, timeout=30, isolation_level=None, check_same_thread=not cross_thread)
         try:
             if not read_only:
                 from .schema import require_supported_database

@@ -73,38 +73,43 @@ def main():
             send({'status': 'error', 'code': 'startup_failed'})
             return 1
         send({'status': 'ready'})
-        while True:
-            message = read_message()
-            if message is None:
-                return 0
-            supplied = message.get('token')
-            if not isinstance(supplied, str) or not supplied.isascii() or not hmac.compare_digest(token, supplied):
-                send({'error': 'unauthorized'})
-                continue
-            request_id = message.get('id')
-            if request_id is not None and (type(request_id) is not int or not 0 <= request_id < 2**53):
-                send({'error': 'invalid request id'})
-                continue
-            correlation = {} if request_id is None else {'id': request_id}
-            method, path = message.get('method'), message.get('path')
-            body = message.get('body', {})
-            query = message.get('query', {})
-            if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
-                send({**correlation, 'error': 'invalid operation'})
-                continue
-            if not isinstance(query, dict) or (path != '/api/jobs' and query) or (path == '/api/jobs' and
-                    (set(query) - {'cursor'} or ('cursor' in query and (not isinstance(query['cursor'], str) or len(query['cursor']) > 100)))):
-                send({**correlation, 'error': 'invalid query'})
-                continue
-            try:
-                send({**correlation, 'result': app.handle(method, path, query, body)})
-            except ValueError as error:
-                if getattr(error, 'code', None) == 'job_record_too_large':
-                    send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
-                else:
+        try:
+            while True:
+                message = read_message()
+                if message is None:
+                    return 0
+                supplied = message.get('token')
+                if not isinstance(supplied, str) or not supplied.isascii() or not hmac.compare_digest(token, supplied):
+                    send({'error': 'unauthorized'})
+                    continue
+                request_id = message.get('id')
+                if request_id is not None and (type(request_id) is not int or not 0 <= request_id < 2**53):
+                    send({'error': 'invalid request id'})
+                    continue
+                correlation = {} if request_id is None else {'id': request_id}
+                method, path = message.get('method'), message.get('path')
+                body = message.get('body', {})
+                query = message.get('query', {})
+                if not isinstance(method, str) or not isinstance(path, str) or (method, path) not in ALLOWED or not isinstance(body, dict):
+                    send({**correlation, 'error': 'invalid operation'})
+                    continue
+                if not isinstance(query, dict) or (path != '/api/jobs' and query) or (path == '/api/jobs' and
+                        (set(query) - {'cursor'} or ('cursor' in query and (not isinstance(query['cursor'], str) or len(query['cursor']) > 100)))):
                     send({**correlation, 'error': 'invalid query'})
-            except Exception:
-                send({**correlation, 'error': 'operation failed'})
+                    continue
+                try:
+                    send({**correlation, 'result': app.handle(method, path, query, body)})
+                except ValueError as error:
+                    if getattr(error, 'code', None) == 'job_record_too_large':
+                        send({**correlation, 'error': 'job record is too large', 'code': 'job_record_too_large'})
+                    else:
+                        send({**correlation, 'error': 'invalid query'})
+                except Exception:
+                    send({**correlation, 'error': 'operation failed'})
+        finally:
+            close = getattr(app, 'close', None)
+            if callable(close):
+                close()
     except Exception:
         return 1
 
