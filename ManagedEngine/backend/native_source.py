@@ -307,7 +307,7 @@ def observe(db, body):
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
-            if (not was_unresolved) and (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
+            if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
                 db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", 0, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
@@ -350,17 +350,18 @@ def complete_job(db, body):
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
     stage = _text(body.get("stage"), "stage", required=True, maximum=32)
     result = body.get("result")
-    if stage not in {"curator", "editor", "material"} or not isinstance(result, dict):
+    claimed_generation = body.get("decisionGeneration")
+    if not isinstance(claimed_generation, int) or stage not in {"curator", "editor", "material"} or not isinstance(result, dict):
         raise ValueError("Invalid native completion")
     with transaction(db):
         row = db.execute("SELECT j.decision_generation,j.native_context_id,j.intent_json FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND o.namespace=?", (job_id, namespace)).fetchone()
-        if row is None or row[1] != context_id or json.loads(row[2] or "{}").get("revoked") or row[0] != db.execute("SELECT decision_generation FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0]:
+        if row is None or row[1] != context_id or row[0] != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
             raise ValueError("Native completion was revoked or mismatched")
         db.execute("INSERT OR REPLACE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) SELECT ?,item_id,?,?,?,? FROM native_processing_contexts WHERE id=?", (job_id, stage, "ready", json.dumps(result), utcnow(), context_id))
         db.execute("UPDATE processing_jobs SET status='succeeded',result_json=?,updated_at=? WHERE id=?", (json.dumps(result), utcnow(), job_id))
     return {"jobID": job_id, "contextID": context_id, "stage": stage, "status": "ready"}
 
-
+def context_results(db, method, body):
     namespace = _namespace(body.get("namespace"))
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
