@@ -36,8 +36,8 @@
       "previous_path": null,
       "group": "account",
       "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/Container.swift",
@@ -76,16 +76,16 @@
       "previous_path": null,
       "group": "account",
       "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/Folder.swift",
@@ -100,40 +100,40 @@
       "previous_path": null,
       "group": "account",
       "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "30f4714f7d7eac6e70d9c8a484ca710c9672a922",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
       "previous_path": null,
       "group": "account",
       "blob": "cec6adec2bf78880e93a0336e493abf27972a838",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
       "previous_path": null,
       "group": "account",
       "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
       "previous_path": null,
       "group": "account",
       "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Sources/Account/OPMLFile.swift",
@@ -148,8 +148,8 @@
       "previous_path": null,
       "group": "account",
       "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
-      "standards": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings",
-      "spec": "R6 hunks inspected; connected seams incomplete; 2 source-derived P2 findings"
+      "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+      "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
     },
     {
       "path": "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
@@ -470,5 +470,5 @@
       "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift"
     ]
   },
-  "working_tree_note": "Original T30 owner owns uncommitted coordinator Account.swift/OPMLFile.swift corrections and their tests; pinned7accb68 remains review source until new handoff."
+  "working_tree_note": "T30 owner owns R12 pending-save/maintenance tests and the coordinator LocalAccountRefresher correction for R8 overlap schedules; pinned7accb68 remains review source until the next completed handoff. Storage14 paired R9 reviews are read-only at the pin."
 }
