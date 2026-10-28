@@ -92,16 +92,22 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				}
 			}
 
-			for fetcher in fetchers {
-				let articles: Set<Article>
+			do {
+				for fetcher in fetchers {
+					let articles: Set<Article>
 
-				if (fetcher as? SidebarItem)?.readFiltered(readFilterEnabledTable: readFilterEnabledTable) ?? true {
-					articles = await fetcher.fetchUnreadArticlesAsync()
-				} else {
-					articles = await fetcher.fetchArticlesAsync()
+					if (fetcher as? SidebarItem)?.readFiltered(readFilterEnabledTable: readFilterEnabledTable) ?? true {
+						articles = try await fetcher.fetchUnreadArticlesAsync()
+					} else {
+						articles = try await fetcher.fetchArticlesAsync()
+					}
+
+					process(articles)
 				}
-
-				process(articles)
+			} catch {
+				self.isFinished = true
+				callCompletionIfNeeded()
+				return
 			}
 
 			// Belt-and-suspenders: ensure the queue never deadlocks even if
@@ -187,14 +193,20 @@ typealias FetchRequestOperationResultBlock = (Set<Article>, FetchRequestOperatio
 				return hidingReadArticlesState.isHidingReadArticles(for: sidebarItemID)
 			}
 
-			for fetcher in fetchers {
-				let articles: Set<Article>
-				if fetcherHidesReadArticles(fetcher) {
-					articles = await fetcher.fetchUnreadArticlesAsync()
-				} else {
-					articles = await fetcher.fetchArticlesAsync()
+			do {
+				for fetcher in fetchers {
+					let articles: Set<Article>
+					if fetcherHidesReadArticles(fetcher) {
+						articles = try await fetcher.fetchUnreadArticlesAsync()
+					} else {
+						articles = try await fetcher.fetchArticlesAsync()
+					}
+					process(articles)
 				}
-				process(articles)
+			} catch {
+				self.isFinished = true
+				callCompletionIfNeeded()
+				return
 			}
 
 			// Ensure the queue never deadlocks even if

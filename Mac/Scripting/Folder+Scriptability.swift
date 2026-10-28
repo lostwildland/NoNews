@@ -105,9 +105,7 @@ import RSCore
 	@objc(articles)
 	var articles: NSArray {
 		let feeds = Array(folder.topLevelFeeds)
-		let allArticles = feeds.flatMap { feed in
-			feed.fetchArticles()
-		}
+		guard let allArticles = scriptArticles(feeds) else { return [] }
 		// Sort articles by logical date published like Feed does
 		let sortedArticles = allArticles.sorted(by: {
 			$0.logicalDatePublished > $1.logicalDatePublished
@@ -118,18 +116,14 @@ import RSCore
 	@objc(countOfArticles)
 	func countOfArticles() -> Int {
 		let feeds = Array(folder.topLevelFeeds)
-		return feeds.reduce(0) { count, feed in
-			let feedArticles = feed.fetchArticles()
-			return count + feedArticles.count
-		}
+		guard let articles = scriptArticles(feeds) else { return 0 }
+		return articles.count
 	}
 
 	@objc(objectInArticlesAtIndex:)
 	func objectInArticlesAtIndex(_ index: Int) -> ScriptableArticle? {
 		let feeds = Array(folder.topLevelFeeds)
-		let allArticles = feeds.flatMap { feed in
-			feed.fetchArticles()
-		}
+		guard let allArticles = scriptArticles(feeds) else { return nil }
 		let sortedArticles = allArticles.sorted(by: {
 			return $0.logicalDatePublished > $1.logicalDatePublished
 		})
@@ -150,4 +144,13 @@ import RSCore
 	var opmlRepresentation: String {
 		folder.OPMLString(indentLevel: 0)
 	}
+	private func scriptArticles(_ feeds: [Feed]) -> [Article]? {
+		do { return try feeds.flatMap { try $0.fetchArticles() } }
+		catch {
+			NSScriptCommand.current()?.scriptErrorNumber = -128
+			NSScriptCommand.current()?.scriptErrorString = error.localizedDescription
+			return nil
+		}
+	}
+
 }

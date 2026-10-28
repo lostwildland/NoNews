@@ -179,8 +179,10 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 
 			do {
 				let (articleIDs, response) = try await caller.retrieveUnreadEntries()
-				changedCount += await self.syncArticleReadState(account: account, articleIDs: articleIDs)
+				changedCount += try await self.syncArticleReadState(account: account, articleIDs: articleIDs)
 				caller.storeConditionalGetIfNeeded(key: FeedbinAPICaller.ConditionalGetKeys.unreadEntries, response: response)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				refreshError = error
 				Self.logger.error("Feedbin: Retrieving unread entries failed: \(error.localizedDescription)")
@@ -188,8 +190,10 @@ public enum FeedbinAccountDelegateError: String, Error, Sendable {
 
 			do {
 				let (articleIDs, response) = try await caller.retrieveStarredEntries()
-				changedCount += await self.syncArticleStarredState(account: account, articleIDs: articleIDs)
+				changedCount += try await self.syncArticleStarredState(account: account, articleIDs: articleIDs)
 				caller.storeConditionalGetIfNeeded(key: FeedbinAPICaller.ConditionalGetKeys.starredEntries, response: response)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				refreshError = error
 				Self.logger.error("Feedbin: Retrieving starred entries failed: \(error.localizedDescription)")
@@ -814,6 +818,8 @@ private extension FeedbinAccountDelegate {
 				try await apiCall(articleIDGroup)
 				await self.syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup.map { String($0) }), key: key)
 				sentCount += articleIDGroup.count
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 				Self.logger.error("Feedbin: Article status sync call failed: \(error.localizedDescription)")
@@ -936,7 +942,7 @@ private extension FeedbinAccountDelegate {
 		try await account.logActivity(kind: .refreshMissingArticles) {
 			var savedError: Error?
 
-			let fetchedArticleIDs = await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
+			let fetchedArticleIDs = try await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
 			let articleIDs = Array(fetchedArticleIDs)
 			let chunkedArticleIDs = articleIDs.chunked(into: 100)
 
@@ -1001,52 +1007,54 @@ private extension FeedbinAccountDelegate {
 
 	}
 
-	func syncArticleReadState(account: Account, articleIDs: [Int]?) async -> Int {
+	func syncArticleReadState(account: Account, articleIDs: [Int]?) async throws -> Int {
 		guard let articleIDs else {
 			return 0
 		}
 
-		guard let pendingArticleIDs = try? await syncDatabase.selectPendingReadStatusArticleIDs() else {
-			return 0
-		}
+		let pendingArticleIDs: Set<String>
+		do { pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let feedbinUnreadArticleIDs = Set(articleIDs.map { String($0) })
-		let currentUnreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
 		// Mark articles as unread
 		let deltaUnreadArticleIDs = feedbinUnreadArticleIDs.subtracting(currentUnreadArticleIDs).subtracting(pendingArticleIDs)
-		let markedUnread = await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
+		let markedUnread = try await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
 
 		// Mark articles as read
 		let deltaReadArticleIDs = currentUnreadArticleIDs.subtracting(feedbinUnreadArticleIDs).subtracting(pendingArticleIDs)
-		let markedRead = await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
+		let markedRead = try await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
 
 		return markedUnread.count + markedRead.count
 	}
 
-	func syncArticleStarredState(account: Account, articleIDs: [Int]?) async -> Int {
+	func syncArticleStarredState(account: Account, articleIDs: [Int]?) async throws -> Int {
 		guard let articleIDs else {
 			return 0
 		}
 
-		guard let pendingArticleIDs = try? await syncDatabase.selectPendingStarredStatusArticleIDs() else {
-			return 0
-		}
+		let pendingArticleIDs: Set<String>
+		do { pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let feedbinStarredArticleIDs = Set(articleIDs.map { String($0) })
-		let currentStarredArticleIDs = await account.fetchStarredArticleIDsAsync()
+		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
 		// Mark articles as starred
 		let deltaStarredArticleIDs = feedbinStarredArticleIDs.subtracting(currentStarredArticleIDs).subtracting(pendingArticleIDs)
-		let markedStarred = await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
+		let markedStarred = try await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
 
 		// Mark articles as unstarred
 		let deltaUnstarredArticleIDs = currentStarredArticleIDs.subtracting(feedbinStarredArticleIDs).subtracting(pendingArticleIDs)
-		let markedUnstarred = await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
+		let markedUnstarred = try await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
 
 		return markedStarred.count + markedUnstarred.count
 	}

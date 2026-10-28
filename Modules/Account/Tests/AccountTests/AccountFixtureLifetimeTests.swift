@@ -63,6 +63,29 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		try await manager.deleteAccount(account)
 	}
 
+	@Test func cancelledReconciliationDoesNotProjectAnEmptyLibrary() async throws {
+		let manager = TestAccountManager()
+		let account = manager.createAccount(type: .feedbin)
+		let delegate = try #require(account.delegate as? FeedbinAccountDelegate)
+		await delegate.waitForSyncInitializationForTesting()
+		#expect(await account.database.createStatusesIfNeededAsync(articleIDs: ["42"]))
+		_ = try await account.database.markAndFetchNewAsync(articleIDs: ["42"], statusKey: .read, flag: false)
+		let notifications = NotificationCounter()
+		let observer = NotificationCenter.default.addObserver(forName: .StatusesDidChange, object: account, queue: nil) { _ in
+			notifications.count.withLock { $0 += 1 }
+		}
+		account.database.beginClosing()
+		await #expect(throws: CancellationError.self) {
+			_ = try await delegate.syncArticleReadState(account: account, articleIDs: [])
+		}
+		#expect(notifications.count.withLock { $0 } == 0)
+		#expect(try await delegate.syncDatabase.selectPendingCount() == 0)
+		#expect(await account.closeForFixtureRemoval())
+		#expect(try stringValue(in: account.dataFolder + "/DB.sqlite3", sql: "SELECT read FROM statuses WHERE articleID = '42'") == "0")
+		NotificationCenter.default.removeObserver(observer)
+		try await manager.deleteAccount(account)
+	}
+
 	@Test func admittedStatusWritePersistsWhileCloseWaits() async throws {
 		let manager = TestAccountManager()
 		let account = manager.createAccount(type: .onMyMac)
@@ -788,8 +811,10 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 			feed.editedName = "Admitted"
 			folder.externalID = "admitted-id"
 			folder.addFeedToTreeAtTopLevel(other)
-			let changed = await account.database.markAndFetchNewAsync(articleIDs: ["admitted"], statusKey: .starred, flag: true)
-			#expect(changed == ["admitted"])
+			do {
+				let changed = try await account.database.markAndFetchNewAsync(articleIDs: ["admitted"], statusKey: .starred, flag: true)
+				#expect(changed == ["admitted"])
+			} catch { Issue.record("Admitted status write failed: \(error)") }
 			folder.unreadCount = 7
 		}
 		for await _ in started { break }
@@ -855,9 +880,10 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		NotificationCenter.default.removeObserver(displayObserver)
 		NotificationCenter.default.removeObserver(folderObserver)
 		NotificationCenter.default.removeObserver(unreadObserver)
-		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
-		let rejected = await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
-		#expect(rejected.isEmpty)
+		await #expect(throws: CancellationError.self) { _ = try await account.fetchArticlesAsync(.feed(feed)) }
+		await #expect(throws: CancellationError.self) {
+			_ = try await account.database.markAndFetchNewAsync(articleIDs: ["rejected"], statusKey: .starred, flag: true)
+		}
 		let created = await account.database.createStatusesIfNeededAsync(articleIDs: ["rejected"])
 		let deleted = await account.database.deleteAsync(articleIDs: ["admitted"])
 		#expect(!created && !deleted)
@@ -939,7 +965,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 		#expect(feed.editedName == "Accepted")
 		let settingsWrite = account.feedSettingsDatabaseForTesting.setString("Rejected", for: feed.url, column: .editedName)
 		#expect(!settingsWrite)
-		#expect(await account.fetchArticlesAsync(.feed(feed)).isEmpty)
+		await #expect(throws: CancellationError.self) { _ = try await account.fetchArticlesAsync(.feed(feed)) }
 		await #expect(throws: CancellationError.self) {
 			try await sync.selectPendingCount()
 		}
@@ -987,8 +1013,7 @@ private final class GatedRefreshURLProtocol: URLProtocol, @unchecked Sendable {
 			#expect(closed)
 			feed.editedName = "After close"
 			#expect(feed.editedName == "Before close")
-			let articles = await account.fetchArticlesAsync(.feed(feed))
-			#expect(articles.isEmpty)
+			await #expect(throws: CancellationError.self) { _ = try await account.fetchArticlesAsync(.feed(feed)) }
 			for file in files { #expect(!hasOpenFile(file)) }
 			#expect(try stringValue(in: account.dataFolder + "/FeedSettings.db", sql: "SELECT editedName FROM feedSettings WHERE feedID = 'fixture'") == "Before close")
 		}

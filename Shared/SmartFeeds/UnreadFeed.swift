@@ -67,19 +67,19 @@ import Images
 
 @MainActor extension UnreadFeed: ArticleFetcher {
 
-	func fetchArticles() -> Set<Article> {
-		fetchUnreadArticles()
+	func fetchArticles() throws -> Set<Article> {
+		try fetchUnreadArticles()
 	}
 
-	func fetchArticlesAsync() async -> Set<Article> {
-		await fetchUnreadArticlesAsync()
+	func fetchArticlesAsync() async throws -> Set<Article> {
+		try await fetchUnreadArticlesAsync()
 	}
 
-	func fetchUnreadArticles() -> Set<Article> {
-		AccountManager.shared.fetchArticles(fetchType)
+	func fetchUnreadArticles() throws -> Set<Article> {
+		try AccountManager.shared.fetchArticles(fetchType)
 	}
 
-	func fetchUnreadArticlesAsync() async -> Set<Article> {
-		await AccountManager.shared.fetchArticlesAsync(fetchType)
+	func fetchUnreadArticlesAsync() async throws -> Set<Article> {
+		try await AccountManager.shared.fetchArticlesAsync(fetchType)
 	}
 }

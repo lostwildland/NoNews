@@ -149,7 +149,8 @@ import Images
 		}
 
 		for feed in account.flattenedFeeds() {
-			ids.append(contentsOf: identifiers(for: feed))
+			guard let feedIDs = try? identifiers(for: feed) else { return }
+			ids.append(contentsOf: feedIDs)
 		}
 
 		CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ids)
@@ -160,14 +161,16 @@ import Images
 		ids.append(identifier(for: folder))
 
 		for feed in folder.flattenedFeeds() {
-			ids.append(contentsOf: identifiers(for: feed))
+			guard let feedIDs = try? identifiers(for: feed) else { return }
+			ids.append(contentsOf: feedIDs)
 		}
 
 		CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ids)
 	}
 
 	static func cleanUp(_ feed: Feed) {
-		CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: identifiers(for: feed))
+		guard let ids = try? identifiers(for: feed) else { return }
+		CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: ids)
 	}
 	#endif
 
@@ -317,10 +320,10 @@ import Images
 		return "account_\(article.accountID)_feed_\(article.feedID)_article_\(article.articleID)"
 	}
 
-	static func identifiers(for feed: Feed) -> [String] {
+	static func identifiers(for feed: Feed) throws -> [String] {
 		var ids = [String]()
 		ids.append(identifier(for: feed))
-		let articles = feed.fetchArticles()
+		let articles = try feed.fetchArticles()
 		for article in articles {
 			ids.append(identifier(for: article))
 		}

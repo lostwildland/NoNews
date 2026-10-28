@@ -77,7 +77,7 @@ extension TimelineViewController {
 			return
 		}
 
-		let unreadArticles = feed.fetchUnreadArticles()
+		guard let unreadArticles = try? feed.fetchUnreadArticles() else { return }
 		guard !unreadArticles.isEmpty else {
 			return
 		}

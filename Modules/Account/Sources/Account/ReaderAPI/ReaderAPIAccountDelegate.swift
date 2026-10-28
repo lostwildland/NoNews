@@ -145,12 +145,14 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 					})
 					refreshProgress.completeTask()
 
-					_ = await account.markAsReadAsync(articleIDs: Set(articleIDs))
-					try? await refreshArticleStatus()
+					_ = try await account.markAsReadAsync(articleIDs: Set(articleIDs))
+					do { try await refreshArticleStatus() }
+					catch is CancellationError { throw CancellationError() }
+					catch {}
 					refreshProgress.completeTask()
 				}
 
-				await refreshMissingArticles(account)
+				try await refreshMissingArticles(account)
 				refreshProgress.reset()
 				accountSettings?.lastRefreshCompletedDate = Date()
 			}
@@ -244,24 +246,32 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 
 			do {
 				sentCount += try await sendArticleStatuses(createUnreadStatuses, account: account, label: "unread", apiCall: caller.createUnreadEntries)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendArticleStatuses(deleteUnreadStatuses, account: account, label: "read", apiCall: caller.deleteUnreadEntries)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendArticleStatuses(createStarredStatuses, account: account, label: "starred", apiCall: caller.createStarredEntries)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendArticleStatuses(deleteStarredStatuses, account: account, label: "unstarred", apiCall: caller.deleteStarredEntries)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
@@ -306,7 +316,9 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 
 			do {
 				let articleIDs = try await caller.retrieveItemIDs(type: .unread, pageHandler: articleIDPageHandler(for: account, kind: .refreshArticleStatuses))
-				changedCount += await syncArticleReadState(account: account, articleIDs: articleIDs)
+				changedCount += try await syncArticleReadState(account: account, articleIDs: articleIDs)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 				Self.logger.error("ReaderAPIAccountDelegate: refreshArticleStatus — retrieving unread entries failed: \(error.localizedDescription)")
@@ -314,7 +326,9 @@ final class ReaderAPIAccountDelegate: AccountDelegate {
 
 			do {
 				let articleIDs = try await caller.retrieveItemIDs(type: .starred, pageHandler: articleIDPageHandler(for: account, kind: .refreshArticleStatuses))
-				changedCount += await syncArticleStarredState(account: account, articleIDs: articleIDs)
+				changedCount += try await syncArticleStarredState(account: account, articleIDs: articleIDs)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				if savedError == nil {
 					savedError = error
@@ -995,6 +1009,8 @@ private extension ReaderAPIAccountDelegate {
 				try await account.logRefreshPage(kind: .sendArticleStatuses, message: { _ in "\(articleIDGroup.count) \(label)" }, { try await apiCall(articleIDGroup) })
 				await syncDatabase.deleteSelectedForProcessing(Set(articleIDGroup), key: key)
 				sentCount += articleIDGroup.count
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 				Self.logger.error("ReaderAPIAccountDelegate: sendArticleStatuses — error \(error.localizedDescription)")
@@ -1076,24 +1092,26 @@ private extension ReaderAPIAccountDelegate {
 
 			refreshProgress.completeTask()
 
-			_ = await account.markAsReadAsync(articleIDs: Set(articleIDs))
+			_ = try await account.markAsReadAsync(articleIDs: Set(articleIDs))
 			refreshProgress.completeTask()
 
-			try? await refreshArticleStatus()
+			do { try await refreshArticleStatus() }
+			catch is CancellationError { throw CancellationError() }
+			catch {}
 			refreshProgress.completeTask()
 
-			await refreshMissingArticles(account)
+			try await refreshMissingArticles(account)
 			refreshProgress.reset()
 		}
 
 		return feed
 	}
 
-	func refreshMissingArticles(_ account: Account) async {
+	func refreshMissingArticles(_ account: Account) async throws {
 		Self.logger.debug("ReaderAPIAccountDelegate: refreshMissingArticles")
 
-		await account.logActivity(kind: .refreshMissingArticles) {
-			let fetchedArticleIDs = await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
+		try await account.logActivity(kind: .refreshMissingArticles) {
+			let fetchedArticleIDs = try await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
 
 			if fetchedArticleIDs.isEmpty {
 				return
@@ -1175,7 +1193,7 @@ private extension ReaderAPIAccountDelegate {
 
 	}
 
-	func syncArticleReadState(account: Account, articleIDs: [String]?) async -> Int {
+	func syncArticleReadState(account: Account, articleIDs: [String]?) async throws -> Int {
 		Self.logger.debug("ReaderAPIAccountDelegate: syncArticleReadState — articleIDs.count \(articleIDs?.count ?? 0)")
 
 		guard let articleIDs else {
@@ -1183,26 +1201,27 @@ private extension ReaderAPIAccountDelegate {
 		}
 
 		// A failed pending-statuses read must not be treated as “nothing pending” — that would revert pending changes.
-		guard let pendingArticleIDs = try? await syncDatabase.selectPendingReadStatusArticleIDs() else {
-			return 0
-		}
+		let pendingArticleIDs: Set<String>
+		do { pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let serverUnreadArticleIDs = Set(articleIDs)
-		let currentUnreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 		// Mark articles as unread
 		let deltaUnreadArticleIDs = serverUnreadArticleIDs.subtracting(currentUnreadArticleIDs).subtracting(pendingArticleIDs)
-		let markedUnread = await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
+		let markedUnread = try await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
 
 		// Mark articles as read
 		let deltaReadArticleIDs = currentUnreadArticleIDs.subtracting(serverUnreadArticleIDs).subtracting(pendingArticleIDs)
-		let markedRead = await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
+		let markedRead = try await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
 
 		return markedUnread.count + markedRead.count
 	}
 
-	func syncArticleStarredState(account: Account, articleIDs: [String]?) async -> Int {
+	func syncArticleStarredState(account: Account, articleIDs: [String]?) async throws -> Int {
 		Self.logger.debug("ReaderAPIAccountDelegate: syncArticleStarredState — articleIDs.count \(articleIDs?.count ?? 0)")
 
 		guard let articleIDs else {
@@ -1210,12 +1229,13 @@ private extension ReaderAPIAccountDelegate {
 		}
 
 		// A failed pending-statuses read must not be treated as “nothing pending” — that would revert pending changes.
-		guard let pendingArticleIDs = try? await syncDatabase.selectPendingStarredStatusArticleIDs() else {
-			return 0
-		}
+		let pendingArticleIDs: Set<String>
+		do { pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let serverStarredArticleIDs = Set(articleIDs)
-		let currentStarredArticleIDs = await account.fetchStarredArticleIDsAsync()
+		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 		// Previously a pending unsent star landed in the unstarred delta and got visibly reverted.
@@ -1223,11 +1243,11 @@ private extension ReaderAPIAccountDelegate {
 
 		// Mark articles as starred
 		let deltaStarredArticleIDs = serverStarredArticleIDs.subtracting(currentStarredArticleIDs).subtracting(pendingArticleIDs)
-		let markedStarred = await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
+		let markedStarred = try await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
 
 		// Mark articles as unstarred
 		let deltaUnstarredArticleIDs = currentStarredArticleIDs.subtracting(serverStarredArticleIDs).subtracting(pendingArticleIDs)
-		let markedUnstarred = await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
+		let markedUnstarred = try await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
 
 		return markedStarred.count + markedUnstarred.count
 	}

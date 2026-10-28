@@ -472,9 +472,12 @@ struct SidebarItemNode: Hashable, Sendable {
 			return
 		}
 
-		let article = articles.article(matching: articleSpecifier) ??
-		AccountManager.shared.fetchArticle(accountID: articleSpecifier.accountID,
-										   articleID: articleSpecifier.articleID)
+		let article: Article?
+		do {
+			article = try articles.article(matching: articleSpecifier) ?? AccountManager.shared.fetchArticle(accountID: articleSpecifier.accountID, articleID: articleSpecifier.articleID)
+		} catch {
+			return
+		}
 
 		if let article {
 			// Disable animation since this function runs only during state restoration on launch.

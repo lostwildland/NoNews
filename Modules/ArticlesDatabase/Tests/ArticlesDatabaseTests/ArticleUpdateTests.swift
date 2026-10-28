@@ -27,7 +27,7 @@ import ArticlesDatabase
 		self.database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "test", retentionStyle: .feedBased)
 	}
 
-	@Test func identicalUpdateReportsNoChanges() async {
+	@Test func identicalUpdateReportsNoChanges() async throws {
 		let item = parsedItem(title: "Title", markdown: nil)
 		let firstChanges = await database.updateAsync(parsedItems: [item], feedID: feedID, deleteOlder: false)
 		#expect(firstChanges.new?.count == 1)
@@ -38,7 +38,7 @@ import ArticlesDatabase
 		#expect(secondChanges.updated == nil)
 	}
 
-	@Test func markdownChangePersists() async {
+	@Test func markdownChangePersists() async throws {
 		let original = parsedItem(title: "Title", markdown: "one")
 		_ = await database.updateAsync(parsedItems: [original], feedID: feedID, deleteOlder: false)
 
@@ -47,11 +47,11 @@ import ArticlesDatabase
 		#expect(changes.updated?.count == 1)
 
 		database.emptyCaches()
-		let fetched = await database.fetchArticlesAsync(feedID: feedID).first
+		let fetched = try await database.fetchArticlesAsync(feedID: feedID).first
 		#expect(fetched?.markdown == "two")
 	}
 
-	@Test func clearedFieldStopsReportingAsUpdated() async {
+	@Test func clearedFieldStopsReportingAsUpdated() async throws {
 		let withTitle = parsedItem(title: "Title", markdown: nil)
 		_ = await database.updateAsync(parsedItems: [withTitle], feedID: feedID, deleteOlder: false)
 
@@ -60,7 +60,7 @@ import ArticlesDatabase
 		#expect(clearingChanges.updated?.count == 1)
 
 		database.emptyCaches()
-		let fetched = await database.fetchArticlesAsync(feedID: feedID).first
+		let fetched = try await database.fetchArticlesAsync(feedID: feedID).first
 		#expect(fetched?.title == nil)
 
 		database.emptyCaches()

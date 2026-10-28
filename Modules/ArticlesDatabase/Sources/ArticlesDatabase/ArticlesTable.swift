@@ -50,16 +50,16 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Articles for Feed
 
-	func fetchArticles(_ feedID: String) -> Set<Article> {
-		fetchArticles { self.fetchArticlesForFeedID(feedID, $0) }
+	func fetchArticles(_ feedID: String) throws -> Set<Article> {
+		try fetchArticles { self.fetchArticlesForFeedID(feedID, $0) }
 	}
 
 	func fetchArticlesAsync(_ feedID: String, _ completion: @escaping ArticleSetResultBlock) {
 		fetchArticlesAsync({ self.fetchArticlesForFeedID(feedID, $0) }, completion)
 	}
 
-	func fetchArticles(_ feedIDs: Set<String>) -> Set<Article> {
-		fetchArticles { self.fetchArticles(feedIDs, $0) }
+	func fetchArticles(_ feedIDs: Set<String>) throws -> Set<Article> {
+		try fetchArticles { self.fetchArticles(feedIDs, $0) }
 	}
 
 	func fetchArticlesAsync(_ feedIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
@@ -68,8 +68,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Articles by articleID
 
-	func fetchArticles(articleIDs: Set<String>) -> Set<Article> {
-		fetchArticles { self.fetchArticles(articleIDs: articleIDs, $0) }
+	func fetchArticles(articleIDs: Set<String>) throws -> Set<Article> {
+		try fetchArticles { self.fetchArticles(articleIDs: articleIDs, $0) }
 	}
 
 	func fetchArticlesAsync(articleIDs: Set<String>, _ completion: @escaping ArticleSetResultBlock) {
@@ -78,8 +78,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Unread Articles
 
-	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
-		fetchArticles { self.fetchUnreadArticles(feedIDs, limit, $0) }
+	func fetchUnreadArticles(_ feedIDs: Set<String>, _ limit: Int?) throws -> Set<Article> {
+		try fetchArticles { self.fetchUnreadArticles(feedIDs, limit, $0) }
 	}
 
 	func fetchUnreadArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
@@ -88,8 +88,8 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Today Articles
 
-	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?) -> Set<Article> {
-		fetchArticles { self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }
+	func fetchArticlesSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?) throws -> Set<Article> {
+		try fetchArticles { self.fetchArticlesSince(feedIDs, cutoffDate, limit, $0) }
 	}
 
 	func fetchArticlesSinceAsync(_ feedIDs: Set<String>, _ cutoffDate: Date, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
@@ -98,16 +98,16 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Starred Articles
 
-	func fetchStarredArticles(_ feedIDs: Set<String>, _ limit: Int?) -> Set<Article> {
-		fetchArticles { self.fetchStarredArticles(feedIDs, limit, $0) }
+	func fetchStarredArticles(_ feedIDs: Set<String>, _ limit: Int?) throws -> Set<Article> {
+		try fetchArticles { self.fetchStarredArticles(feedIDs, limit, $0) }
 	}
 
 	func fetchStarredArticlesAsync(_ feedIDs: Set<String>, _ limit: Int?, _ completion: @escaping ArticleSetResultBlock) {
 		fetchArticlesAsync({ self.fetchStarredArticles(feedIDs, limit, $0) }, completion)
 	}
 
-	func fetchStarredArticlesCount(_ feedIDs: Set<String>) -> Int {
-		fetchArticlesCount { self.fetchStarredArticlesCount(feedIDs, $0) }
+	func fetchStarredArticlesCount(_ feedIDs: Set<String>) throws -> Int {
+		try fetchArticlesCount { self.fetchStarredArticlesCount(feedIDs, $0) }
 	}
 
 	// MARK: - Fetching Counts Async
@@ -134,24 +134,24 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	// MARK: - Fetching Search Articles
 
-	func fetchArticlesMatching(_ searchString: String) -> Set<Article> {
+	func fetchArticlesMatching(_ searchString: String) throws -> Set<Article> {
 		nonisolated(unsafe) var articles: Set<Article> = Set<Article>()
 
-		queue.runInDatabaseSync { database in
+		guard queue.runInDatabaseSync({ database in
 			articles = self.fetchArticlesMatching(searchString, database)
-		}
+		}) else { throw CancellationError() }
 
 		return articles
 	}
 
-	func fetchArticlesMatching(_ searchString: String, _ feedIDs: Set<String>) -> Set<Article> {
-		var articles = fetchArticlesMatching(searchString)
+	func fetchArticlesMatching(_ searchString: String, _ feedIDs: Set<String>) throws -> Set<Article> {
+		var articles = try fetchArticlesMatching(searchString)
 		articles = articles.filter { feedIDs.contains($0.feedID) }
 		return articles
 	}
 
-	func fetchArticlesMatchingWithArticleIDs(_ searchString: String, _ articleIDs: Set<String>) -> Set<Article> {
-		var articles = fetchArticlesMatching(searchString)
+	func fetchArticlesMatchingWithArticleIDs(_ searchString: String, _ articleIDs: Set<String>) throws -> Set<Article> {
+		var articles = try fetchArticlesMatching(searchString)
 		articles = articles.filter { articleIDs.contains($0.articleID) }
 		return articles
 	}
@@ -379,11 +379,13 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 	func fetchUnreadCounts(_ feedIDs: Set<String>, _ completion: @escaping UnreadCountDictionaryCompletionBlock) {
 		if feedIDs.isEmpty {
-			completion(UnreadCountDictionary())
+			queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { _ in
+				DispatchQueue.main.async { completion(.success([:])) }
+			}
 			return
 		}
 
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([:]) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select distinct feedID, count(*) from articles natural join statuses where feedID in \(placeholders) and read=0 group by feedID;"
 
@@ -391,7 +393,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: parameters) else {
 				DispatchQueue.main.async {
-					completion(UnreadCountDictionary())
+					completion(.success(UnreadCountDictionary()))
 				}
 				return
 			}
@@ -401,7 +403,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 
 			let unreadCountDictionary = self.unreadCountDictionary(with: resultSet)
 			DispatchQueue.main.async {
-				completion(unreadCountDictionary)
+				completion(.success(unreadCountDictionary))
 			}
 		}
 	}
@@ -409,29 +411,33 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func fetchUnreadCount(_ feedIDs: Set<String>, _ since: Date, _ completion: @escaping SingleUnreadCountCompletionBlock) {
 		// Get unread count for today, for instance.
 		if feedIDs.isEmpty {
-			completion(0)
+			queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { _ in
+				DispatchQueue.main.async { completion(.success(0)) }
+			}
 			return
 		}
 
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let (whereClause, parameters) = self.sinceWhereClauseAndParameters(feedIDs, since)
 			let sql = "select count(*) from articles natural join statuses where \(whereClause) and read=0;"
 
 			let unreadCount = self.numberWithSQLAndParameters(sql, parameters, in: database)
 
 			DispatchQueue.main.async {
-				completion(unreadCount)
+				completion(.success(unreadCount))
 			}
 		}
 	}
 
 	func fetchStarredAndUnreadCount(_ feedIDs: Set<String>, _ completion: @escaping SingleUnreadCountCompletionBlock) {
 		if feedIDs.isEmpty {
-			completion(0)
+			queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { _ in
+				DispatchQueue.main.async { completion(.success(0)) }
+			}
 			return
 		}
 
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and read=0 and starred=1;"
 			let parameters = Array(feedIDs) as [Any]
@@ -439,7 +445,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let unreadCount = self.numberWithSQLAndParameters(sql, parameters, in: database)
 
 			DispatchQueue.main.async {
-				completion(unreadCount)
+				completion(.success(unreadCount))
 			}
 		}
 	}
@@ -447,29 +453,33 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	func fetchArticlesCountSince(_ feedIDs: Set<String>, _ cutoffDate: Date, _ completion: @escaping SingleUnreadCountCompletionBlock) {
 		// Total count (read and unread) since a cutoff date — today's count, for instance.
 		if feedIDs.isEmpty {
-			completion(0)
+			queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { _ in
+				DispatchQueue.main.async { completion(.success(0)) }
+			}
 			return
 		}
 
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let (whereClause, parameters) = self.sinceWhereClauseAndParameters(feedIDs, cutoffDate)
 			let sql = "select count(*) from articles natural join statuses where \(whereClause);"
 
 			let count = self.numberWithSQLAndParameters(sql, parameters, in: database)
 
 			DispatchQueue.main.async {
-				completion(count)
+				completion(.success(count))
 			}
 		}
 	}
 
 	func fetchStarredArticlesCountAsync(_ feedIDs: Set<String>, _ completion: @escaping SingleUnreadCountCompletionBlock) {
 		if feedIDs.isEmpty {
-			completion(0)
+			queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { _ in
+				DispatchQueue.main.async { completion(.success(0)) }
+			}
 			return
 		}
 
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(0) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let placeholders = NSString.rs_SQLValueList(withPlaceholders: UInt(feedIDs.count))
 			let sql = "select count(*) from articles natural join statuses where feedID in \(placeholders) and starred=1;"
 			let parameters = Array(feedIDs) as [Any]
@@ -477,7 +487,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 			let count = self.numberWithSQLAndParameters(sql, parameters, in: database)
 
 			DispatchQueue.main.async {
-				completion(count)
+				completion(.success(count))
 			}
 		}
 	}
@@ -510,10 +520,10 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	}
 
 	func markAndFetchNew(_ articleIDs: Set<String>, _ statusKey: ArticleStatus.Key, _ flag: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
+		queue.runInTransaction(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let newStatusIDs = self.statusesTable.markAndFetchNew(articleIDs, statusKey, flag, database)
 			DispatchQueue.main.async {
-				completion(newStatusIDs)
+				completion(.success(newStatusIDs))
 			}
 		}
 	}
@@ -664,29 +674,29 @@ nonisolated private extension ArticlesTable {
 
 	// MARK: - Fetching
 
-	private func fetchArticles(_ fetchMethod: @escaping ArticlesFetchMethod) -> Set<Article> {
+	private func fetchArticles(_ fetchMethod: @escaping ArticlesFetchMethod) throws -> Set<Article> {
 		nonisolated(unsafe) var articles = Set<Article>()
 
-		queue.runInDatabaseSync { database in
+		guard queue.runInDatabaseSync({ database in
 			articles = fetchMethod(database)
-		}
+		}) else { throw CancellationError() }
 		return articles
 	}
 
-	private func fetchArticlesCount(_ fetchMethod: @escaping ArticlesCountFetchMethod) -> Int {
+	private func fetchArticlesCount(_ fetchMethod: @escaping ArticlesCountFetchMethod) throws -> Int {
 		nonisolated(unsafe) var articlesCount = 0
 
-		queue.runInDatabaseSync { database in
+		guard queue.runInDatabaseSync({ database in
 			articlesCount = fetchMethod(database)
-		}
+		}) else { throw CancellationError() }
 		return articlesCount
 	}
 
 	private func fetchArticlesAsync(_ fetchMethod: @escaping ArticlesFetchMethod, _ completion: @escaping ArticleSetResultBlock) {
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let articles = fetchMethod(database)
 			DispatchQueue.main.async {
-				completion(articles)
+				completion(.success(articles))
 			}
 		}
 	}

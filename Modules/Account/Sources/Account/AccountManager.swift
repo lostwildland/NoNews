@@ -423,17 +423,17 @@ import ActivityLog
 
 	// These fetch articles from active accounts and return a merged Set<Article>.
 
-	public func fetchArticles(_ fetchType: FetchType) -> Set<Article> {
+	public func fetchArticles(_ fetchType: FetchType) throws -> Set<Article> {
 		precondition(Thread.isMainThread)
 
 		var articles = Set<Article>()
 		for account in activeAccounts {
-			articles.formUnion(account.fetchArticles(fetchType))
+			articles.formUnion(try account.fetchArticles(fetchType))
 		}
 		return articles
 	}
 
-	public func fetchArticlesAsync(_ fetchType: FetchType) async -> Set<Article> {
+	public func fetchArticlesAsync(_ fetchType: FetchType) async throws -> Set<Article> {
 		precondition(Thread.isMainThread)
 
 		guard activeAccounts.count > 0 else {
@@ -442,7 +442,7 @@ import ActivityLog
 
 		var allFetchedArticles = Set<Article>()
 		for account in activeAccounts {
-			let articles = await account.fetchArticlesAsync(fetchType)
+			let articles = try await account.fetchArticlesAsync(fetchType)
 			allFetchedArticles.formUnion(articles)
 		}
 
@@ -450,51 +450,51 @@ import ActivityLog
 	}
 
 	/// Fetch a single article (synchronously) by accountID and articleID.
-	public func fetchArticle(accountID: String, articleID: String) -> Article? {
+	public func fetchArticle(accountID: String, articleID: String) throws -> Article? {
 		precondition(Thread.isMainThread)
 
 		guard let account = existingAccount(accountID: accountID) else {
 			return nil
 		}
 
-		let articles = account.fetchArticles(.articleIDs(Set([articleID])))
+		let articles = try account.fetchArticles(.articleIDs(Set([articleID])))
 		return articles.first
 	}
 
 	// MARK: - Fetching Article Counts
 
-	public func fetchCountForStarredArticles() -> Int {
+	public func fetchCountForStarredArticles() throws -> Int {
 		precondition(Thread.isMainThread)
 		var count = 0
 		for account in activeAccounts {
-			count += account.fetchCountForStarredArticles()
+			count += try account.fetchCountForStarredArticles()
 		}
 		return count
 	}
 
-	public func fetchCountForStarredArticlesAsync() async -> Int {
+	public func fetchCountForStarredArticlesAsync() async throws -> Int {
 		precondition(Thread.isMainThread)
 		var count = 0
 		for account in activeAccounts {
-			count += await account.fetchCountForStarredArticlesAsync()
+			count += try await account.fetchCountForStarredArticlesAsync()
 		}
 		return count
 	}
 
-	public func fetchCountForTodayArticlesAsync() async -> Int {
+	public func fetchCountForTodayArticlesAsync() async throws -> Int {
 		precondition(Thread.isMainThread)
 		var count = 0
 		for account in activeAccounts {
-			count += await account.fetchCountForTodayArticlesAsync()
+			count += try await account.fetchCountForTodayArticlesAsync()
 		}
 		return count
 	}
 
-	public func fetchUnreadCountForTodayAsync() async -> Int {
+	public func fetchUnreadCountForTodayAsync() async throws -> Int {
 		precondition(Thread.isMainThread)
 		var count = 0
 		for account in activeAccounts {
-			count += await account.fetchUnreadCountForTodayAsync()
+			count += try await account.fetchUnreadCountForTodayAsync()
 		}
 		return count
 	}

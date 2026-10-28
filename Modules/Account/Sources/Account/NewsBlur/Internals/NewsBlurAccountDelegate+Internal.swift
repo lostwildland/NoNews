@@ -297,51 +297,53 @@ import os
 		return sentCount
 	}
 
-	func syncStoryReadState(account: Account, hashes: Set<NewsBlurStoryHash>?) async -> Int {
+	func syncStoryReadState(account: Account, hashes: Set<NewsBlurStoryHash>?) async throws -> Int {
 		guard let hashes else {
 			return 0
 		}
 
-		guard let pendingStoryHashes = try? await syncDatabase.selectPendingReadStatusArticleIDs() else {
-			return 0
-		}
+		let pendingStoryHashes: Set<String>
+		do { pendingStoryHashes = try await syncDatabase.selectPendingReadStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let newsBlurUnreadStoryHashes = Set(hashes.map { $0.hash })
-		let currentUnreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		let currentUnreadArticleIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
 		// Mark articles as unread
 		let deltaUnreadArticleIDs = newsBlurUnreadStoryHashes.subtracting(currentUnreadArticleIDs).subtracting(pendingStoryHashes)
-		let markedUnread = await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
+		let markedUnread = try await account.markAsUnreadAsync(articleIDs: deltaUnreadArticleIDs)
 
 		// Mark articles as read
 		let deltaReadArticleIDs = currentUnreadArticleIDs.subtracting(newsBlurUnreadStoryHashes).subtracting(pendingStoryHashes)
-		let markedRead = await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
+		let markedRead = try await account.markAsReadAsync(articleIDs: deltaReadArticleIDs)
 
 		return markedUnread.count + markedRead.count
 	}
 
-	func syncStoryStarredState(account: Account, hashes: Set<NewsBlurStoryHash>?) async -> Int {
+	func syncStoryStarredState(account: Account, hashes: Set<NewsBlurStoryHash>?) async throws -> Int {
 		guard let hashes else {
 			return 0
 		}
-		guard let pendingStoryHashes = try? await syncDatabase.selectPendingStarredStatusArticleIDs() else {
-			return 0
-		}
+		let pendingStoryHashes: Set<String>
+		do { pendingStoryHashes = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { return 0 }
 
 		let newsBlurStarredStoryHashes = Set(hashes.map { $0.hash })
-		let currentStarredArticleIDs = await account.fetchStarredArticleIDsAsync()
+		let currentStarredArticleIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Skip articles with pending local changes in both directions — the pending send is the truth.
 
 		// Mark articles as starred
 		let deltaStarredArticleIDs = newsBlurStarredStoryHashes.subtracting(currentStarredArticleIDs).subtracting(pendingStoryHashes)
-		let markedStarred = await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
+		let markedStarred = try await account.markAsStarredAsync(articleIDs: deltaStarredArticleIDs)
 
 		// Mark articles as unstarred
 		let deltaUnstarredArticleIDs = currentStarredArticleIDs.subtracting(newsBlurStarredStoryHashes).subtracting(pendingStoryHashes)
-		let markedUnstarred = await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
+		let markedUnstarred = try await account.markAsUnstarredAsync(articleIDs: deltaUnstarredArticleIDs)
 
 		return markedStarred.count + markedUnstarred.count
 	}

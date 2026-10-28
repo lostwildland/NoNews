@@ -103,7 +103,7 @@ final class CloudKitSendStatusOperation: MainThreadOperation, @unchecked Sendabl
 		}
 
 		let articleIDs = syncStatuses.map({ $0.articleID })
-		let articles = await account.fetchArticlesAsync(.articleIDs(Set(articleIDs)))
+		let articles = try await account.fetchArticlesAsync(.articleIDs(Set(articleIDs)))
 
 		let syncStatusesDict = Dictionary(grouping: syncStatuses, by: { $0.articleID })
 		let articlesDict = articles.reduce(into: [String: Article]()) { result, article in

@@ -23,20 +23,20 @@ import ArticlesDatabase
 		self.database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "test", retentionStyle: .feedBased)
 	}
 
-	@Test func statusRepairFixesStaleReadStatusRows() async {
+	@Test func statusRepairFixesStaleReadStatusRows() async throws {
 		let articles = await seedTwoUnreadArticles()
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 
 		// Reproduce a lost write: read in memory, unread in the database.
 		for article in articles {
 			article.status.setBoolStatus(true, forKey: .read)
 		}
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 
 		// The count query is enqueued behind the repair on the serial database
 		// queue, so it sees the repaired rows.
 		database.repairStatuses()
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
 
 	@Test func markRepairsStaleReadStatusRows() async throws {
@@ -44,65 +44,65 @@ import ArticlesDatabase
 		for article in articles {
 			article.status.setBoolStatus(true, forKey: .read)
 		}
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 
 		// Marking repairs the rows even though memory already matches,
 		// and reports no changed articles.
 		let articleIDs = Set(articles.map { $0.articleID })
 		let changedArticleIDs = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 		#expect(changedArticleIDs.isEmpty)
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
 
-	@Test func statusRepairFixesStaleStarredStatusRows() async {
+	@Test func statusRepairFixesStaleStarredStatusRows() async throws {
 		let articles = await seedTwoUnreadArticles()
 		for article in articles {
 			article.status.setBoolStatus(true, forKey: .starred)
 		}
-		#expect(await database.fetchStarredArticleIDsAsync().isEmpty)
+		#expect(try await database.fetchStarredArticleIDsAsync().isEmpty)
 
 		database.repairStatuses()
 
 		let articleIDs = Set(articles.map { $0.articleID })
-		#expect(await database.fetchStarredArticleIDsAsync() == articleIDs)
+		#expect(try await database.fetchStarredArticleIDsAsync() == articleIDs)
 	}
 
-	@Test func statusRepairIsHarmlessWhenNothingIsStale() async {
+	@Test func statusRepairIsHarmlessWhenNothingIsStale() async throws {
 		_ = await seedTwoUnreadArticles()
 
 		database.repairStatuses()
 
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
-		#expect(await database.fetchStarredArticleIDsAsync().isEmpty)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchStarredArticleIDsAsync().isEmpty)
 	}
 
 	@Test func statusRepairFixesStaleUnreadStatusRows() async throws {
 		let articles = await seedTwoUnreadArticles()
 		let articleIDs = Set(articles.map { $0.articleID })
 		_ = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 
 		// Reproduce a lost write in the other direction: unread in memory, read in the database.
 		for article in articles {
 			article.status.setBoolStatus(false, forKey: .read)
 		}
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 
 		database.repairStatuses()
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 	}
 
-	@Test func statusRepairFixesMoreStatusesThanOneChunk() async {
+	@Test func statusRepairFixesMoreStatusesThanOneChunk() async throws {
 		// More than the repair pass's 500-status chunk, so the second chunk is exercised.
 		let articleCount = 501
 		let articles = await seedUnreadArticles(count: articleCount)
 		for article in articles {
 			article.status.setBoolStatus(true, forKey: .read)
 		}
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == articleCount)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == articleCount)
 
 		database.repairStatuses()
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 	}
 
 	@Test func normalMarksStillReportChanges() async throws {
@@ -111,11 +111,11 @@ import ArticlesDatabase
 
 		let markedRead = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: true)
 		#expect(markedRead == articleIDs)
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 0)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 0)
 
 		let markedUnread = try await database.markAsync(articleIDs: articleIDs, statusKey: .read, flag: false)
 		#expect(markedUnread == articleIDs)
-		#expect(await database.fetchUnreadCountAsync(feedID: feedID) == 2)
+		#expect(try await database.fetchUnreadCountAsync(feedID: feedID) == 2)
 	}
 }
 

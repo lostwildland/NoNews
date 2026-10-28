@@ -90,7 +90,7 @@ extension SidebarViewController {
 			return
 		}
 
-		let articles = unreadArticles(for: objects)
+		guard let articles = try? unreadArticles(for: objects) else { return }
 		guard let undoManager = undoManager, let markReadCommand = MarkStatusCommand(initialArticles: Array(articles), markingRead: true, undoManager: undoManager) else {
 			return
 		}
@@ -378,12 +378,12 @@ private extension SidebarViewController {
 		return item
 	}
 
-	func unreadArticles(for objects: [Any]) -> Set<Article> {
+	func unreadArticles(for objects: [Any]) throws -> Set<Article> {
 
 		var articles = Set<Article>()
 		for object in objects {
 			if let articleFetcher = object as? ArticleFetcher {
-				let unreadArticles = articleFetcher.fetchUnreadArticles()
+				let unreadArticles = try articleFetcher.fetchUnreadArticles()
 				articles.formUnion(unreadArticles)
 			}
 		}

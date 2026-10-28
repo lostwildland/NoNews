@@ -94,11 +94,15 @@ import Images
 
 		isFetchingUnreadCounts = true
 		Task { @MainActor in
-			var updatedUnreadCount = 0
-			for account in activeAccounts {
-				updatedUnreadCount += await delegate.fetchUnreadCount(account: account)
+			do {
+				var updatedUnreadCount = 0
+				for account in activeAccounts {
+					updatedUnreadCount += try await delegate.fetchUnreadCount(account: account)
+				}
+				unreadCount = updatedUnreadCount
+			} catch {
+				// Keep the last complete count when an account closes.
 			}
-			unreadCount = updatedUnreadCount
 
 			isFetchingUnreadCounts = false
 			if needsRefetch {
@@ -111,20 +115,20 @@ import Images
 
 extension SmartFeed: ArticleFetcher {
 
-	func fetchArticles() -> Set<Article> {
-		delegate.fetchArticles()
+	func fetchArticles() throws -> Set<Article> {
+		try delegate.fetchArticles()
 	}
 
-	func fetchArticlesAsync() async -> Set<Article> {
-		await delegate.fetchArticlesAsync()
+	func fetchArticlesAsync() async throws -> Set<Article> {
+		try await delegate.fetchArticlesAsync()
 	}
 
-	func fetchUnreadArticles() -> Set<Article> {
-		delegate.fetchUnreadArticles()
+	func fetchUnreadArticles() throws -> Set<Article> {
+		try delegate.fetchUnreadArticles()
 	}
 
-	func fetchUnreadArticlesAsync() async -> Set<Article> {
-		await delegate.fetchUnreadArticlesAsync()
+	func fetchUnreadArticlesAsync() async throws -> Set<Article> {
+		try await delegate.fetchUnreadArticlesAsync()
 	}
 }
 

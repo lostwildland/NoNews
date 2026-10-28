@@ -1283,7 +1283,7 @@ private extension TimelineViewController {
 			exceptionArticleFetcher = nil
 		}
 
-		let fetchedArticles = fetchUnsortedArticlesSync(for: representedObjects)
+		guard let fetchedArticles = try? fetchUnsortedArticlesSync(for: representedObjects) else { return }
 		replaceArticles(with: fetchedArticles)
 	}
 
@@ -1316,7 +1316,7 @@ private extension TimelineViewController {
 		articles = Array(unsortedArticles).sorted(by: sortParameters)
 	}
 
-	func fetchUnsortedArticlesSync(for representedObjects: [Any]) -> Set<Article> {
+	func fetchUnsortedArticlesSync(for representedObjects: [Any]) throws -> Set<Article> {
 		cancelPendingAsyncFetches()
 		let fetchers = representedObjects.compactMap { $0 as? ArticleFetcher }
 		if fetchers.isEmpty {
@@ -1326,10 +1326,10 @@ private extension TimelineViewController {
 		var fetchedArticles = Set<Article>()
 		for fetchers in fetchers {
 			if (fetchers as? SidebarItem)?.readFiltered(readFilterEnabledTable: readFilterEnabledTable) ?? true {
-				let articles = fetchers.fetchUnreadArticles()
+				let articles = try fetchers.fetchUnreadArticles()
 				fetchedArticles.formUnion(articles)
 			} else {
-				let articles = fetchers.fetchArticles()
+				let articles = try fetchers.fetchArticles()
 				fetchedArticles.formUnion(articles)
 			}
 		}

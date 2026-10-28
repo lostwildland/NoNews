@@ -193,7 +193,7 @@ import Articles
 
 	@objc(articles)
 	var articles: NSArray {
-		let feedArticles = feed.fetchArticles()
+		guard let feedArticles = scriptArticles() else { return [] }
 		// the articles are a set, use the sorting algorithm from the viewer
 		let sortedArticles = feedArticles.sorted(by: {
 			return $0.logicalDatePublished > $1.logicalDatePublished
@@ -203,10 +203,19 @@ import Articles
 
 	@objc(valueInArticlesWithUniqueID:)
 	func valueInArticles(withUniqueID id: String) -> ScriptableArticle? {
-		let articles = feed.fetchArticles()
+		guard let articles = scriptArticles() else { return nil }
 		guard let article = articles.first(where: {$0.uniqueID == id}) else {
 			return nil
 		}
 		return ScriptableArticle(article, container: self)
 	}
+	private func scriptArticles() -> Set<Article>? {
+		do { return try feed.fetchArticles() }
+		catch {
+			NSScriptCommand.current()?.scriptErrorNumber = -128
+			NSScriptCommand.current()?.scriptErrorString = error.localizedDescription
+			return nil
+		}
+	}
+
 }

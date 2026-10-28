@@ -1084,7 +1084,7 @@ private extension CloudKitAccountDelegate {
 				syncProgress.completeTask()
 			}
 			do {
-				let articles = await account.fetchArticlesAsync(.feed(feed))
+				let articles = try await account.fetchArticlesAsync(.feed(feed))
 
 				await storeArticleChanges(new: articles, updated: Set<Article>(), deleted: Set<Article>())
 				syncProgress.completeTask()

@@ -54,11 +54,17 @@ final class CloudKitArticlesZoneDelegate: CloudKitZoneDelegate {
 		accumulatedChangedCount += changed.count
 		accumulatedDeletedCount += deleted.count
 
-		let pendingReadStatusArticleIDs = (try? await syncDatabase.selectPendingReadStatusArticleIDs()) ?? Set<String>()
-		let pendingStarredStatusArticleIDs = (try? await syncDatabase.selectPendingStarredStatusArticleIDs()) ?? Set<String>()
+		let pendingReadStatusArticleIDs: Set<String>
+		let pendingStarredStatusArticleIDs: Set<String>
+		do { pendingReadStatusArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { pendingReadStatusArticleIDs = [] }
+		do { pendingStarredStatusArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs() }
+		catch is CancellationError { throw CancellationError() }
+		catch { pendingStarredStatusArticleIDs = [] }
 
 		await delete(recordKeys: deleted, pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
-		await update(records: changed,
+		try await update(records: changed,
 					 pendingReadStatusArticleIDs: pendingReadStatusArticleIDs,
 					 pendingStarredStatusArticleIDs: pendingStarredStatusArticleIDs)
 	}
@@ -79,7 +85,7 @@ private extension CloudKitArticlesZoneDelegate {
 		await account?.delete(articleIDs: deletableArticleIDs)
 	}
 
-	func update(records: [CKRecord], pendingReadStatusArticleIDs: Set<String>, pendingStarredStatusArticleIDs: Set<String>) async {
+	func update(records: [CKRecord], pendingReadStatusArticleIDs: Set<String>, pendingStarredStatusArticleIDs: Set<String>) async throws {
 
 		let receivedUnreadArticleIDs = Set(records.filter({ $0[CloudKitArticlesZone.CloudKitArticleStatus.Fields.read] == "0" }).map({ stripPrefix($0.externalID) }))
 		let receivedReadArticleIDs =  Set(records.filter({ $0[CloudKitArticlesZone.CloudKitArticleStatus.Fields.read] == "1" }).map({ stripPrefix($0.externalID) }))
@@ -97,10 +103,10 @@ private extension CloudKitArticlesZoneDelegate {
 			return Dictionary(grouping: parsedItems, by: { item in item.feedURL }).mapValues { Set($0) }
 		}.value
 
-		await self.account?.markAsUnreadAsync(articleIDs: updateableUnreadArticleIDs)
-		await self.account?.markAsReadAsync(articleIDs: updateableReadArticleIDs)
-		await self.account?.markAsUnstarredAsync(articleIDs: updateableUnstarredArticleIDs)
-		await self.account?.markAsStarredAsync(articleIDs: updateableStarredArticleIDs)
+		try await self.account?.markAsUnreadAsync(articleIDs: updateableUnreadArticleIDs)
+		try await self.account?.markAsReadAsync(articleIDs: updateableReadArticleIDs)
+		try await self.account?.markAsUnstarredAsync(articleIDs: updateableUnstarredArticleIDs)
+		try await self.account?.markAsStarredAsync(articleIDs: updateableStarredArticleIDs)
 
 		for (feedID, parsedItems) in feedIDsAndItems {
 			guard let articleChanges = await self.account?.updateAsync(feedID: feedID, parsedItems: parsedItems, deleteOlder: false) else {

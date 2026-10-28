@@ -196,6 +196,8 @@ import Secrets
 				var summary = RefreshAllSummary()
 				do {
 					summary.statusesSent = try await sendArticleStatusReturningCount(for: account)
+				} catch is CancellationError {
+					throw CancellationError()
 				} catch {
 					// A failed status send must not block fetching new articles.
 					// <https://discourse.netnewswire.com/t/no-feed-updates/336>
@@ -217,14 +219,14 @@ import Secrets
 				// reuse them instead of walking global.all a second time with the same bounds.
 				// On a first sync there is no updated set: everything is new.
 				let updatedIDs = accountSettings?.lastArticleFetchStartTime == nil ? Set<String>() : streamArticleIDs
-				let missingIDs = await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
+				let missingIDs = try await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
 				refreshProgress.completeTask()
 				// Updated articles first — missing ones are recomputed every sync, so they
 				// survive the per-sync download cap. A truncated update would be lost.
 				let downloadIDs = Array(updatedIDs) + Array(missingIDs.subtracting(updatedIDs))
 				summary.articlesDownloaded = try await downloadEntries(for: account, articleIDs: downloadIDs)
 				refreshProgress.completeTask()
-				summary.newArticlesFromFeedRefresh = await refreshIndividualFeeds(for: account)
+				summary.newArticlesFromFeedRefresh = try await refreshIndividualFeeds(for: account)
 				refreshProgress.completeTask()
 				return summary
 			}
@@ -359,7 +361,7 @@ import Secrets
 					// succeed — they’d requeue forever and grow the backlog without bound.
 					// <https://github.com/Ranchero-Software/NetNewsWire/issues/3779>
 					if pairing.key == .read, pairing.flag == true {
-						let articles = await account.fetchArticlesAsync(.articleIDs(articleIDs))
+						let articles = try await account.fetchArticlesAsync(.articleIDs(articleIDs))
 						// Feedly’s marker limit is on the crawl date, which isn’t stored. dateArrived
 						// can’t precede the crawl, so if even the newer of these two dates is past the
 						// cutoff, the crawl certainly is. An old article crawled recently is kept.
@@ -1039,7 +1041,7 @@ private extension FeedlyAccountDelegate {
 		let newerThan = Date().bySubtracting(days: Self.streamFetchDaysLimit)
 		let (remoteUnreadIDs, truncated) = try await collectStreamIDs(for: account, resource: resource, kind: .refreshArticleStatuses, newerThan: newerThan, unreadOnly: true)
 
-		let localUnreadIDs = await account.fetchUnreadArticleIDsAsync()
+		let localUnreadIDs = try await account.fetchUnreadArticleIDsAsync()
 
 		// Read the pending set last, right before the diffs — an edit made during the
 		// fetches above must be in it, or the marks below would briefly revert the edit.
@@ -1048,20 +1050,22 @@ private extension FeedlyAccountDelegate {
 		let pendingArticleIDs: Set<String>
 		do {
 			pendingArticleIDs = try await syncDatabase.selectPendingReadStatusArticleIDs()
+		} catch is CancellationError {
+			throw CancellationError()
 		} catch {
 			throw FeedlyAccountDelegateError.databaseReadFailed(error.localizedDescription)
 		}
 		let adjustedRemoteUnreadIDs = remoteUnreadIDs.subtracting(pendingArticleIDs)
 
 		let newlyUnread = adjustedRemoteUnreadIDs.subtracting(localUnreadIDs)
-		await account.markAsUnreadAsync(articleIDs: adjustedRemoteUnreadIDs)
+		try await account.markAsUnreadAsync(articleIDs: adjustedRemoteUnreadIDs)
 
 		// A truncated walk isn’t authoritative about absence — marking read from it
 		// would flip everything past the page cap.
 		var toMarkRead = Set<String>()
 		if !truncated {
 			toMarkRead = localUnreadIDs.subtracting(adjustedRemoteUnreadIDs).subtracting(pendingArticleIDs)
-			await account.markAsReadAsync(articleIDs: toMarkRead)
+			try await account.markAsReadAsync(articleIDs: toMarkRead)
 		}
 
 		return (added: newlyUnread.count, removed: toMarkRead.count)
@@ -1075,7 +1079,7 @@ private extension FeedlyAccountDelegate {
 		let resource = FeedlyTagResourceID.Global.saved(for: userID)
 		let (remoteStarredIDs, truncated) = try await collectStreamIDs(for: account, resource: resource, kind: .refreshArticleStatuses, unreadOnly: nil)
 
-		let localStarredIDs = await account.fetchStarredArticleIDsAsync()
+		let localStarredIDs = try await account.fetchStarredArticleIDsAsync()
 
 		// Read the pending set last, right before the diffs — an edit made during the
 		// fetches above must be in it, or the marks below would briefly revert the edit.
@@ -1084,20 +1088,22 @@ private extension FeedlyAccountDelegate {
 		let pendingArticleIDs: Set<String>
 		do {
 			pendingArticleIDs = try await syncDatabase.selectPendingStarredStatusArticleIDs()
+		} catch is CancellationError {
+			throw CancellationError()
 		} catch {
 			throw FeedlyAccountDelegateError.databaseReadFailed(error.localizedDescription)
 		}
 		let adjustedRemoteStarredIDs = remoteStarredIDs.subtracting(pendingArticleIDs)
 
 		let newlyStarred = adjustedRemoteStarredIDs.subtracting(localStarredIDs)
-		await account.markAsStarredAsync(articleIDs: adjustedRemoteStarredIDs)
+		try await account.markAsStarredAsync(articleIDs: adjustedRemoteStarredIDs)
 
 		// A truncated walk isn’t authoritative about absence — unstarring from it
 		// would strip every star past the page cap.
 		var toUnstar = Set<String>()
 		if !truncated {
 			toUnstar = localStarredIDs.subtracting(adjustedRemoteStarredIDs).subtracting(pendingArticleIDs)
-			await account.markAsUnstarredAsync(articleIDs: toUnstar)
+			try await account.markAsUnstarredAsync(articleIDs: toUnstar)
 		}
 
 		return (added: newlyStarred.count, removed: toUnstar.count)
@@ -1160,7 +1166,7 @@ private extension FeedlyAccountDelegate {
 	/// Feedly stream. Backfills articles that the aggregate global.all stream doesn't return.
 	/// <https://github.com/Ranchero-Software/NetNewsWire/issues/4635>
 	/// Returns the total number of new articles across the refreshed feeds.
-	func refreshIndividualFeeds(for account: Account) async -> Int {
+	func refreshIndividualFeeds(for account: Account) async throws -> Int {
 		let now = Date()
 		let due = account.flattenedFeeds()
 			.filter { feed in
@@ -1189,8 +1195,10 @@ private extension FeedlyAccountDelegate {
 				newArticleCount += result.newArticleCount
 				// saveEntries marks new articles read by default; restore the server's unread state for the ones that are unread.
 				if !result.newUnreadArticleIDs.isEmpty {
-					await account.markAsUnreadAsync(articleIDs: result.newUnreadArticleIDs)
+					try await account.markAsUnreadAsync(articleIDs: result.newUnreadArticleIDs)
 				}
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				// Arm the limiter and stop the rotation — refreshing more feeds would extend the ban.
 				if rateLimiter.isRateLimitError(error) {

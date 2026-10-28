@@ -135,24 +135,32 @@ import Secrets
 
 			do {
 				sentCount += try await sendStoryStatuses(createUnreadStatuses, throttle: true, apiCall: caller.markAsUnread)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendStoryStatuses(deleteUnreadStatuses, throttle: false, apiCall: caller.markAsRead)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendStoryStatuses(createStarredStatuses, throttle: true, apiCall: caller.star)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
 
 			do {
 				sentCount += try await sendStoryStatuses(deleteStarredStatuses, throttle: true, apiCall: caller.unstar)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				savedError = error
 			}
@@ -186,7 +194,9 @@ import Secrets
 
 			do {
 				let storyHashes = try await caller.retrieveUnreadStoryHashes()
-				changedCount += await syncStoryReadState(account: account, hashes: storyHashes)
+				changedCount += try await syncStoryReadState(account: account, hashes: storyHashes)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				Self.logger.error("NewsBlur: error retrieving unread stories: \(error.localizedDescription)")
 				savedError = error
@@ -194,7 +204,9 @@ import Secrets
 
 			do {
 				let storyHashes = try await caller.retrieveStarredStoryHashes()
-				changedCount += await syncStoryStarredState(account: account, hashes: storyHashes)
+				changedCount += try await syncStoryStarredState(account: account, hashes: storyHashes)
+			} catch is CancellationError {
+				throw CancellationError()
 			} catch {
 				Self.logger.error("NewsBlur: error retrieving starred stories: \(error.localizedDescription)")
 				savedError = error
@@ -232,7 +244,7 @@ import Secrets
 		}
 
 		try await account.logActivity(kind: .refreshMissingArticles) {
-			let fetchedArticleIDs = await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
+			let fetchedArticleIDs = try await account.fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync()
 
 			var savedError: Error?
 

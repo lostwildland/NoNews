@@ -30,43 +30,43 @@ import ArticlesDatabase
 
 	@Test func todayUnreadCountAcrossFeeds() async throws {
 		try await seedArticles()
-		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA, feedB]) == 2)
+		#expect(try await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA, feedB]) == 2)
 	}
 
 	@Test func todayUnreadCountForOneFeed() async throws {
 		try await seedArticles()
-		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA]) == 1)
-		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedB]) == 1)
+		#expect(try await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA]) == 1)
+		#expect(try await database.fetchUnreadCountForTodayAsync(feedIDs: [feedB]) == 1)
 	}
 
 	@Test func todayTotalCountAcrossFeeds() async throws {
 		try await seedArticles()
-		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedA, feedB]) == 4)
+		#expect(try await database.fetchTodayArticlesCountAsync(feedIDs: [feedA, feedB]) == 4)
 	}
 
 	@Test func todayTotalCountForOneFeed() async throws {
 		try await seedArticles()
-		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedA]) == 2)
-		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: [feedB]) == 2)
+		#expect(try await database.fetchTodayArticlesCountAsync(feedIDs: [feedA]) == 2)
+		#expect(try await database.fetchTodayArticlesCountAsync(feedIDs: [feedB]) == 2)
 	}
 
 	@Test func todayArticlesAcrossFeeds() async throws {
 		try await seedArticles()
-		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB])
+		let articles = try await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB])
 		let expected = articleIDs(forUniqueIDs: ["a-recent", "a-nil", "b-recent", "b-nil"])
 		#expect(Set(articles.map { $0.articleID }) == expected)
 	}
 
 	@Test func todayArticlesForOneFeed() async throws {
 		try await seedArticles()
-		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA])
+		let articles = try await database.fetchTodayArticlesAsync(feedIDs: [feedA])
 		let expected = articleIDs(forUniqueIDs: ["a-recent", "a-nil"])
 		#expect(Set(articles.map { $0.articleID }) == expected)
 	}
 
 	@Test func todayArticlesWithLimit() async throws {
 		try await seedArticles()
-		let articles = await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB], limit: 3)
+		let articles = try await database.fetchTodayArticlesAsync(feedIDs: [feedA, feedB], limit: 3)
 		#expect(articles.count == 3)
 		let inWindow = articleIDs(forUniqueIDs: ["a-recent", "a-nil", "b-recent", "b-nil"])
 		#expect(Set(articles.map { $0.articleID }).isSubset(of: inWindow))
@@ -74,9 +74,9 @@ import ArticlesDatabase
 
 	@Test func emptyFeedIDsReturnNothing() async throws {
 		try await seedArticles()
-		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: []) == 0)
-		#expect(await database.fetchTodayArticlesCountAsync(feedIDs: []) == 0)
-		#expect(await database.fetchTodayArticlesAsync(feedIDs: []).isEmpty)
+		#expect(try await database.fetchUnreadCountForTodayAsync(feedIDs: []) == 0)
+		#expect(try await database.fetchTodayArticlesCountAsync(feedIDs: []) == 0)
+		#expect(try await database.fetchTodayArticlesAsync(feedIDs: []).isEmpty)
 	}
 }
 

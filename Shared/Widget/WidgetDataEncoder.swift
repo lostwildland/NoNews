@@ -80,7 +80,12 @@ import Account
 
 		removeStaleFaviconsFromSharedContainer()
 
-		let latestData = await fetchWidgetData()
+		let latestData: WidgetData
+		do {
+			latestData = try await fetchWidgetData()
+		} catch {
+			return
+		}
 		let encodedData: Data
 		do {
 			encodedData = try JSONEncoder().encode(latestData)
@@ -139,19 +144,19 @@ import Account
 
 @MainActor private extension WidgetDataEncoder {
 
-	func fetchWidgetData() async -> WidgetData {
-		let fetchedUnreadArticles = await AccountManager.shared.fetchArticlesAsync(.unread(fetchLimit))
+	func fetchWidgetData() async throws -> WidgetData {
+		let fetchedUnreadArticles = try await AccountManager.shared.fetchArticlesAsync(.unread(fetchLimit))
 		let unreadArticles = sortedLatestArticles(fetchedUnreadArticles)
 
-		let fetchedStarredArticles = await AccountManager.shared.fetchArticlesAsync(.starred(fetchLimit))
+		let fetchedStarredArticles = try await AccountManager.shared.fetchArticlesAsync(.starred(fetchLimit))
 		let starredArticles = sortedLatestArticles(fetchedStarredArticles)
 
-		let fetchedTodayArticles = await AccountManager.shared.fetchArticlesAsync(.today(fetchLimit))
+		let fetchedTodayArticles = try await AccountManager.shared.fetchArticlesAsync(.today(fetchLimit))
 		let todayArticles = sortedLatestArticles(fetchedTodayArticles)
 
-		let totalTodayCount = await AccountManager.shared.fetchCountForTodayArticlesAsync()
-		let totalTodayUnreadCount = await AccountManager.shared.fetchUnreadCountForTodayAsync()
-		let totalStarredCount = await AccountManager.shared.fetchCountForStarredArticlesAsync()
+		let totalTodayCount = try await AccountManager.shared.fetchCountForTodayArticlesAsync()
+		let totalTodayUnreadCount = try await AccountManager.shared.fetchUnreadCountForTodayAsync()
+		let totalStarredCount = try await AccountManager.shared.fetchCountForStarredArticlesAsync()
 
 		let latestData = WidgetData(totalUnreadCount: SmartFeedsController.shared.unreadFeed.unreadCount,
 									totalTodayCount: totalTodayCount,

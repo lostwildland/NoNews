@@ -1373,7 +1373,7 @@ extension MainTimelineViewController {
 			return nil
 		}
 
-		let fetchedArticles = feed.fetchArticles()
+		guard let fetchedArticles = try? feed.fetchArticles() else { return nil }
 		let articles = Array(fetchedArticles)
 		guard articles.canMarkAllAsRead(), let collectionView, let contentView = collectionView.cellForItem(at: indexPath)?.contentView else {
 			return nil
@@ -1395,7 +1395,7 @@ extension MainTimelineViewController {
 			return nil
 		}
 
-		let fetchedArticles = feed.fetchArticles()
+		guard let fetchedArticles = try? feed.fetchArticles() else { return nil }
 		let articles = Array(fetchedArticles)
 		guard articles.canMarkAllAsRead(), let collectionView, let contentView = collectionView.cellForItem(at: indexPath)?.contentView else {
 			return nil

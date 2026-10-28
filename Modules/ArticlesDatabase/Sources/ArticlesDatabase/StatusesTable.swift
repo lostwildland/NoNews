@@ -141,27 +141,27 @@ final class StatusesTable: DatabaseTable, Sendable {
 	}
 
 	func fetchArticleIDsAsync(_ statusKey: ArticleStatus.Key, _ value: Bool, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			var sql = "select articleID from statuses where \(statusKey.rawValue)="
 			sql += value ? "1" : "0"
 			sql += ";"
 
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: nil) else {
 				DispatchQueue.main.async {
-					completion(Set<String>())
+					completion(.success(Set<String>()))
 				}
 				return
 			}
 
 			let articleIDs = resultSet.mapToSet { $0.swiftString(forColumnIndex: 0) }
 			DispatchQueue.main.async {
-				completion(articleIDs)
+				completion(.success(articleIDs))
 			}
 		}
 	}
 
 	func fetchArticleIDsForStatusesWithoutArticlesNewerThan(_ cutoffDate: Date, _ completion: @escaping ArticleIDsCompletionBlock) {
-		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion([]) } }) { database in
+		queue.runInDatabase(onRejected: { DispatchQueue.main.async { completion(.failure(CancellationError())) } }) { database in
 			let sql = "select articleID from statuses s where (starred=1 or dateArrived>?) and not exists (select 1 from articles a where a.articleID = s.articleID);"
 			let articleIDs: Set<String>
 			if let resultSet = database.executeQuery(sql, withArgumentsIn: [cutoffDate]) {
@@ -171,7 +171,7 @@ final class StatusesTable: DatabaseTable, Sendable {
 			}
 
 			DispatchQueue.main.async {
-				completion(articleIDs)
+				completion(.success(articleIDs))
 			}
 		}
 	}

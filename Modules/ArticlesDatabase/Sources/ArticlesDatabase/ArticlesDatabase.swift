@@ -152,46 +152,46 @@ public struct ArticleCounts: Sendable {
 
 	// MARK: - Fetching Articles
 
-	public func fetchArticles(feedID: String) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticles(feedID: String) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticles(feedID)
+		return try articlesTable.fetchArticles(feedID)
 	}
 
-	public func fetchArticles(feedIDs: Set<String>) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticles(feedIDs: Set<String>) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticles(feedIDs)
+		return try articlesTable.fetchArticles(feedIDs)
 	}
 
-	public func fetchArticles(articleIDs: Set<String>) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticles(articleIDs: Set<String>) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticles(articleIDs: articleIDs)
+		return try articlesTable.fetchArticles(articleIDs: articleIDs)
 	}
 
-	public func fetchUnreadArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchUnreadArticles(feedIDs: Set<String>, limit: Int? = nil) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchUnreadArticles(feedIDs, limit)
+		return try articlesTable.fetchUnreadArticles(feedIDs, limit)
 	}
 
-	public func fetchTodayArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchTodayArticles(feedIDs: Set<String>, limit: Int? = nil) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticlesSince(feedIDs, todayCutoffDate(), limit)
+		return try articlesTable.fetchArticlesSince(feedIDs, todayCutoffDate(), limit)
 	}
 
-	public func fetchStarredArticles(feedIDs: Set<String>, limit: Int? = nil) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchStarredArticles(feedIDs: Set<String>, limit: Int? = nil) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchStarredArticles(feedIDs, limit)
+		return try articlesTable.fetchStarredArticles(feedIDs, limit)
 	}
 
-	public func fetchStarredArticlesCount(feedIDs: Set<String>) -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchStarredArticlesCount(feedIDs: Set<String>) throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchStarredArticlesCount(feedIDs)
+		return try articlesTable.fetchStarredArticlesCount(feedIDs)
 	}
 
 	/// Returns aggregate article counts (total, unread, starred, statuses) for the given feeds.
@@ -207,16 +207,16 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
-	public func fetchArticlesMatching(searchString: String, feedIDs: Set<String>) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesMatching(searchString: String, feedIDs: Set<String>) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticlesMatching(searchString, feedIDs)
+		return try articlesTable.fetchArticlesMatching(searchString, feedIDs)
 	}
 
-	public func fetchArticlesMatchingWithArticleIDs(searchString: String, articleIDs: Set<String>) -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesMatchingWithArticleIDs(searchString: String, articleIDs: Set<String>) throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return articlesTable.fetchArticlesMatchingWithArticleIDs(searchString, articleIDs)
+		return try articlesTable.fetchArticlesMatchingWithArticleIDs(searchString, articleIDs)
 	}
 
 	/// Returns a dictionary of feedID → latest article date for all feeds with articles.
@@ -234,90 +234,90 @@ public struct ArticleCounts: Sendable {
 
 	// MARK: - Fetching Articles Async
 
-	public func fetchArticlesAsync(feedID: String) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesAsync(feedID: String) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticlesAsync(feedID: feedID) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchArticlesAsync(feedIDs: Set<String>) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesAsync(feedIDs: Set<String>) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticlesAsync(feedIDs: feedIDs) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchArticlesAsync(articleIDs: Set<String>) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesAsync(articleIDs: Set<String>) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticlesAsync(articleIDs: articleIDs) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchUnreadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchUnreadArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchUnreadArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchTodayArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchTodayArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchTodayArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchedStarredArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchedStarredArticlesAsync(feedIDs: Set<String>, limit: Int? = nil) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchedStarredArticlesAsync(feedIDs: feedIDs, limit: limit) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesMatchingAsync(searchString: String, feedIDs: Set<String>) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticlesMatchingAsync(searchString: searchString, feedIDs: feedIDs) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
 
-	public func fetchArticlesMatchingWithArticleIDsAsync(searchString: String, articleIDs: Set<String>) async -> Set<Article> {
-		guard acceptsWork else { return [] }
+	public func fetchArticlesMatchingWithArticleIDsAsync(searchString: String, articleIDs: Set<String>) async throws -> Set<Article> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticlesMatchingWithArticleIDsAsync(searchString: searchString, articleIDs: articleIDs) { articles in
-				continuation.resume(returning: articles)
+				continuation.resume(with: articles)
 			}
 		}
 	}
@@ -338,74 +338,70 @@ public struct ArticleCounts: Sendable {
 	}
 
 	/// Fetch unread count for a single feed.
-	public func fetchUnreadCountAsync(feedID: String) async -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchUnreadCountAsync(feedID: String) async throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
 		Self.logger.debug("ArticlesDatabase: \(#function, privacy: .public) \(self.accountID, privacy: .public)")
-		return await withCheckedContinuation { continuation in
-			_fetchUnreadCounts(feedIDs: Set([feedID])) { unreadCountDictionary in
-				if let unreadCount = unreadCountDictionary[feedID] {
-					continuation.resume(returning: unreadCount)
-				} else {
-					continuation.resume(returning: 0)
-				}
+		return try await withCheckedThrowingContinuation { continuation in
+			_fetchUnreadCounts(feedIDs: Set([feedID])) { result in
+				continuation.resume(with: result.map { $0[feedID] ?? 0 })
 			}
 		}
 	}
 
 	/// Fetch non-zero unread counts for given feedIDs.
-	public func fetchUnreadCountsAsync(feedIDs: Set<String>) async -> UnreadCountDictionary {
-		guard acceptsWork else { return [:] }
+	public func fetchUnreadCountsAsync(feedIDs: Set<String>) async throws -> UnreadCountDictionary {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchUnreadCounts(feedIDs: feedIDs) { unreadCountDictionary in
-				continuation.resume(returning: unreadCountDictionary)
+				continuation.resume(with: unreadCountDictionary)
 			}
 		}
 	}
 
-	public func fetchUnreadCountForTodayAsync(feedIDs: Set<String>) async -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchUnreadCountForTodayAsync(feedIDs: Set<String>) async throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchUnreadCount(feedIDs: feedIDs, since: todayCutoffDate()) { unreadCount in
-				continuation.resume(returning: unreadCount)
+				continuation.resume(with: unreadCount)
 			}
 		}
 	}
 
-	public func fetchUnreadCountForStarredArticlesAsync(feedIDs: Set<String>) async -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchUnreadCountForStarredArticlesAsync(feedIDs: Set<String>) async throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchStarredAndUnreadCount(feedIDs: feedIDs) { unreadCount in
-				continuation.resume(returning: unreadCount)
+				continuation.resume(with: unreadCount)
 			}
 		}
 	}
 
-	public func fetchTodayArticlesCountAsync(feedIDs: Set<String>) async -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchTodayArticlesCountAsync(feedIDs: Set<String>) async throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			articlesTable.fetchArticlesCountSince(feedIDs, todayCutoffDate()) { count in
-				continuation.resume(returning: count)
+				continuation.resume(with: count)
 			}
 		}
 	}
 
-	public func fetchStarredArticlesCountAsync(feedIDs: Set<String>) async -> Int {
-		guard acceptsWork else { return 0 }
+	public func fetchStarredArticlesCountAsync(feedIDs: Set<String>) async throws -> Int {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			articlesTable.fetchStarredArticlesCountAsync(feedIDs) { count in
-				continuation.resume(returning: count)
+				continuation.resume(with: count)
 			}
 		}
 	}
@@ -452,36 +448,36 @@ public struct ArticleCounts: Sendable {
 	// MARK: - ArticleIDs
 
 	/// Fetch the articleIDs of unread articles.
-	public func fetchUnreadArticleIDsAsync() async -> Set<String> {
-		guard acceptsWork else { return [] }
+	public func fetchUnreadArticleIDsAsync() async throws -> Set<String> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchUnreadArticleIDsAsync { articleIDs in
-				continuation.resume(returning: articleIDs)
+				continuation.resume(with: articleIDs)
 			}
 		}
 	}
 
-	public func fetchStarredArticleIDsAsync() async -> Set<String> {
-		guard acceptsWork else { return [] }
+	public func fetchStarredArticleIDsAsync() async throws -> Set<String> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchStarredArticleIDsAsync { articleIDs in
-				continuation.resume(returning: articleIDs)
+				continuation.resume(with: articleIDs)
 			}
 		}
 	}
 
 	/// Fetch articleIDs for articles that we should have, but don’t. These articles are either starred or newer than the article cutoff date.
-	public func fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync() async -> Set<String> {
-		guard acceptsWork else { return [] }
+	public func fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDateAsync() async throws -> Set<String> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_fetchArticleIDsForStatusesWithoutArticlesNewerThanCutoffDate { articleIDs in
-				continuation.resume(returning: articleIDs)
+				continuation.resume(with: articleIDs)
 			}
 		}
 	}
@@ -500,13 +496,13 @@ public struct ArticleCounts: Sendable {
 		}
 	}
 
-	public func markAndFetchNewAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async -> Set<String> {
-		guard acceptsWork else { return [] }
+	public func markAndFetchNewAsync(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws -> Set<String> {
+		guard acceptsWork else { throw CancellationError() }
 		activeOperations += 1
 		defer { operationFinished() }
-		return await withCheckedContinuation { continuation in
+		return try await withCheckedThrowingContinuation { continuation in
 			_markAndFetchNew(articleIDs: articleIDs, statusKey: statusKey, flag: flag) { articleIDs in
-				continuation.resume(returning: articleIDs)
+				continuation.resume(with: articleIDs)
 			}
 		}
 	}
@@ -579,11 +575,11 @@ private extension ArticlesDatabase {
 
 // MARK: - Articles Table (Private)
 
-typealias UnreadCountDictionaryCompletionBlock = @Sendable (UnreadCountDictionary) -> Void
+typealias UnreadCountDictionaryCompletionBlock = @Sendable (Result<UnreadCountDictionary, Error>) -> Void
 typealias UpdateArticlesCompletionBlock = @Sendable (ArticleChanges) -> Void
-typealias SingleUnreadCountCompletionBlock = @Sendable (Int) -> Void
-typealias ArticleSetResultBlock = @Sendable (Set<Article>) -> Void
-typealias ArticleIDsCompletionBlock = @Sendable (Set<String>) -> Void
+typealias SingleUnreadCountCompletionBlock = @Sendable (Result<Int, Error>) -> Void
+typealias ArticleSetResultBlock = @Sendable (Result<Set<Article>, Error>) -> Void
+typealias ArticleIDsCompletionBlock = @Sendable (Result<Set<String>, Error>) -> Void
 typealias ArticleIDsResultBlock = @Sendable (Result<Set<String>, Error>) -> Void
 
 private extension ArticlesDatabase {
