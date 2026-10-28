@@ -69,7 +69,7 @@ class Application:
         read_only = method == 'GET' or (path == '/api/config/migration/preview' and 'snapshotId' in body)
         with (nullcontext(_connection) if _connection is not None else InformationDB(self.database, read_only=read_only)) as db:
             if path == '/api/config/services':
-                return configuration.service(db.db, method, body)
+                return configuration.service(db.db, method, body, response_budget=response_budget)
             if path == '/api/config/prompts':
                 return configuration.prompt(db.db, method, body)
             if path == '/api/config/history':

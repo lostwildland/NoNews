@@ -145,8 +145,14 @@ def main():
                     elif path == '/api/config/migration/operation':
                         envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
                         result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) + 1)
+                    elif method == 'GET' and path == '/api/config/services':
+                        envelope = json.dumps({**correlation, 'result': {}}, separators=(',', ':'), ensure_ascii=True)
+                        result = app.handle(method, path, query, body, response_budget=MAX_MESSAGE - len(envelope) - 1)
                     else:
-                        result = app.handle(method, path, query, body, mutation_id=mutation_id)
+                        if mutation_id is None:
+                            result = app.handle(method, path, query, body)
+                        else:
+                            result = app.handle(method, path, query, body, mutation_id=mutation_id)
                     send({**correlation, 'result': result})
                 except ValueError as error:
                     if getattr(error, 'code', None) == 'job_record_too_large':

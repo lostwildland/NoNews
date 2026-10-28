@@ -475,11 +475,15 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	}
 
 	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], onFailure: (() -> Void)? = nil, then: @escaping ([String: Any]) -> Void) {
+		request(method, path, body, onFailureWithError: { _ in onFailure?() }, then: then)
+	}
+
+	private func request(_ method: String, _ path: String, _ body: [String: Any] = [:], onFailureWithError: ((Error) -> Void)?, then: @escaping ([String: Any]) -> Void) {
 		requestClient.request(method: method, path: path, body: body) { [weak self] result in
 			switch result {
 			case .success(let value): then(value)
 			case .failure(let error):
-				if let onFailure { onFailure(); return }
+				if let onFailureWithError { onFailureWithError(error); return }
 				if case .some(.outcomeUnknown(_)) = error as? ProcessingEngine.EngineError {
 					self?.feedback.stringValue = "The save is being confirmed. Restart processing and check the saved configuration before retrying."
 				} else if error as? ProcessingEngine.EngineError == .mutationNotSaved {
@@ -687,12 +691,23 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		var body: [String: Any] = ["name": serviceName.stringValue, "type": serviceType.indexOfSelectedItem == 0 ? "magpie" : "openai-compatible", "endpoint": endpoint.stringValue]
 		if let id = currentService?["id"] as? String { body["id"] = id }
 		let secret = credential.stringValue
+		let existingService = currentService
+		let requiresFreshCredential = existingService?["endpoint"] as? String != endpoint.stringValue ||
+			(existingService?["type"] as? String == "magpie") != (serviceType.indexOfSelectedItem == 0)
 		serviceGeneration += 1
 		let generation = serviceGeneration
 		request("PUT", "/api/config/services", body) { [weak self] value in
 			guard let self, let id = value["id"] as? String else { return }
 			guard self.serviceGeneration == generation else { self.loadLists(); return }
 			self.currentService = value
+			if requiresFreshCredential {
+				if secret.isEmpty || value["type"] as? String == "magpie" {
+					self.rememberPendingCredentialDeletion(id)
+					self.retryCredentialDeletion(id)
+				} else {
+					try? self.storeCredential(secret, serviceID: id)
+				}
+			}
 			guard value["type"] as? String == "openai-compatible" else {
 				self.feedback.stringValue = "Service saved. Refresh its directory before choosing a target."
 				self.loadLists()
@@ -701,9 +716,10 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			let state: String
 			let message: String
 			do {
-				if !secret.isEmpty { try self.storeCredential(secret, serviceID: id) }
+				if !secret.isEmpty && !requiresFreshCredential { try self.storeCredential(secret, serviceID: id) }
 				let present: Bool
-				if !secret.isEmpty { present = true }
+				if requiresFreshCredential { present = false }
+				else if !secret.isEmpty { present = true }
 				else { present = try self.readCredential(serviceID: id) != nil }
 				state = present ? "verified" : "incomplete"
 				message = present ? "Service saved and credential verified. Refresh its directory before choosing a target." : "Service saved without a credential. Add one to complete the connection."
@@ -852,12 +868,16 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 	}
 
 	@objc private func pauseMigration() {
-		guard currentMigrationInput() != nil else { migrationStatus.stringValue = "Select a Magpie service first."; return }
+		guard let input = currentMigrationInput() else { migrationStatus.stringValue = "Select a Magpie service first."; return }
 		migrationReview.invalidate()
 		cancelMigrationPreview()
-		migrationRequest("pause", [:], onFailure: { [weak self] in self?.migrationStatus.stringValue = "Claims could not be paused. Try again." }) { [weak self] _ in
-			self?.migrationWaiting = false
-			self?.previewMigration()
+		migrationRequest("pause", [:], onFailure: { [weak self] in
+			guard self?.currentMigrationInput() == input else { return }
+			self?.migrationStatus.stringValue = "Claims could not be paused. Try again."
+		}) { [weak self] _ in
+			guard let self, self.currentMigrationInput() == input else { return }
+			self.migrationWaiting = false
+			self.previewMigration()
 		}
 	}
 	@objc private func applyMigration() {
@@ -1010,8 +1030,12 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 		alert.addButton(withTitle: "Cancel")
 		guard alert.runModal() == .alertFirstButtonReturn else { return }
 		rememberPendingCredentialDeletion(id)
-		request("DELETE", "/api/config/services", ["id": id], onFailure: { [weak self] in
-			self?.clearPendingCredentialDeletion(id)
+		request("DELETE", "/api/config/services", ["id": id], onFailureWithError: { [weak self] error in
+			if error as? ProcessingEngine.EngineError == .mutationRejected {
+				self?.clearPendingCredentialDeletion(id)
+			} else {
+				self?.feedback.stringValue = "The service removal is being confirmed. Its Keychain credential will remain queued until removal is verified."
+			}
 		}) { [weak self] _ in
 			guard let self else { return }
 			guard self.serviceGeneration == generation else { return }

@@ -101,10 +101,10 @@ def _current_text(db, value):
     return row
 
 
-def service(db, method, body):
+def service(db, method, body, response_budget=None):
     if method == 'GET':
         if 'id' not in body:
-            return _list(db, 'service', body)
+            return _list(db, 'service', body, response_budget=response_budget)
         return _record(db, 'service', body.get('id'))
     if method == 'DELETE':
         value = _record(db, 'service', body.get('id'))
@@ -455,17 +455,31 @@ def _records(db, kind):
     return (json.loads(row[0]) for row in rows)
 
 
-def _list(db, kind, body):
+def _list(db, kind, body, response_budget=None):
     after = body.get('after', '')
     if not isinstance(after, str) or (after and (len(after) != 32 or any(c not in '0123456789abcdef' for c in after))):
         raise ConfigurationError('Invalid cursor')
     prefix = f'nonews.{kind}.'
     rows = db.execute('SELECT value FROM app_settings WHERE key > ? AND key < ? ORDER BY key LIMIT 101',
                       (prefix + after, f'nonews.{kind}/')).fetchall()
-    values = [json.loads(row[0]) for row in rows[:100]]
-    if kind == 'service':
-        values = [_record(db, 'service', value['id']) for value in values]
-    return {kind + 's': values, 'next': values[-1]['id'] if len(rows) > 100 else None}
+    values = []
+    for row in rows:
+        value = json.loads(row[0])
+        if kind == 'service':
+            value = _record(db, 'service', value['id'])
+        candidate = values + [value]
+        has_more = len(candidate) < len(rows) or len(rows) > 100
+        encoded = json.dumps({kind + 's': candidate, 'next': value['id'] if has_more else None},
+                             ensure_ascii=True, separators=(',', ':')).encode()
+        if response_budget is not None and len(encoded) > response_budget:
+            if not values:
+                raise RenderCapacityError('Configuration page exceeds transport capacity')
+            break
+        values.append(value)
+        if len(values) == 100:
+            break
+    has_more = len(values) < len(rows) or len(rows) > 100
+    return {kind + 's': values, 'next': values[-1]['id'] if has_more and values else None}
 
 
 def references(db, method, body):

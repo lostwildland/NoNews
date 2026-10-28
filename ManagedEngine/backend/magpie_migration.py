@@ -201,7 +201,22 @@ def preview(db, catalog, choices, service_id, editor_services, *, staged=False):
         db.execute('CREATE TEMP TABLE migration_preview_pending(sequence INTEGER PRIMARY KEY, job_id TEXT, payload TEXT)')
     rows = [] if not staged else None
     for row in db.execute('SELECT kit_id,role,config_json FROM model_configs ORDER BY kit_id,role'):
-        raw = json.loads(row['config_json'])
+        role_key = f"{row['kit_id']}/{row['role']}"
+        try:
+            raw = json.loads(row['config_json'])
+        except (TypeError, ValueError):
+            _, binding = association(db, 'migration-binding', role_key)
+            value = {'kit': row['kit_id'], 'role': row['role'], 'old': None, 'target': None,
+                     'basis': 'legacy value could not be decoded',
+                     'serviceId': binding['serviceId'] if binding else None,
+                     'blocked': 'Malformed legacy model configuration; repair the source value before applying'}
+            _ensure_row_capacity(value)
+            if staged:
+                db.execute('INSERT INTO migration_preview_models(kit,role,target,payload) VALUES (?,?,?,?)',
+                           (value['kit'], value['role'], None, json.dumps(value, ensure_ascii=True, separators=(',', ':'))))
+            else:
+                rows.append(value)
+            continue
         if not isinstance(raw, dict):
             raise configuration.ConfigurationError('Unsupported legacy model configuration')
         allowed = {'provider', 'model', 'thinking_effort', 'fallback', 'target'}
