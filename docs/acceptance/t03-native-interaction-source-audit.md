@@ -10,6 +10,8 @@ The same unscoped callback pattern appears in `showPrompt`, paged history/refere
 
 Root inspected the actual callback sites, request dispatch, binding/body construction, service and prompt selection/reset, shared-save confirmation and readback. The original owner received the finding by steer during R12; root did not edit its active source. Preserve completed durable writes and Keychain updates for their original identity while preventing stale callbacks from replacing a newer editor's values or acknowledgement. Tests must exercise the controller/request wiring; the migration-only state helper does not cover these forms.
 
+Follow-up source checkpoint `00c2665` reports matching editor guards and use of the captured Save as Copy input. The owner explicitly reports that actual controller-wiring regressions remain unwritten. This is a reported source correction awaiting fresh review and behavior tests, not closure of the6da5efa finding.
+
 ## HIG references consulted
 
 Apple's official pages were read on 2026-10-28 through their Markdown representations after the documentation renderer returned a JavaScript shell:

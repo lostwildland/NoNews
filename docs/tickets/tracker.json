@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Bounded native browsing Slice3A pushed6da5efa; owner reports declared-runtime prompt/browse checks,12focused Python passes/1optional skip and narrow source Swift6 typecheck. Cooperative preview/Apply/release remains pending. Coordinator source audit foundP1 editor-intent race: stale binding/prompt callbacks can publish a different service than visible selection; same ownerR12 steered for connected fix/regressions. Strict harness, exact payload integrity, paired review, Keychain and actualHIG UI gates remain open. T30 retains focused native resource.",
+      "implementation_state": "Clean pushed00c2665 adds cooperative migration operations, queued isolated writes, durable Apply operation receipt and general editor response guards. Root exact-commit authenticated large report testPASS1case17.188s; no native latency claim. Controller-wiring regressions unwritten; strictSwift6/native deadline/EOF-expiry/payload integrity and complete reviews pending. T30 retains focused native grant.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "6da5efa249ede069bf8ebccec8ecb86d198da9e2",
+      "last_reported_head": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -100,7 +100,8 @@
         "docs/acceptance/t03-ui-acknowledgement-review-r4.md",
         "docs/acceptance/t03-preview-binding-review-r3.md"
       ],
-      "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md"
+      "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md",
+      "review_coverage": "docs/acceptance/t03-review-coverage.json"
     },
     "04": {
       "url": "https://github.com/lostwildland/NoNews/issues/6",
@@ -568,9 +569,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "R17 paired correction review at65be895 covered8/8changed-hunk sets. Standards0material Standards findings with separateSpecP1; Spec2P1 transaction durability and dropped record error. Root926bbe3 preserves receive failure (parse only). FeedSettings synchronous SQL under admission lock also needs repair. Original owner resumes corrections/focused native checks;203focused and791full remain earlier-source evidence, not current acceptance.",
+      "implementation_state": "Partial R17a85ac89 pushed/clean. Root independently read208focused passes. Real deferred DELETE COMMIT rollback/pending-page retention and receive/admission green are owner evidence; positive callback recovery/exact incomplete-page red/admission red and other update/status commit callbacks remain unresolved. Same original ownerR21 continues complete connected durability correction with focused native grant. No full/build/iOS acceptance.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "926bbe30e9dec29d29c5ad3341022d1829a533be",
+      "last_reported_head": "a85ac897758debe408b5a08e616fc97836966a2d",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [

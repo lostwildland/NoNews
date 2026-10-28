@@ -1,0 +1,187 @@
+{
+  "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
+  "candidate": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
+  "state": "21 original-base paths. Current source is clean/pushed; cooperative7-path correction ready for fresh paired review. Native forms and complete backend/packaging/harness coverage remain separate. T03 unaccepted.",
+  "groups": {
+    "native": 2,
+    "backend": 4,
+    "packaging": 1,
+    "native-checks": 3,
+    "fixtures-and-measurements": 4,
+    "python-checks": 4,
+    "evidence": 3
+  },
+  "files": [
+    {
+      "path": "Mac/Preferences/ProcessingPreferencesViewController.swift",
+      "group": "native",
+      "blob": "379d52b6026a690a8b5bbcfb2ca6ff879b7f7030",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "Mac/Processing/ProcessingEngine.swift",
+      "group": "native",
+      "blob": "d8a2a0130f55711b672ce0834d34bc03ec060345",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/backend/configuration.py",
+      "group": "backend",
+      "blob": "c95bf84a8e1c46817c16725586f9ff6972980326",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/backend/magpie_migration.py",
+      "group": "backend",
+      "blob": "ed9b4922fc80ad9f709a3096b66681153120979a",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/backend/server.py",
+      "group": "backend",
+      "blob": "40df7e49512f91a3f7073216e0d1dda2bf7b6e1e",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/payload_sources.py",
+      "group": "packaging",
+      "blob": "1ed2f8516c9bcc2f1192c2cc5d68a3eafc26cff9",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/stdio_service.py",
+      "group": "backend",
+      "blob": "cfc71a56871575e9b7cbbe8e7be6035a8e81b6dc",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/MigrationReviewStateChecks.swift",
+      "group": "native-checks",
+      "blob": "747bf93d7f886365340ff29b527255ee7bd7c24d",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
+      "group": "native-checks",
+      "blob": "d46b34bf0e13e9281fa43033cd08d4e5f4d8ae78",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/configuration_browse_fixture.py",
+      "group": "fixtures-and-measurements",
+      "blob": "d10cd3118a565a37aa2e131262f4f6ea639659a3",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/configuration_directory_fixture.py",
+      "group": "fixtures-and-measurements",
+      "blob": "cd4eae3af8da690ff506eb0289b7809f00e0ccf9",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/measure_migration_preview.py",
+      "group": "fixtures-and-measurements",
+      "blob": "b16f842d4e89f75698bf0fd5627d92c7b30cc6d3",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/native_fixture.py",
+      "group": "fixtures-and-measurements",
+      "blob": "c8923c7b29c161f3ba8af7e3ec7a40bcd903f06c",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/run_configuration_native_checks.sh",
+      "group": "native-checks",
+      "blob": "c70a9a3bee9a5bc4d1588137cc18908aa0a6b177",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/test_channel.py",
+      "group": "python-checks",
+      "blob": "3d504fea1d9a8318055c62f6dfbdbe6f3010ca9d",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/test_configuration.py",
+      "group": "python-checks",
+      "blob": "766156033164ec7cb7d6817c3cb0826c013a6cf8",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/test_configuration_migration.py",
+      "group": "python-checks",
+      "blob": "39f8ae90445f490bd66e24a7fae1f762baaf54ed",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "ManagedEngine/tests/test_stdio.py",
+      "group": "python-checks",
+      "blob": "09580ef551d42f77bdc6129ae8a8ecc6b5886913",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "docs/acceptance/t03-apply-acknowledgement-r4.md",
+      "group": "evidence",
+      "blob": "bc0acb229658c3a14b9586e6c9c07be73ca58ffb",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "docs/acceptance/t03-native-processing-configuration.md",
+      "group": "evidence",
+      "blob": "f724df9cb149005e36c0c196871ba913f1b9d5b4",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    },
+    {
+      "path": "docs/acceptance/t03-preferences-typecheck.md",
+      "group": "evidence",
+      "blob": "505853d83c0f5e23f2996bf7f8a5c6698522de3c",
+      "standards": "Full current-source coverage pending; prior correction reviews retain their recorded scopes.",
+      "spec": "Full current-source coverage pending; source/helper checks do not establish native acceptance."
+    }
+  ],
+  "review_scopes": {
+    "cooperative_operations": {
+      "base": "6da5efa249ede069bf8ebccec8ecb86d198da9e2",
+      "candidate": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
+      "paths": [
+        "ManagedEngine/backend/server.py",
+        "ManagedEngine/backend/magpie_migration.py",
+        "ManagedEngine/stdio_service.py",
+        "Mac/Processing/ProcessingEngine.swift",
+        "ManagedEngine/tests/ProcessingConfigurationChecks.swift",
+        "ManagedEngine/tests/test_configuration_migration.py",
+        "docs/acceptance/t03-native-processing-configuration.md"
+      ],
+      "state": "Ready for paired correction review:245additions/11deletions in7paths; new UI318-line delta is excluded and remains pending."
+    }
+  },
+  "evidence": {
+    "coordinator_public_test": {
+      "head": "00c2665dbe49f4cc0fbf4a2d85e744ae38c94030",
+      "test": "ManagedEngine.tests.test_configuration_migration.MigrationTest.test_report_over_16_mib_survives_restart_and_concurrent_changes",
+      "result": "1passed17.188s, system Python, ResourceWarning as error, extracted exact commit, optional reference variables unset. Authenticated loopback only; not per-request/native deadline proof."
+    },
+    "native": "Current strict harness/controller-wiring/deadline/payload integrity/app/Keychain/HIG checks pending. Earlier6da5efa native proof retains its stated Swift5/source boundaries."
+  }
+}

@@ -1,12 +1,14 @@
 # T30 native fixture and cancellation candidate
 
-Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; reviewed checkpoint `65be895bf0bb8534eba3ef9e10973fa03a978185`, followed by coordinator receive-error correction `926bbe30e9dec29d29c5ad3341022d1829a533be`. The [coverage ledger](t30-review-coverage.json) pins105 logical changed paths, including the additional CloudKit zones/transport, command/timeline/widget consumers and regression tests. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current partial R17 checkpoint `a85ac897758debe408b5a08e616fc97836966a2d`, following reviewed65be895 and coordinator receive-error correction926bbe3. The [coverage ledger](t30-review-coverage.json) now pins106 logical changed paths, including the additional feed-settings read test. This candidate is the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
 
 ## Current evidence
 
+Root independently read the15:25:17 xcresult:208 passed, zero failures/skips,208 total. The owner reports actual deferred-constraint DELETE commit red/green, retained article/pending status/withheld page and continued database use; queued receive and feed-settings admission green also passed. Root has not independently reproduced these schedules. The owner explicitly leaves other update/status callbacks before commit, successful callback-token recovery/exact incomplete-page red, and prior-lock behavioral red unfinished. Same ownerR21 continues this connected correction with the focused native grant; no final full/build/iOS run is granted.
+
 Root independently read the12:40:25 xcresult summary:203 passed, zero failures/skips,203 total. The owner reports this combined working-source run includes failed article deletion, withheld CloudKit page checkpoint and retained pending sync status. The adapted baseline red and widget fetch/encode/write failure results are owner evidence in the worker's native-fixture record; root has not rerun them.
 
-The historical full-plan result remains791 passes at5013c91. Its independently exported action had zero disk-I/O/vnode-unlink matches. It predates the current consumer/provider/CloudKit fixes. No current-source full Mac plan, normal signed artifact or final generic iOS build is established by that result. The source boundary and serialized Xcode resource are released; final heavy runs remain deferred until known review findings stabilize.
+The historical full-plan result remains791 passes at5013c91. Its independently exported action had zero disk-I/O/vnode-unlink matches. It predates the current consumer/provider/CloudKit fixes. No current-source full Mac plan, normal signed artifact or final generic iOS build is established by that result. The source boundary and focused native resource are now held by the original T30 owner for R21; final heavy runs remain deferred until known review findings stabilize.
 
 ## Review frontier
 

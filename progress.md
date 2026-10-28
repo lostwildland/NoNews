@@ -1,5 +1,10 @@
 # Progress — NoNews IO parity
 
+## 2026-10-28 — Cooperative source checkpoint and partial durability proof
+
+- T03 delivered clean/pushed00c2665 with cooperative migration polling, separate queued mutation transactions, durable Apply operation receipt and reported editor guards/captured copy input. Root independently ran the exact-commit authenticated large-report scenario:1pass17.188s, system Python, ResourceWarning error; not a native/request latency bound. Created21-path original-base ledger and7-path cooperative correction review scope. Controller-wiring tests, strict native/deadline/EOF-expiry/payload and full UI acceptance remain pending.
+- T30 delivered partiala85ac89; root independently read15-25-17xcresult208pass/0fail/0skip. Owner reports real deferred DELETE COMMIT rollback/page/pending-state proof, queued receive and admission green. Other update/status precommit callbacks, positive callback recovery/exact incomplete-page red and admission prior-behavior red remain explicitly open. Same ownerR21 continues connected correction with focused native grant; final full/build/iOS remain deferred. Ledger expanded105→106paths; no accepted ticket increment.
+
 ## 2026-10-28 — Configuration editor intent audit
 
 - Root read committed6da5efa form callbacks, service/target binding, prompt/reference/history and shared-save paths. Source-derived P1: out-of-order responses can restore a different service binding or prompt than the current visible editor; no native reproduction claimed. The original T03 owner received the concrete schedules during R12 without root editing its source boundary.

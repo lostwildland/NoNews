@@ -1,5 +1,9 @@
 # Execution findings
 
+2026-10-28 — Current cooperative/durability checkpoints:
+- Root independently ran the exact00c2665 authenticated large-report preview/Apply/queue/cancel/replacement/rollback/restart case:1pass17.188s under system Python with ResourceWarning as error. This is functional protocol proof, not native per-request timing, EOF/expiry or controller-wiring proof. T03 ledger pins21paths;7-path cooperative correction is ready for paired review.
+- Root independently read T30's15-25-17xcresult208pass/0fail/0skip. Owner's partiala85ac89 still leaves other article/status precommit callbacks and callback/admission proof open. Same ownerR21 continues with exclusive focused native grant; final full/build/iOS remain deferred.
+
 2026-10-28 — T03 native editor intent:
 - Source6da5efa `loadBinding` accepts a delayed service response without checking the visible selection; `promptBody` uses that response's service ID. Related prompt/history/save callbacks are also unscoped. Coordinator source-derivedP1, no application reproduction; original ownerR12 received the concrete response-order schedules. See docs/acceptance/t03-native-interaction-source-audit.md.
 - Apple HIG Settings/Feedback/Accessibility pages were read from their official Markdown representations. Recorded actual-native keyboard, focus, feedback, credential-error and VoiceOver checks; no source-only accessibility score or UI acceptance is claimed.
