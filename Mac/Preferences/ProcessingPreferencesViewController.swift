@@ -509,7 +509,7 @@ final class ProcessingPreferencesViewController: NSViewController, NSTextFieldDe
 			let details = jobs.map { job in
 				let reasons = (job["blocked"] as? [String] ?? []).joined(separator: ", ")
 				let target = job["editorTarget"] as? String
-				func gatewayName(_ id: String?) -> String {
+				@MainActor func gatewayName(_ id: String?) -> String {
 					guard let id else { return "unknown" }
 					guard let row = self.serviceRows.first(where: { $0["id"] as? String == id }) else { return "Unavailable [\(id)]" }
 					return self.serviceLabel(row)
