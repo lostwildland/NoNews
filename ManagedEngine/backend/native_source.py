@@ -60,8 +60,7 @@ CREATE TABLE IF NOT EXISTS native_processing_contexts(
   body_strategy TEXT,
   policy_revision INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE(item_id, observation_id)
+  updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS native_context_item ON native_processing_contexts(item_id);
 CREATE TABLE IF NOT EXISTS native_context_results(
@@ -95,6 +94,13 @@ CREATE TABLE IF NOT EXISTS native_feed_policies(
 
 def ensure_schema(db) -> None:
     db.executescript(SCHEMA)
+    context_sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='native_processing_contexts'").fetchone()
+    if context_sql and "UNIQUE(item_id, observation_id)" in (context_sql[0] or ""):
+        db.execute("ALTER TABLE native_processing_contexts RENAME TO native_processing_contexts_legacy")
+        db.executescript(SCHEMA)
+        db.execute("INSERT INTO native_processing_contexts SELECT * FROM native_processing_contexts_legacy")
+        db.execute("DROP TABLE native_processing_contexts_legacy")
+
     columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts)")}
     additions = {
         "media_type": "TEXT",
@@ -291,13 +297,10 @@ def replay(db, body):
     row = db.execute("SELECT c.item_id,o.namespace,o.account_id,o.feed_id,p.curator_prompt_id,p.editor_prompt_id,p.service_id,p.media_type,p.processing_mode,p.threshold,p.scoring_strategy,p.body_strategy,p.revision FROM native_processing_contexts c JOIN native_source_observations o ON o.id=c.observation_id LEFT JOIN native_feed_policies p ON p.namespace=o.namespace AND p.account_id=o.account_id AND p.feed_id=o.feed_id WHERE c.id=?", (context_id,)).fetchone()
     if row is None:
         raise ValueError("Context not found")
-    now = utcnow()
-    replay_context_id = uuid.uuid4().hex
     observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
-    source_observation = db.execute("SELECT namespace,account_id,feed_id,article_id,unique_id,feed_url,title,original_url,published_at,item_id,identity_state,identity_type,identity_value,raw_identity_value,created_at,updated_at FROM native_source_observations WHERE id=?", (observation_id,)).fetchone()
-    replay_observation_id = "replay-" + uuid.uuid4().hex
-    db.execute("INSERT INTO native_source_observations(id,namespace,account_id,feed_id,article_id,unique_id,feed_url,title,original_url,published_at,item_id,identity_state,identity_type,identity_value,raw_identity_value,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_observation_id, *source_observation))
-    db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], replay_observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
+    replay_context_id = uuid.uuid4().hex
+    now = utcnow()
+    db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
     job_id = "native-replay-" + uuid.uuid4().hex
     db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation) VALUES (?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "preview": True}), "user", 0))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
