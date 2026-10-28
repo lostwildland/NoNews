@@ -50,6 +50,18 @@ import Darwin
 			try await Task.sleep(for: .milliseconds(10))
 		}
 		precondition(jobsReturned && settingReturned)
+		var operationErrors: [ProcessingEngine.EngineError] = []
+		for cursor in ["capacity", "invalid", "unknown"] {
+			let error: ProcessingEngine.EngineError = await withCheckedContinuation { continuation in
+				engine.request(method: "GET", path: "/api/jobs", query: ["cursor": cursor]) { result in
+					guard case .failure(let error) = result, let engineError = error as? ProcessingEngine.EngineError else { fatalError("Expected typed operation error") }
+					continuation.resume(returning: engineError)
+				}
+			}
+			operationErrors.append(error)
+			precondition(engine.state == .ready)
+		}
+		precondition(operationErrors == [.jobRecordTooLarge, .operation, .operation])
 		engine.stop()
 		engine.stop()
 		try await wait(engine) { $0 == .stopped }

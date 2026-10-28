@@ -11,6 +11,52 @@ import unittest
 
 
 class CooperativeJobsTest(unittest.TestCase):
+    def test_frame_io_failures_release_snapshot_and_allow_fresh_read(self):
+        import sys
+        from unittest.mock import Mock
+        engine = Path(__file__).resolve().parents[1]
+        sys.path.insert(0, str(engine))
+        from backend.server import Application
+        for operation in ('seek', 'read'):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as temp:
+                data = Path(temp)
+                app = Application(data/'information.sqlite', data/'raw', data/'artifacts',
+                                  token='a'*32, write_scope='settings')
+                raw = 'retained result ' * 10000
+                with closing(sqlite3.connect(data/'information.sqlite')) as db, db:
+                    db.execute("INSERT INTO items(id,media_type,title,first_ingested_at,review_date,created_at,updated_at) VALUES ('item','news','t','01','01','01','01')")
+                    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,result_json) VALUES ('job','item','curator','key','failed','01','01','01',?)", (raw,))
+                try:
+                    page = app.handle('GET', '/api/jobs', {}, {})
+                    while page.get('preparing'):
+                        page = app.handle('GET', '/api/jobs', {'cursor': page['next']}, {})
+                    self.assertFalse(page['recordComplete'])
+                    token, spool, size, following, deadline = app.snapshot
+                    timer = app.snapshot_timer
+                    self.assertIsNotNone(timer)
+                    broken = Mock(wraps=spool)
+                    getattr(broken, operation).side_effect = OSError('synthetic frame failure')
+                    app.snapshot = (token, broken, size, following, deadline)
+                    with self.assertRaises(OSError):
+                        app.handle('GET', '/api/jobs', {'cursor': page['next']}, {})
+                    self.assertTrue(spool.closed)
+                    self.assertIsNone(app.snapshot)
+                    self.assertIsNone(app.snapshot_timer)
+                    self.assertTrue(timer.finished.is_set())
+                    self.assertIsNone(app.preparation)
+                    self.assertIsNone(app.preparation_timer)
+                    self.assertEqual(app.handle('GET', '/api/status', {}, {})['schemaVersion'], 41)
+                    page = app.handle('GET', '/api/jobs', {}, {})
+                    chunks = bytearray()
+                    while True:
+                        chunks.extend(base64.b64decode(page['chunk']))
+                        if page['recordComplete']:
+                            break
+                        page = app.handle('GET', '/api/jobs', {'cursor': page['next']}, {})
+                    self.assertEqual(json.loads(chunks)['result_json'], raw)
+                finally:
+                    app.close()
+
     def test_broad_and_deep_records_yield_bounded_progress(self):
         engine = Path(__file__).resolve().parents[1]
         token = 'a'*32

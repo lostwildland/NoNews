@@ -10,6 +10,8 @@ Each record is serialized once to a private temporary spool, up to 512 MiB per r
 
 A capacity refusal returns `error: "job record is too large"` and stable `code: "job_record_too_large"`, preserving the request ID. Invalid queries/cursors retain their separate error. Refusal does not alter the stored record or stop subsequent status/history requests.
 
+The native request boundary exposes this code as `ProcessingEngine.EngineError.jobRecordTooLarge`; other operation errors, including unknown codes, remain `.operation`. Frame seek/read failures immediately close the owned spool and cancel its idle timer before returning failure.
+
 Preparation retains one SQLite read transaction across bounded progress requests, preserving the original snapshot, and closes it before returning record frames. Replacement, idle expiry, failure and channel EOF also close the transaction, parser and temporary files. For failed aggregate (`auto`) jobs, a streaming JSON projection reads only failed stage statuses; the stored result itself is returned unchanged. Invalid or non-object aggregate JSON has no resolved stages. The 512 MiB limit counts the complete UTF-8 encoded JSON record, including escaping and object syntax; oversized records fail without truncation.
 
 Aggregate JSON nesting is walked iteratively. The parser caches one 64 KiB nesting-state block and uses a spool with up to 64 KiB buffered in memory; deeper state spills into a private temporary file in the app-owned database directory. It reads and writes spill data at block boundaries and releases the file when parsing finishes or fails. Deep valid results remain readable and retain their stage semantics; malformed results have no resolved stages and retain their original text.

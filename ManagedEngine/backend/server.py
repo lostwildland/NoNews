@@ -353,8 +353,12 @@ class Application:
             if offset < 0 or offset >= size or offset % 24000:
                 raise ValueError('invalid cursor')
             self.snapshot = (token, spool, size, following, time.monotonic() + 120)
-            spool.seek(offset)
-            chunk = spool.read(24000)
+            try:
+                spool.seek(offset)
+                chunk = spool.read(24000)
+            except (OSError, ValueError):
+                self._clear_snapshot()
+                raise
             end = offset + len(chunk)
             complete = end == size
             next_cursor = following if complete else f's:{token}:{end}'

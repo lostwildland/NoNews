@@ -238,7 +238,10 @@ final class ProcessingEngine {
 				pending.removeValue(forKey: id)
 				timers.removeValue(forKey: id)?.invalidate()
 				if let result = value["result"] as? [String: Any] { completion(.success(result)) }
-				else { completion(.failure(EngineError.operation)) }
+				else {
+					let error: EngineError = value["code"] as? String == "job_record_too_large" ? .jobRecordTooLarge : .operation
+					completion(.failure(error))
+				}
 			} else {
 				fail("Invalid response from processing component.")
 				return
@@ -311,5 +314,5 @@ final class ProcessingEngine {
 		process = nil
 		failPending()
 	}
-	private enum EngineError: Error { case unavailable, operation }
+	enum EngineError: Error, Equatable { case unavailable, operation, jobRecordTooLarge }
 }

@@ -57,6 +57,15 @@ for line in sys.stdin:
     elif path == '/api/status':
         result = {'schemaVersion': 41}
     elif path == '/api/jobs':
+        cursor = request.get('query', {}).get('cursor')
+        if cursor in {'capacity', 'invalid', 'unknown'}:
+            reply = {'id': request['id'], 'error': 'invalid query'}
+            if cursor == 'capacity':
+                reply.update(error='job record is too large', code='job_record_too_large')
+            elif cursor == 'unknown':
+                reply['code'] = 'untrusted_synthetic_code'
+            print(json.dumps(reply), flush=True)
+            continue
         result = {'jobs': []}
     elif request['method'] == 'PUT':
         value = request['body']['processors']
