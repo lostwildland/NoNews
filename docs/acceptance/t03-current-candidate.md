@@ -1,6 +1,6 @@
 # T03 current configuration candidate
 
-Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; the latest pushed source checkpoint is `3a31ee27bf4ac6a1bdb406f74d12586c487937ab`, following the reviewed `6e9dac9` outcome slice. The [review ledger](t03-review-coverage.json) still describes the earlier21-path candidate and is stale until refreshed. T03 is open and unaccepted; fresh paired final-source review is running. No new worktree was created.
+Original base `a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b`; the latest pushed source checkpoint is `bd4fffa`, following final source `3a31ee2` and the reviewed `6e9dac9` outcome slice. The [review ledger](t03-review-coverage.json) still describes the earlier21-path candidate and is stale until refreshed. T03 is open and unaccepted; fresh paired correction review is running. No new worktree was created.
 
 ## Execution recovery
 
@@ -19,7 +19,7 @@ The owner reports seven focused configuration/migration/stdio passes with one op
 
 ## Required next work
 
-The final `3a31ee2` checkpoint adds actual AppKit controller request-wiring regressions for out-of-order gateway/prompt/history/reference responses, captured Save-as-Copy inputs, and Apply acknowledgement after failed readback. Strict Swift 6 controller checks, the declared-runtime 200,000-byte/oversize/cooperative browsing journey, queued-save stop/restart recovery, and final payload manifest verification passed as owner evidence. Full app/GUI/VoiceOver/keyboard, Keychain, signed bundle, T11 continuity and independent review remain open.
+The final `bd4fffa` correction adds direct mutation receipt recovery, persisted credential state, bounded migration snapshot/per-row capacity, bounded unknown recovery IDs, and an Advanced output disclosure. The focused system-Python suite passed 16 tests with one optional skip; fresh paired correction review is pending. Full app/GUI/VoiceOver/keyboard, Keychain, signed bundle, T11 continuity and final HIG/XIB layout acceptance remain open.
 
 Fresh [R5 paired cooperative reviews](t03-cooperative-review-r5.md) covered7/7changed-hunk sets at00c2665. Standards reported no independent Standards finding and separately three Spec P2 concerns; Spec reported one P1 and three P2s. Root reproduced and fixed acknowledged-error queue exhaustion atdd58d6e; the final regression plus full large-report case passed together (two tests,14.057seconds). The owner reports render-envelope/unread-preview cleanup atf96d605 and definitive queued-save outcomes at6e9dac9. Root independently ran the exact checkpoint migration test file:4 tests passed in30.319seconds with ResourceWarning as error. The owner reports14 passes/1 optional skip, but native execution predates the final tombstone change. Current source distinguishes complete, cancelled, notCommitted and unknown outcomes; fresh review, controller wiring and final native checks remain required.
 

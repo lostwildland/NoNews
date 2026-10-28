@@ -1,7 +1,7 @@
 {
   "base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-  "candidate": "3a31ee27bf4ac6a1bdb406f74d12586c487937ab",
-  "state": "Final source checkpoint 3a31ee2 adds controller request-wiring regressions and current strict/native payload evidence. The listed 21-path blobs still describe 6e9dac9 and must be refreshed; paired final-source review is pending.",
+  "candidate": "bd4fffa",
+  "state": "Correction bd4fffa adds direct mutation receipts, credential-state persistence, bounded snapshot capacity and bounded unknown recovery IDs. The listed21-path blobs still describe6e9dac9; fresh paired correction review is pending and ledger refresh remains required.",
   "groups": {
     "native": 2,
     "backend": 4,

@@ -5,6 +5,11 @@
 - T30 correction `e44f338` fixes the release-only DEBUG reference, FTS `sqlite3_step` error propagation, CloudKit outbox insertion/deletion result handling, selection BEGIN/COMMIT rollback, and serializes CloudKit status mutation checks. Formal acceptance test passed 827 top-level tests with zero failures/skips (300 dynamic runs); the new SyncStatus transaction regression passed. Fresh paired R21 review is pending; iOS, final artifact, live CloudKit, production deletion and UI remain open.
 - T03 final source `3a31ee2` adds actual AppKit controller ordering/identity regressions, Save-as-Copy capture checks, Apply acknowledgement preservation, strict Swift 6 checks, declared-runtime transport/restart journeys and final payload manifest verification. Fresh paired review is running; full app/UI/VoiceOver/keyboard, Keychain, signed bundle and T11 continuity remain open.
 
+## 2026-10-28 — T03 durable correction and T30 provider propagation
+
+- T03 `bd4fffa` adds direct mutation receipts, persisted incomplete/verified credential state, bounded migration snapshot/per-row capacity, bounded unknown recovery IDs and an Advanced output disclosure. The source suite passed 16 tests with one optional skip; fresh paired correction review is pending. XIB layout, full HIG/UI/Keychain and signed runtime acceptance remain open.
+- T30 `d0b9db7` propagates SyncDatabase errors through CloudKit and Feedbin/Feedly/ReaderAPI/NewsBlur selection, insertion and post-send deletion paths, and holds the shared status mutation gate through CloudKit claim/send/delete. The formal macOS plan passed with zero failures/skips; fresh paired R22 review is pending, as are final artifact/iOS/live CloudKit/production deletion gates.
+
 ## 2026-10-28 — Connected transaction handoff and remaining Save P1
 
 - Root independently reran the exact T03 `6e9dac9` source fixture with system Python: 15 tests, 14 passed and 1 optional reference skip in 49.748s, including definitive queued-save outcomes, restart recovery, cancellation cleanup, oversized-frame continuity and payload-source checks. This validates the source service boundary only; native/controller, payload refresh, Keychain, UI/HIG and packaged-app acceptance remain open.

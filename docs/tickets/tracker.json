@@ -79,11 +79,11 @@
         "02"
       ],
       "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
-      "implementation_state": "Final source3a31ee2 adds actual AppKit controller request-wiring regressions, durable outcome recovery and strict declared-runtime/payload checks. Root independently ran15 source tests at6e9; fresh paired final-source review is running. Full app/GUI/VoiceOver/keyboard, Keychain, signed bundle, T11 and HIG acceptance remain open.",
+      "implementation_state": "Correction bd4fffa adds direct mutation receipt recovery, persisted credential state, bounded report capacity, bounded unknown recovery IDs and an Advanced disclosure. Focused source suite16/1skip passed; fresh paired correction review is running. Full app/UI/Keychain/signed bundle/T11/HIG layout acceptance remain open.",
       "implementation_branch": "t3/byo-ai-magpie-prompts",
       "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
       "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
-      "last_reported_head": "3a31ee27bf4ac6a1bdb406f74d12586c487937ab",
+      "last_reported_head": "bd4fffa",
       "implementation_thread": "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1",
       "review_evidence": "docs/acceptance/t03-current-candidate.md",
       "script_source_audit": {
@@ -572,9 +572,9 @@
         "28",
         "29"
       ],
-      "implementation_state": "Correction e44f338 fixes release compilation, FTS iteration errors, CloudKit insertion/deletion result propagation, selection transaction rollback and serializes CloudKit status mutations. Current macOS plan passed827/0/0. Fresh R21 paired review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
+      "implementation_state": "Correction d0b9db7 propagates provider/CloudKit queue insertion, selection and post-send deletion failures with captured errors and shared status mutation gating. Latest macOS plan passed with zero failures/skips; fresh R22 review and final artifact/iOS/live CloudKit/UI acceptance remain open.",
       "implementation_branch": "t3/native-fixture-lifetime",
-      "last_reported_head": "e44f338",
+      "last_reported_head": "d0b9db7",
       "review_evidence": "docs/acceptance/t30-current-candidate.md",
       "review_coverage": "docs/acceptance/t30-review-coverage.json",
       "additional_review_evidence": [

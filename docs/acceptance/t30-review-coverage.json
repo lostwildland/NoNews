@@ -1,8 +1,8 @@
 {
   "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
-  "candidate": "e44f338",
-  "source": "e44f338",
-  "state": "Current source e44f338 passes the 827-test macOS plan. The earlier106-path ledger remains pinned to R17; the seven-path b33a201...e44f338 correction is pending fresh R21 paired review and ledger refresh.",
+  "candidate": "d0b9db7",
+  "source": "d0b9db7",
+  "state": "Current source d0b9db7 passes the full macOS plan after provider/error propagation. The earlier106-path ledger remains pinned to R17; later corrections are pending fresh R22 paired review and ledger refresh.",
   "groups": {
     "consumers": 27,
     "account-core": 7,

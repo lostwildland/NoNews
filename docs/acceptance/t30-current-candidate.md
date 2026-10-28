@@ -1,6 +1,6 @@
 # T30 native fixture and cancellation candidate
 
-Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current source is `e44f338`, after the reviewed R17 source/evidence pair, shared-helper correction `9ab2069`, and correction `b33a201`. The [coverage ledger](t30-review-coverage.json) still pins the earlier106-path connected candidate; the new seven-path `b33a201...e44f338` delta is tracked separately until fresh R21 review completes. This candidate remains the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
+Original base `2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2`; current source is `d0b9db7`, after the reviewed R17 source/evidence pair and corrections through `e44f338`. The [coverage ledger](t30-review-coverage.json) still pins the earlier106-path connected candidate; later provider/error deltas are tracked separately until fresh R22 review completes. This candidate remains the fixture/cancellation prerequisite; it does not satisfy full ticket30 parity, migration, sync or release acceptance.
 
 ## Current evidence
 
