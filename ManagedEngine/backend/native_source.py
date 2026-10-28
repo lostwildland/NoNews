@@ -307,8 +307,9 @@ def observe(db, body):
                        (context_id, item_id, observation_id, policy[0] if policy else None, policy[1] if policy else None, policy[2] if policy else None,
                         policy[3] if policy else None, policy[4] if policy else "disabled", policy[5] if policy else None,
                         policy[6] if policy else None, policy[7] if policy else None, policy[8] if policy else 0, now, now))
-            if (existing_context[1] if existing_context else (policy[4] if policy else "disabled")) in {"normal", "important"}:
-                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", 0, context_id))
+            decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
+            if policy and (existing_context[1] if existing_context else policy[4]) in {"normal", "important"}:
+                db.execute("INSERT OR IGNORE INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", ("native-" + context_id, item_id, "auto", "native:" + context_id, "pending", now, now, now, json.dumps({"nativeContextID": context_id, "policyRevision": policy[8], "curatorPromptID": policy[0], "editorPromptID": policy[1], "serviceID": policy[2], "mediaType": policy[3], "processingMode": policy[4], "threshold": policy[5], "scoringStrategy": policy[6], "bodyStrategy": policy[7]}), "automatic", decision_generation, context_id))
                 db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", ("native-" + context_id, item_id, "curator", "pending", json.dumps({"nativeContextID": context_id, "policyRevision": policy[8]}), now))
     return observation(db, observation_id)
 
@@ -322,6 +323,8 @@ def replay(db, body):
         raise ValueError("Context not found")
     if row[8] not in {"normal", "important"} or row[12] is None:
         raise ValueError("Current source policy is unavailable or disabled for replay")
+    observation_id = db.execute("SELECT observation_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
+    decision_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row[0],)).fetchone()[0] if db.execute("SELECT 1 FROM pragma_table_info('items') WHERE name='review_generation'").fetchone() else 0
     original_media = db.execute("SELECT media_type FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
     if original_media and original_media != row[7]:
         raise ValueError("Current media policy is incompatible with historical context")
@@ -329,7 +332,7 @@ def replay(db, body):
     now = utcnow()
     db.execute("INSERT INTO native_processing_contexts(id,item_id,observation_id,curator_prompt_id,editor_prompt_id,service_id,media_type,processing_mode,threshold,scoring_strategy,body_strategy,policy_revision,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (replay_context_id, row[0], observation_id, row[4], row[5], row[6], row[7], row[8], row[9], row[10], row[11], row[12], now, now))
     job_id = "native-replay-" + uuid.uuid4().hex
-    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "curatorPromptID": row[4], "editorPromptID": row[5], "serviceID": row[6], "mediaType": row[7], "processingMode": row[8], "threshold": row[9], "scoringStrategy": row[10], "bodyStrategy": row[11], "preview": True}), "user", 0, replay_context_id))
+    db.execute("INSERT INTO processing_jobs(id,item_id,stage,idempotency_key,status,available_at,created_at,updated_at,intent_json,origin,decision_generation,native_context_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", (job_id, row[0], "auto", job_id, "pending", now, now, now, json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12], "curatorPromptID": row[4], "editorPromptID": row[5], "serviceID": row[6], "mediaType": row[7], "processingMode": row[8], "threshold": row[9], "scoringStrategy": row[10], "bodyStrategy": row[11], "preview": True}), "user", decision_generation, replay_context_id))
     db.execute("INSERT OR IGNORE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) VALUES (?,?,?,?,?,?)", (job_id, row[0], "curator", "pending", json.dumps({"nativeContextID": replay_context_id, "policyRevision": row[12]}), now))
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
@@ -340,6 +343,9 @@ def claim_job(db, body):
         row = db.execute("SELECT j.*,o.namespace FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND j.status='pending' AND o.namespace=?", (_text(body.get("jobID"), "job ID", required=True, maximum=128), namespace)).fetchone()
         if row is None:
             raise ValueError("Native job is unavailable")
+        current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (row["item_id"],)).fetchone()[0]
+        if current_generation != row["decision_generation"]:
+            raise ValueError("Native job decision is stale")
         if json.loads(row["intent_json"] or "{}").get("revoked"):
             raise ValueError("Native job was revoked")
         db.execute("UPDATE processing_jobs SET status='running',attempts=attempts+1 WHERE id=? AND status='pending'", (row["id"],))
@@ -357,9 +363,13 @@ def complete_job(db, body):
         raise ValueError("Native completion must provide a Curator run")
     with transaction(db):
         row = db.execute("SELECT j.decision_generation,j.native_context_id,j.intent_json FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND o.namespace=?", (job_id, namespace)).fetchone()
-        if row is None or row[1] != context_id or row[0] != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
+        if row is None:
+            raise ValueError("Native job is unavailable")
+        item_id = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]
+        current_generation = db.execute("SELECT review_generation FROM items WHERE id=?", (item_id,)).fetchone()[0]
+        if row[1] != context_id or row[0] != claimed_generation or current_generation != claimed_generation or json.loads(row[2] or "{}").get("revoked") or db.execute("SELECT status FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0] != "running":
             raise ValueError("Native completion was revoked or mismatched")
-        run = db.execute("SELECT item_id,prompt_version_id FROM curator_runs WHERE id=?", (result["run_id"],)).fetchone()
+        run = db.execute("SELECT r.item_id,r.prompt_version_id FROM curator_runs r JOIN native_processing_contexts c ON c.id=? WHERE r.id=? AND r.status='succeeded' AND EXISTS (SELECT 1 FROM prompt_versions v WHERE v.id=r.prompt_version_id AND v.kit_id=c.curator_prompt_id AND v.role='curator')", (context_id, result["run_id"])).fetchone()
         if run is None or run[0] != db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()[0]:
             raise ValueError("Curator result does not belong to native context")
         db.execute("INSERT OR REPLACE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) SELECT ?,item_id,?,?,?,? FROM native_processing_contexts WHERE id=?", (job_id, stage, "ready", json.dumps(result), utcnow(), context_id))
