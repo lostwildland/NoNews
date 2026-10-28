@@ -704,8 +704,6 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 				if secret.isEmpty || value["type"] as? String == "magpie" {
 					self.rememberPendingCredentialDeletion(id)
 					self.retryCredentialDeletion(id)
-				} else {
-					try? self.storeCredential(secret, serviceID: id)
 				}
 			}
 			guard value["type"] as? String == "openai-compatible" else {
@@ -715,10 +713,14 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			}
 			let state: String
 			let message: String
+			var freshCredentialStored = false
 			do {
-				if !secret.isEmpty && !requiresFreshCredential { try self.storeCredential(secret, serviceID: id) }
+				if !secret.isEmpty {
+					try self.storeCredential(secret, serviceID: id)
+					freshCredentialStored = requiresFreshCredential
+				}
 				let present: Bool
-				if requiresFreshCredential { present = false }
+				if requiresFreshCredential { present = freshCredentialStored }
 				else if !secret.isEmpty { present = true }
 				else { present = try self.readCredential(serviceID: id) != nil }
 				state = present ? "verified" : "incomplete"
