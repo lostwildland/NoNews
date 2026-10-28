@@ -147,8 +147,9 @@ final class StatusesTable: DatabaseTable, Sendable {
 			sql += ";"
 
 			guard let resultSet = database.executeQuery(sql, withArgumentsIn: nil) else {
+				let error = database.lastError() ?? NSError(domain: "FMDatabase", code: Int(database.lastErrorCode()))
 				DispatchQueue.main.async {
-					completion(.success(Set<String>()))
+					completion(.failure(error))
 				}
 				return
 			}

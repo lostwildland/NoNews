@@ -5,6 +5,35 @@ import Articles
 @testable import ArticlesDatabase
 
 @MainActor @Suite struct AdmissionCancellationTests {
+	@Test func failedStatusQueryIsNotASuccessfulEmptyRead() async {
+		let queue = DatabaseQueue(databasePath: ":memory:")
+		let table = StatusesTable(queue: queue)
+		queue.runInDatabaseSync { database in
+			#expect(database.executeStatements("CREATE TABLE statuses (articleID TEXT, read INTEGER, starred INTEGER);"))
+		}
+		for (key, value) in [(ArticleStatus.Key.read, false), (.starred, true)] {
+			let result: Result<Set<String>, Error> = await withCheckedContinuation { continuation in
+				table.fetchArticleIDsAsync(key, value) { continuation.resume(returning: $0) }
+			}
+			if case .success(let ids) = result { #expect(ids.isEmpty) }
+			else { Issue.record("A valid empty status query failed") }
+		}
+		queue.runInDatabaseSync { database in
+			#expect(database.executeStatements("DROP TABLE statuses;"))
+		}
+		for (key, value) in [(ArticleStatus.Key.read, false), (.starred, true)] {
+			let result: Result<Set<String>, Error> = await withCheckedContinuation { continuation in
+				table.fetchArticleIDsAsync(key, value) { continuation.resume(returning: $0) }
+			}
+			if case .failure(let error) = result {
+				#expect(!(error is CancellationError))
+				#expect((error as NSError).domain == "FMDatabase")
+				#expect((error as NSError).code == 1)
+			} else { Issue.record("A failed status query returned successful empty IDs") }
+		}
+		#expect(await queue.close())
+	}
+
 	@Test func emptyCountsSucceedButClosedDatabaseRejects() async throws {
 		let database = ArticlesDatabase(databaseFilePath: ":memory:", accountID: "counts-fixture", retentionStyle: .feedBased)
 		let empty = try await database.fetchArticleCountsAsync(feedIDs: [])
