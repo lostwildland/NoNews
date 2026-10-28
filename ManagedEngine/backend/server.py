@@ -108,6 +108,10 @@ class Application:
                         namespace = native_source._namespace(body.get('namespace'))
                         return native_source.observation(db.db, body.get('id'), namespace)
                     return native_source.observation_by_binding(db.db, body)
+            if path == '/api/native/jobs/claim' and method == 'POST':
+                return native_source.claim_job(db.db, body)
+            if path == '/api/native/jobs/complete' and method == 'POST':
+                return native_source.complete_job(db.db, body)
             if path == '/api/native/replay' and method == 'POST':
                 return native_source.replay(db.db, body)
             if path == '/api/native/context/results':

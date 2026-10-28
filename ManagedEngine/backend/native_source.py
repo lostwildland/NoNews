@@ -332,7 +332,35 @@ def replay(db, body):
     return {"jobID": job_id, "contextID": replay_context_id, "historicalRerun": "queued"}
 
 
-def context_results(db, method, body):
+def claim_job(db, body):
+    namespace = _namespace(body.get("namespace"))
+    with transaction(db):
+        row = db.execute("SELECT j.*,o.namespace FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND j.status='pending' AND o.namespace=?", (_text(body.get("jobID"), "job ID", required=True, maximum=128), namespace)).fetchone()
+        if row is None:
+            raise ValueError("Native job is unavailable")
+        if json.loads(row["intent_json"] or "{}").get("revoked"):
+            raise ValueError("Native job was revoked")
+        db.execute("UPDATE processing_jobs SET status='running',attempts=attempts+1 WHERE id=? AND status='pending'", (row["id"],))
+    return {"jobID": row["id"], "contextID": row["native_context_id"], "intent": json.loads(row["intent_json"] or "{}"), "decisionGeneration": row["decision_generation"]}
+
+
+def complete_job(db, body):
+    namespace = _namespace(body.get("namespace"))
+    job_id = _text(body.get("jobID"), "job ID", required=True, maximum=128)
+    context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
+    stage = _text(body.get("stage"), "stage", required=True, maximum=32)
+    result = body.get("result")
+    if stage not in {"curator", "editor", "material"} or not isinstance(result, dict):
+        raise ValueError("Invalid native completion")
+    with transaction(db):
+        row = db.execute("SELECT j.decision_generation,j.native_context_id,j.intent_json FROM processing_jobs j JOIN native_processing_contexts c ON c.id=j.native_context_id JOIN native_source_observations o ON o.id=c.observation_id WHERE j.id=? AND o.namespace=?", (job_id, namespace)).fetchone()
+        if row is None or row[1] != context_id or json.loads(row[2] or "{}").get("revoked") or row[0] != db.execute("SELECT decision_generation FROM processing_jobs WHERE id=?", (job_id,)).fetchone()[0]:
+            raise ValueError("Native completion was revoked or mismatched")
+        db.execute("INSERT OR REPLACE INTO pipeline_stage_runs(job_id,item_id,stage,status,result_json,updated_at) SELECT ?,item_id,?,?,?,? FROM native_processing_contexts WHERE id=?", (job_id, stage, "ready", json.dumps(result), utcnow(), context_id))
+        db.execute("UPDATE processing_jobs SET status='succeeded',result_json=?,updated_at=? WHERE id=?", (json.dumps(result), utcnow(), job_id))
+    return {"jobID": job_id, "contextID": context_id, "stage": stage, "status": "ready"}
+
+
     namespace = _namespace(body.get("namespace"))
     context_id = _text(body.get("contextID"), "context ID", required=True, maximum=64)
     origin_context_id = _text(body.get("originContextID"), "origin context ID", required=True, maximum=64)
@@ -464,8 +492,11 @@ def feeds(db, method, body):
                     raise ValueError("Enabled feed policy requires media, a Curator prompt, and a service")
                 service_row = db.execute("SELECT value FROM app_settings WHERE key=?", ("nonews.service." + values["service_id"],)).fetchone()
                 if service_row:
-                    service_value = json.loads(service_row[0])
-                    service_value["credentialState"] = service_value.get("credentialState") or ("not_required" if service_value.get("type") == "magpie" else "incomplete")
+                    from . import configuration
+                    if isinstance(values["service_id"], str) and len(values["service_id"]) == 32:
+                        service_value = configuration._record(db, "service", values["service_id"])
+                    else:
+                        service_value = json.loads(service_row[0])
                     if service_value.get("type") != "magpie" and (service_value.get("credentialState") == "incomplete" or service_value.get("error") or service_value.get("stale") or not service_value.get("checkedAt")):
                         raise ValueError("Service binding is unavailable")
 
