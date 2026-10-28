@@ -1037,7 +1037,7 @@ private final class ProcessingPreferencesFormScrollView: NSScrollView {
 			let definitiveFailure = error as? ProcessingEngine.EngineError
 			if definitiveFailure == .mutationRejected || definitiveFailure == .mutationNotSaved || definitiveFailure == .invalidConfiguration {
 				self?.clearPendingCredentialDeletion(id)
-				if definitiveFailure == .mutationNotSaved {
+				if definitiveFailure == .mutationNotSaved || definitiveFailure == .mutationRejected {
 					self?.feedback.stringValue = "The service was not removed. Its Keychain credential remains unchanged."
 				} else if definitiveFailure == .invalidConfiguration {
 					self?.feedback.stringValue = "The service remains because it is still in use. Its Keychain credential remains unchanged."
