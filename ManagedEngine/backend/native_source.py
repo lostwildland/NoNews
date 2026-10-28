@@ -298,9 +298,15 @@ def context_results(db, method, body):
             row = db.execute("SELECT item_id,prompt_version_id FROM editor_drafts WHERE id=?", (result_id,)).fetchone()
         else:
             row = db.execute("SELECT item_id FROM raw_snapshots WHERE id=?", (result_id,)).fetchone()
-        context_item = db.execute("SELECT item_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
+        context_item = db.execute("SELECT item_id,curator_prompt_id,editor_prompt_id FROM native_processing_contexts WHERE id=?", (context_id,)).fetchone()
         if row is None or row[0] != context_item[0]:
             raise ValueError("Context result does not belong to item")
+        if result_type == "curator":
+            if not context_item[1] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='curator'", (row[1], context_item[1])).fetchone() is None:
+                raise ValueError("Curator result does not match context prompt")
+        elif result_type == "draft":
+            if not context_item[2] or db.execute("SELECT 1 FROM prompt_versions WHERE id=? AND kit_id=? AND role='editor'", (row[1], context_item[2])).fetchone() is None:
+                raise ValueError("Editor result does not match context prompt")
         with transaction(db):
             db.execute("INSERT OR IGNORE INTO native_context_results(context_id,result_type,result_id,created_at) VALUES (?,?,?,?)", (context_id, result_type, result_id, utcnow()))
     return {"contextID": context_id, "results": [dict(row) for row in db.execute("SELECT result_type,result_id,created_at FROM native_context_results WHERE context_id=? ORDER BY created_at DESC,result_id", (context_id,))]}

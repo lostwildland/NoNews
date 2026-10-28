@@ -446,6 +446,11 @@ let appName = "NetNewsWire"
 				let body = current.first else { nativeArticleDrainActive = false; return }
 			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
 				guard let self else { return }
+				if case .success = result {
+					self.removeNativeArticleFromQueue(body)
+					sendNext()
+					return
+				}
 				if case .failure(let error) = result {
 					self.recordNativeArticleFailure(body, error: String(describing: error))
 					self.removeNativeArticleFromQueue(body)
@@ -468,6 +473,15 @@ let appName = "NetNewsWire"
 		}
 	}
 
+
+	@objc func retryFailedNativeArticles() {
+		guard let failed = UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]], !failed.isEmpty else { return }
+		var queued = (UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles").flatMap { $0.data(using: .utf8) }.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] }) ?? []
+		queued.append(contentsOf: failed.map { entry in entry.filter { $0.key != "failure" && $0.key != "failedAt" } })
+		saveNativeArticleQueue(queued)
+		UserDefaults.standard.removeObject(forKey: "NoNews.NativeSource.FailedArticles")
+		drainNativeArticleQueue()
+	}
 
 	private func recordNativeArticleFailure(_ body: [String: Any], error: String) {
 		var failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
