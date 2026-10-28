@@ -255,3 +255,7 @@
 ## 2026-10-28 — T30 Sol/high R25 checkpoint
 
 - T30 Sol/high pushed clean `e86fe2e`, adding status intent journal/restart replay, fetch lifetime protection and gated startup reset. Root ledger refreshed to112 original-base paths. SyncDatabase13 and ArticlesDatabase2 passed;20 Swift files parsed. Account runtime stopped at existing `RSCore/AppConfig.swift:13` missing SwiftPM bundle metadata force-unwrap; no Account runtime count claimed. Fresh paired review required; full/iOS/live provider/UI acceptance remains open.
+
+## 2026-10-28 — T03 R26 correction checkpoint
+
+- Sol/high pushed clean `da794ef`, correcting service catalog state, pane reload/selection, accessibility labels/key order, Advanced explanations, cancellation feedback, Keychain cleanup retry, delegate extension conformance, dynamic constraints and portable native-check product input. Python18/17passed/1skip; strict current Engine/Preferences checks passed. Fresh paired review required; full app/UI/Keychain/payload/live provider/HIG runtime remains open.
