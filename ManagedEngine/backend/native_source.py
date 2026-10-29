@@ -124,9 +124,6 @@ def ensure_schema(db) -> None:
         if result_table:
             db.execute("ALTER TABLE native_context_results RENAME TO native_context_results_legacy")
         db.executescript(SCHEMA)
-        if result_table:
-            db.execute("INSERT INTO native_context_results(context_id,result_type,result_id,created_at) SELECT context_id,result_type,result_id,created_at FROM native_context_results_legacy")
-            db.execute("DROP TABLE native_context_results_legacy")
         legacy_columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts_legacy)")}
         target_columns = ["id", "item_id", "observation_id", "curator_prompt_id", "editor_prompt_id", "service_id", "media_type", "processing_mode", "threshold", "scoring_strategy", "body_strategy", "policy_revision", "created_at", "updated_at"]
         expressions = []
@@ -142,6 +139,9 @@ def ensure_schema(db) -> None:
             else:
                 expressions.append("NULL")
         db.execute(f"INSERT INTO native_processing_contexts({','.join(target_columns)}) SELECT {','.join(expressions)} FROM native_processing_contexts_legacy")
+        if result_table:
+            db.execute("INSERT INTO native_context_results(context_id,result_type,result_id,created_at) SELECT context_id,result_type,result_id,created_at FROM native_context_results_legacy")
+            db.execute("DROP TABLE native_context_results_legacy")
         db.execute("DROP TABLE native_processing_contexts_legacy")
 
     columns = {row[1] for row in db.execute("PRAGMA table_info(native_processing_contexts)")}
