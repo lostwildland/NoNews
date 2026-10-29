@@ -43,6 +43,15 @@ final class DetailWebViewController: NSViewController {
 		DetailWindowState(isShowingExtractedArticle: isShowingExtractedArticle, windowScrollY: windowScrollY ?? 0)
 	}
 
+	private var nativeBindingGeneration = 0
+	private var nativeContextResults: [[String: Any]] = [] {
+		didSet { if isViewLoaded { reloadHTML() } }
+	}
+
+	private var nativeSourceBinding: [String: Any]? {
+		didSet { if isViewLoaded { reloadHTML() } }
+	}
+
 	var article: Article? {
 		switch state {
 		case .article(let article, _):
@@ -54,7 +63,28 @@ final class DetailWebViewController: NSViewController {
 		}
 	}
 
-	private var articleTextSize = AppDefaults.articleTextSize
+	func setNativeSourceBinding(_ binding: [String: Any]?) {
+		nativeBindingGeneration += 1
+		let generation = nativeBindingGeneration
+		nativeSourceBinding = binding
+		nativeContextResults = []
+		guard let contextID = (binding?["contexts"] as? [[String: Any]])?.count == 1 ? ((binding?["contexts"] as? [[String: Any]])?.first?["id"] as? String) : binding?["context_id"] as? String,
+			let article else { return }
+		let accountID = article.accountID
+		let feedID = article.feedID
+		let articleID = article.articleID
+		ProcessingEngine.shared.nativeContextResults(contextID: contextID) { [weak self] result in
+			guard let self, self.nativeBindingGeneration == generation, self.article?.accountID == accountID, self.article?.feedID == feedID, self.article?.articleID == articleID else { return }
+			if case .success(let value) = result { self.nativeContextResults = value["results"] as? [[String: Any]] ?? [] }
+		}
+	}
+
+
+	func setNativeContextResults(_ results: [[String: Any]]) {
+		nativeContextResults = results
+	}
+
+
 	private var isArticleContentJavascriptEnabled = AppDefaults.isArticleContentJavascriptEnabled
 
 	private var webInspectorEnabled: Bool {
@@ -384,11 +414,20 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
 		}
 
+		let nativeContexts = nativeSourceBinding?["contexts"] as? [[String: Any]] ?? []
+		let nativeContextID = (nativeSourceBinding?["context_id"] as? String) ?? (nativeContexts.count == 1 ? (nativeContexts.first?["id"] as? String) : nil)
+		let nativeContextLabel = nativeContextID.map { " Native context: \($0.prefix(8))" } ?? (nativeContexts.count > 1 ? " Contexts: " + nativeContexts.compactMap { $0["id"] as? String }.map { String($0.prefix(8)) }.joined(separator: ", ") : "")
+		let nativeResultLabel = nativeContextResults.isEmpty ? "" : " Results: \(nativeContextResults.count)"
+		let nativeBanner = nativeSourceBinding.map { binding in
+			let state = binding["identity_state"] as? String ?? "unresolved"
+			let label = ["verified": "Verified", "conflict": "Conflicting identity", "unresolved": "Unresolved"][state] ?? "Unresolved"
+			return "<aside class=\"nonews-native-source\" aria-label=\"Source identity\">Source identity: \(label)\(nativeContextLabel)\(nativeResultLabel)</aside>"
+		} ?? ""
 		let substitutions = [
 			"title": rendering.title,
 			"baseURL": rendering.baseURL,
 			"style": rendering.style,
-			"body": rendering.html
+			"body": nativeBanner + rendering.html
 		]
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)

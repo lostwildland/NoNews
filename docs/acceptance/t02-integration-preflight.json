@@ -1,0 +1,46 @@
+{
+  "integration_base": "2c5850844410a9378047463ee1d5c2b6ad01d3f6",
+  "reviewed_engine_head": "920efefd61fb993a850241719a4d99e5691023b6",
+  "prospective_merge_tree": "dde5e85df33d8a1655a8e0190f87c4b25c89a148",
+  "merge_conflicts": false,
+  "reviewed_ledger_paths": 70,
+  "matching_reviewed_paths": 70,
+  "application_build_paths_differ_from_engine": [
+    "Tests/fixtures/io-v41-full.sql",
+    "Tests/test_io_snapshot.py"
+  ],
+  "application_path_roots_compared": [
+    "Mac",
+    "Shared",
+    "Modules",
+    "Tests",
+    "iOS",
+    "Extensions",
+    "NetNewsWire.xcodeproj",
+    "SharedXcodeSettings",
+    "NetNewsWire.xctestplan",
+    "NetNewsWire-CI.xctestplan",
+    "buildscripts"
+  ],
+  "changed_paths_from_integration_base": 65,
+  "reviewed_path_blob_inventory_sha256": "0d0daa390030b3d9223302c2b37a747f4cc9440f8cd9996deaf8d88ad62471f2",
+  "boundary": "Read-only prospective merge, not a committed integration or runtime acceptance. Current native/runtime evidence remains pending.",
+  "normal_application_and_build_roots_compared": [
+    "Mac",
+    "Shared",
+    "Modules",
+    "iOS",
+    "Extensions",
+    "NetNewsWire.xcodeproj",
+    "SharedXcodeSettings",
+    "NetNewsWire.xctestplan",
+    "NetNewsWire-CI.xctestplan",
+    "buildscripts"
+  ],
+  "normal_application_and_build_delta": [],
+  "separate_python_snapshot_test_delta": [
+    "Tests/fixtures/io-v41-full.sql",
+    "Tests/test_io_snapshot.py"
+  ],
+  "project_membership_note": "Normal NetNewsWire target synchronizes Mac and Shared, not Tests. The two additional Tests paths belong to accepted T01 Python verification, not the native app source; no new native or Python test run is claimed."
+}

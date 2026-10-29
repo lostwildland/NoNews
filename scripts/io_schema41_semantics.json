@@ -1,0 +1,4030 @@
+{
+  "activity": {
+    "affinities": {
+      "created_at": "TEXT",
+      "id": "INTEGER",
+      "item_id": "TEXT",
+      "kind": "TEXT",
+      "message": "TEXT",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "created_at",
+      "kind",
+      "message",
+      "status"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": []
+  },
+  "ai_feed_settings": {
+    "affinities": {
+      "body_strategy": "TEXT",
+      "contract_origin": "TEXT",
+      "folders_json": "TEXT",
+      "freshrss_feed_id": "TEXT",
+      "kit_id": "TEXT",
+      "last_seen_at": "TEXT",
+      "media_type": "TEXT",
+      "processing_mode": "TEXT",
+      "scoring_strategy": "TEXT",
+      "subscription_state": "TEXT",
+      "title": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [
+      [
+        "media_type",
+        "is",
+        "null",
+        "or",
+        "media_type",
+        "in",
+        "(",
+        "'news'",
+        ",",
+        "'paper'",
+        ",",
+        "'newsletter'",
+        ",",
+        "'podcast'",
+        ",",
+        "'video'",
+        ")"
+      ],
+      [
+        "processing_mode",
+        "in",
+        "(",
+        "'disabled'",
+        ",",
+        "'normal'",
+        ",",
+        "'important'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "contract_origin": [
+        "'authored'"
+      ],
+      "folders_json": [
+        "'[]'"
+      ],
+      "processing_mode": [
+        "'disabled'"
+      ],
+      "subscription_state": [
+        "'subscribed'"
+      ],
+      "title": [
+        "''"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "contract_origin",
+      "folders_json",
+      "last_seen_at",
+      "processing_mode",
+      "subscription_state",
+      "title",
+      "updated_at"
+    ],
+    "primary_key": [
+      "freshrss_feed_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "freshrss_feed_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "ai_feed_settings_migration": {
+    "affinities": {
+      "completed_at": "TEXT",
+      "id": "INTEGER",
+      "report_json": "TEXT"
+    },
+    "checks": [
+      [
+        "id",
+        "=",
+        "1"
+      ]
+    ],
+    "defaults": {
+      "report_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "report_json"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": []
+  },
+  "ai_folder_profiles": {
+    "affinities": {
+      "enabled": "INTEGER",
+      "folder": "TEXT",
+      "profile": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [
+      [
+        "enabled",
+        "in",
+        "(",
+        "0",
+        ",",
+        "1",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "enabled": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "enabled",
+      "updated_at"
+    ],
+    "primary_key": [
+      "folder"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "folder",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "ai_kits": {
+    "affinities": {
+      "content_type": "TEXT",
+      "content_types_json": "TEXT",
+      "created_at": "TEXT",
+      "id": "TEXT",
+      "name": "TEXT",
+      "threshold": "REAL",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "content_type",
+      "created_at",
+      "name",
+      "threshold",
+      "updated_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "app_settings": {
+    "affinities": {
+      "key": "TEXT",
+      "updated_at": "TEXT",
+      "value": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "updated_at",
+      "value"
+    ],
+    "primary_key": [
+      "key"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "backlog_requests": {
+    "affinities": {
+      "created_at": "TEXT",
+      "cursor": "INTEGER",
+      "entry_ids_json": "TEXT",
+      "entry_routes_json": "TEXT",
+      "error": "TEXT",
+      "id": "TEXT",
+      "kit": "TEXT",
+      "planned": "INTEGER",
+      "queued": "INTEGER",
+      "rescore": "INTEGER",
+      "status": "TEXT",
+      "updated_at": "TEXT",
+      "window": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "cursor": [
+        "0"
+      ],
+      "planned": [
+        "0"
+      ],
+      "queued": [
+        "0"
+      ],
+      "rescore": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "created_at",
+      "cursor",
+      "kit",
+      "planned",
+      "queued",
+      "rescore",
+      "status",
+      "updated_at",
+      "window"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "body_texts": {
+    "affinities": {
+      "snapshot_id": "INTEGER",
+      "text": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "snapshot_id",
+            "snapshot_id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "body_versions",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "text"
+    ],
+    "primary_key": [
+      "snapshot_id"
+    ],
+    "rowid_alias": "snapshot_id",
+    "unique": []
+  },
+  "body_versions": {
+    "affinities": {
+      "authority": "TEXT",
+      "availability": "TEXT",
+      "availability_reason": "TEXT",
+      "characters": "INTEGER",
+      "cleaned_at": "TEXT",
+      "cleanup_request_id": "TEXT",
+      "format": "TEXT",
+      "item_id": "TEXT",
+      "retrieved_at": "TEXT",
+      "sha256": "TEXT",
+      "snapshot_id": "INTEGER",
+      "source": "TEXT",
+      "source_url": "TEXT",
+      "stored_at": "TEXT"
+    },
+    "checks": [
+      [
+        "authority",
+        "in",
+        "(",
+        "'database'",
+        ",",
+        "'imported'",
+        ")"
+      ],
+      [
+        "availability",
+        "in",
+        "(",
+        "'usable'",
+        ",",
+        "'unavailable'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "authority": [
+        "'database'"
+      ],
+      "availability": [
+        "'usable'"
+      ],
+      "availability_reason": [
+        "''"
+      ],
+      "format": [
+        "'markdown'"
+      ],
+      "source_url": [
+        "''"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "snapshot_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "raw_snapshots",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "authority",
+      "availability",
+      "availability_reason",
+      "characters",
+      "format",
+      "item_id",
+      "retrieved_at",
+      "sha256",
+      "source",
+      "source_url",
+      "stored_at"
+    ],
+    "primary_key": [
+      "snapshot_id"
+    ],
+    "rowid_alias": "snapshot_id",
+    "unique": []
+  },
+  "command_batches": {
+    "affinities": {
+      "id": "TEXT",
+      "result_json": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "result_json"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "commands": {
+    "affinities": {
+      "command_type": "TEXT",
+      "error": "TEXT",
+      "executed_at": "TEXT",
+      "id": "TEXT",
+      "idempotency_key": "TEXT",
+      "item_id": "TEXT",
+      "payload": "TEXT",
+      "requested_at": "TEXT",
+      "status": "TEXT",
+      "undo_deadline": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "payload": [
+        "'{}'"
+      ],
+      "status": [
+        "'pending'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "command_type",
+      "idempotency_key",
+      "item_id",
+      "payload",
+      "requested_at",
+      "status",
+      "undo_deadline"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "idempotency_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "curator_runs": {
+    "affinities": {
+      "ai_decision": "TEXT",
+      "error": "TEXT",
+      "finished_at": "TEXT",
+      "id": "TEXT",
+      "input_hash": "TEXT",
+      "item_id": "TEXT",
+      "model": "TEXT",
+      "prompt_version_id": "TEXT",
+      "provider": "TEXT",
+      "raw_snapshot_id": "INTEGER",
+      "reason": "TEXT",
+      "result_json": "TEXT",
+      "score": "REAL",
+      "started_at": "TEXT",
+      "status": "TEXT",
+      "thinking_effort": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "item_id",
+      "started_at",
+      "status"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "deliveries": {
+    "affinities": {
+      "destination": "TEXT",
+      "draft_id": "TEXT",
+      "error": "TEXT",
+      "external_key": "TEXT",
+      "issue_date": "TEXT",
+      "issue_id": "TEXT",
+      "item_id": "TEXT",
+      "position": "INTEGER",
+      "section_hash": "TEXT",
+      "status": "TEXT",
+      "synced_hash": "TEXT",
+      "target": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "destination": [
+        "''"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "destination",
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "destination",
+      "item_id",
+      "target"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "destination",
+            "binary"
+          ],
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "target",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "draft_bodies": {
+    "affinities": {
+      "draft_id": "TEXT",
+      "text": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "draft_id",
+            "draft_id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "draft_versions",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "text"
+    ],
+    "primary_key": [
+      "draft_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "draft_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "draft_versions": {
+    "affinities": {
+      "authority": "TEXT",
+      "characters": "INTEGER",
+      "cleaned_at": "TEXT",
+      "cleanup_request_id": "TEXT",
+      "draft_id": "TEXT",
+      "item_id": "TEXT",
+      "sha256": "TEXT",
+      "stored_at": "TEXT"
+    },
+    "checks": [
+      [
+        "authority",
+        "in",
+        "(",
+        "'database'",
+        ",",
+        "'imported'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "authority": [
+        "'database'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "draft_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "editor_drafts",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "authority",
+      "characters",
+      "item_id",
+      "sha256",
+      "stored_at"
+    ],
+    "primary_key": [
+      "draft_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "draft_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "editor_drafts": {
+    "affinities": {
+      "artifact_hash": "TEXT",
+      "created_at": "TEXT",
+      "id": "TEXT",
+      "input_hash": "TEXT",
+      "item_id": "TEXT",
+      "manual_revision_id": "TEXT",
+      "manual_source_id": "TEXT",
+      "model": "TEXT",
+      "model_source_json": "TEXT",
+      "prompt_version_id": "TEXT",
+      "provider": "TEXT",
+      "raw_snapshot_id": "INTEGER",
+      "thinking_effort": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "created_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "manual_revision_id",
+            "binary"
+          ]
+        ],
+        [
+          "manual_revision_id",
+          "is",
+          "not",
+          "null"
+        ]
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "entry_observations": {
+    "affinities": {
+      "feed_id": "TEXT",
+      "freshrss_entry_id": "TEXT",
+      "id": "INTEGER",
+      "ingested_at": "TEXT",
+      "item_id": "TEXT",
+      "original_url": "TEXT",
+      "published_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "feed_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "feeds",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "feed_id",
+      "freshrss_entry_id",
+      "ingested_at",
+      "item_id"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "freshrss_entry_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "failure_dismissals": {
+    "affinities": {
+      "dismissed_at": "TEXT",
+      "id": "TEXT",
+      "kind": "TEXT",
+      "stamp": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "dismissed_at",
+      "id",
+      "kind",
+      "stamp"
+    ],
+    "primary_key": [
+      "id",
+      "kind"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ],
+          [
+            "kind",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "feed_items": {
+    "affinities": {
+      "feed_id": "TEXT",
+      "first_seen_at": "TEXT",
+      "item_id": "TEXT",
+      "last_seen_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "feed_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "feeds",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "feed_id",
+      "first_seen_at",
+      "item_id",
+      "last_seen_at"
+    ],
+    "primary_key": [
+      "feed_id",
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "feed_id",
+            "binary"
+          ],
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "feeds": {
+    "affinities": {
+      "current_media_type": "TEXT",
+      "feed_url": "TEXT",
+      "first_seen_at": "TEXT",
+      "freshrss_feed_id": "TEXT",
+      "id": "TEXT",
+      "last_seen_at": "TEXT",
+      "subscription_status": "TEXT",
+      "title": "TEXT",
+      "unsubscribed_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "subscription_status": [
+        "'active'"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "first_seen_at",
+      "freshrss_feed_id",
+      "last_seen_at",
+      "subscription_status",
+      "title"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "freshrss_feed_id",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "human_reviews": {
+    "affinities": {
+      "action_source": "TEXT",
+      "created_at": "TEXT",
+      "curator_run_id": "TEXT",
+      "decision": "TEXT",
+      "event_type": "TEXT",
+      "id": "INTEGER",
+      "idempotency_key": "TEXT",
+      "item_id": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "action_source",
+      "created_at",
+      "event_type",
+      "item_id"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "idempotency_key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "ingestion_failures": {
+    "affinities": {
+      "artifact_path": "TEXT",
+      "entry_id": "TEXT",
+      "error": "TEXT",
+      "folder": "TEXT",
+      "id": "TEXT",
+      "resolved": "INTEGER",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "resolved": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "artifact_path",
+      "error",
+      "folder",
+      "resolved",
+      "updated_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "integrations": {
+    "affinities": {
+      "config_json": "TEXT",
+      "key": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "config_json",
+      "updated_at"
+    ],
+    "primary_key": [
+      "key"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "item_feed_contracts": {
+    "affinities": {
+      "body_strategy": "TEXT",
+      "freshrss_feed_id": "TEXT",
+      "item_id": "TEXT",
+      "kit_id": "TEXT",
+      "media_type": "TEXT",
+      "pinned_at": "TEXT",
+      "processing_mode": "TEXT",
+      "refreshed_at": "TEXT",
+      "scoring_strategy": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "processing_mode": [
+        "'disabled'"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "pinned_at",
+      "processing_mode"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "item_identities": {
+    "affinities": {
+      "created_at": "TEXT",
+      "id": "INTEGER",
+      "identity_type": "TEXT",
+      "identity_value": "TEXT",
+      "item_id": "TEXT",
+      "media_type": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "created_at",
+      "identity_type",
+      "identity_value",
+      "item_id",
+      "media_type"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "identity_type",
+            "binary"
+          ],
+          [
+            "identity_value",
+            "binary"
+          ],
+          [
+            "media_type",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "item_material_fingerprints": {
+    "affinities": {
+      "characters": "INTEGER",
+      "item_id": "TEXT",
+      "media_type": "TEXT",
+      "reason": "TEXT",
+      "retrieved_at": "TEXT",
+      "role": "TEXT",
+      "sha256": "TEXT",
+      "source_identity": "TEXT",
+      "source_route": "TEXT",
+      "status": "TEXT",
+      "strategy": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [
+      [
+        "role",
+        "in",
+        "(",
+        "'scoring'",
+        ",",
+        "'body'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "characters": [
+        "0"
+      ],
+      "reason": [
+        "''"
+      ],
+      "sha256": [
+        "''"
+      ],
+      "source_identity": [
+        "''"
+      ],
+      "source_route": [
+        "''"
+      ],
+      "strategy": [
+        "''"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "characters",
+      "item_id",
+      "media_type",
+      "reason",
+      "retrieved_at",
+      "role",
+      "sha256",
+      "source_identity",
+      "source_route",
+      "status",
+      "strategy",
+      "updated_at"
+    ],
+    "primary_key": [
+      "item_id",
+      "role"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "role",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "item_metadata": {
+    "affinities": {
+      "item_id": "TEXT",
+      "metadata_json": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "metadata_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "metadata_json"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "items": {
+    "affinities": {
+      "canonical_url": "TEXT",
+      "created_at": "TEXT",
+      "current_raw_snapshot_id": "INTEGER",
+      "ever_starred": "INTEGER",
+      "first_ingested_at": "TEXT",
+      "human_curator_run_id": "TEXT",
+      "human_decision": "TEXT",
+      "human_review_status": "TEXT",
+      "id": "TEXT",
+      "media_type": "TEXT",
+      "public_id": "TEXT",
+      "published_at": "TEXT",
+      "review_date": "TEXT",
+      "review_generation": "INTEGER",
+      "reviewed_at": "TEXT",
+      "starred": "INTEGER",
+      "title": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [
+      [
+        "media_type",
+        "in",
+        "(",
+        "'news'",
+        ",",
+        "'paper'",
+        ",",
+        "'newsletter'",
+        ",",
+        "'podcast'",
+        ",",
+        "'video'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "ever_starred": [
+        "0"
+      ],
+      "human_review_status": [
+        "'pending'"
+      ],
+      "review_generation": [
+        "0"
+      ],
+      "starred": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "created_at",
+      "ever_starred",
+      "first_ingested_at",
+      "human_review_status",
+      "media_type",
+      "review_date",
+      "review_generation",
+      "starred",
+      "updated_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "public_id",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "legacy_content_imports": {
+    "affinities": {
+      "batch": "TEXT",
+      "content_sha256": "TEXT",
+      "detail_json": "TEXT",
+      "file_sha256": "TEXT",
+      "import_key": "TEXT",
+      "item_id": "TEXT",
+      "kind": "TEXT",
+      "model": "TEXT",
+      "path": "TEXT",
+      "source_hash": "TEXT",
+      "source_key": "TEXT",
+      "source_system": "TEXT",
+      "state": "TEXT",
+      "target_id": "TEXT",
+      "verified_at": "TEXT",
+      "version": "INTEGER"
+    },
+    "checks": [
+      [
+        "kind",
+        "in",
+        "(",
+        "'body'",
+        ",",
+        "'draft'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "batch": [
+        "''"
+      ],
+      "detail_json": [
+        "'{}'"
+      ],
+      "model": [
+        "''"
+      ],
+      "source_hash": [
+        "''"
+      ],
+      "version": [
+        "0"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "batch",
+      "content_sha256",
+      "detail_json",
+      "file_sha256",
+      "item_id",
+      "kind",
+      "model",
+      "path",
+      "source_hash",
+      "source_key",
+      "source_system",
+      "state",
+      "target_id",
+      "verified_at",
+      "version"
+    ],
+    "primary_key": [
+      "import_key"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "import_key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "legacy_draft_imports": {
+    "affinities": {
+      "draft_id": "TEXT",
+      "imported_at": "TEXT",
+      "metadata_json": "TEXT",
+      "source_hash": "TEXT",
+      "source_key": "TEXT",
+      "source_system": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "draft_id",
+            "id"
+          ]
+        ],
+        "delete": "cascade",
+        "match": "none",
+        "table": "editor_drafts",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "imported_at",
+      "metadata_json",
+      "source_hash",
+      "source_key",
+      "source_system"
+    ],
+    "primary_key": [
+      "draft_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "source_hash",
+            "binary"
+          ],
+          [
+            "source_key",
+            "binary"
+          ],
+          [
+            "source_system",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "draft_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_assets": {
+    "affinities": {
+      "archive_path": "TEXT",
+      "file_hash": "TEXT",
+      "id": "INTEGER",
+      "identity_verified": "INTEGER",
+      "item_id": "TEXT",
+      "kind": "TEXT",
+      "metadata_json": "TEXT",
+      "source_path": "TEXT",
+      "source_url": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "identity_verified": [
+        "0"
+      ],
+      "metadata_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "file_hash",
+      "identity_verified",
+      "item_id",
+      "kind",
+      "metadata_json",
+      "source_path"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "file_hash",
+            "binary"
+          ],
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "kind",
+            "binary"
+          ],
+          [
+            "source_path",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_cleanup_audit": {
+    "affinities": {
+      "created_at": "TEXT",
+      "detail_json": "TEXT",
+      "event": "TEXT",
+      "id": "INTEGER",
+      "item_id": "TEXT",
+      "request_id": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "detail_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "created_at",
+      "detail_json",
+      "event",
+      "item_id",
+      "request_id"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": []
+  },
+  "literature_cleanup_backups": {
+    "affinities": {
+      "backup_id": "TEXT",
+      "body_count": "INTEGER",
+      "bytes": "INTEGER",
+      "created_at": "TEXT",
+      "draft_count": "INTEGER",
+      "item_id": "TEXT",
+      "manifest_sha256": "TEXT",
+      "path": "TEXT",
+      "request_id": "TEXT",
+      "verified_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "body_count",
+      "bytes",
+      "created_at",
+      "draft_count",
+      "item_id",
+      "manifest_sha256",
+      "path",
+      "request_id",
+      "verified_at"
+    ],
+    "primary_key": [
+      "backup_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "backup_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_cleanup_media": {
+    "affinities": {
+      "bytes": "INTEGER",
+      "object_key": "TEXT",
+      "public_url": "TEXT",
+      "request_id": "TEXT",
+      "sha256": "TEXT",
+      "status": "TEXT"
+    },
+    "checks": [
+      [
+        "status",
+        "in",
+        "(",
+        "'pending'",
+        ",",
+        "'deleted'",
+        ",",
+        "'shared'",
+        ")"
+      ]
+    ],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "request_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "literature_cleanup_requests",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "bytes",
+      "object_key",
+      "public_url",
+      "request_id",
+      "sha256",
+      "status"
+    ],
+    "primary_key": [
+      "object_key",
+      "request_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "object_key",
+            "binary"
+          ],
+          [
+            "request_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_cleanup_requests": {
+    "affinities": {
+      "action_source": "TEXT",
+      "ai_decision": "TEXT",
+      "ai_run_id": "TEXT",
+      "attempts": "INTEGER",
+      "backup_id": "TEXT",
+      "cause": "TEXT",
+      "command_id": "TEXT",
+      "completed_at": "TEXT",
+      "created_at": "TEXT",
+      "due_at": "TEXT",
+      "error": "TEXT",
+      "execution_token": "TEXT",
+      "id": "TEXT",
+      "item_id": "TEXT",
+      "retry_after": "TEXT",
+      "review_generation": "INTEGER",
+      "review_id": "INTEGER",
+      "started_at": "TEXT",
+      "status": "TEXT",
+      "tombstone_json": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [
+      [
+        "status",
+        "in",
+        "(",
+        "'hold'",
+        ",",
+        "'pending_review'",
+        ",",
+        "'executing'",
+        ",",
+        "'cancelled'",
+        ",",
+        "'executed'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "attempts": [
+        "0"
+      ],
+      "due_at": [
+        "''"
+      ],
+      "review_generation": [
+        "0"
+      ],
+      "status": [
+        "'hold'"
+      ],
+      "tombstone_json": [
+        "''"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "cause",
+      "created_at",
+      "due_at",
+      "item_id",
+      "review_generation",
+      "status",
+      "tombstone_json",
+      "updated_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "review_id",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_drafts": {
+    "affinities": {
+      "bound_at": "TEXT",
+      "citekey": "TEXT",
+      "draft_id": "TEXT",
+      "file_draft_id": "TEXT",
+      "file_identity": "TEXT",
+      "file_sha256": "TEXT",
+      "item_id": "TEXT",
+      "path": "TEXT",
+      "payload_sha256": "TEXT",
+      "version": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "draft_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "editor_drafts",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "bound_at",
+      "citekey",
+      "file_draft_id",
+      "file_identity",
+      "file_sha256",
+      "item_id",
+      "path",
+      "payload_sha256",
+      "version"
+    ],
+    "primary_key": [
+      "draft_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "file_identity",
+            "binary"
+          ],
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "citekey",
+            "binary"
+          ],
+          [
+            "file_draft_id",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "draft_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_file_keys": {
+    "affinities": {
+      "active_evidence_json": "TEXT",
+      "active_parent_identity": "TEXT",
+      "active_parent_item_key": "TEXT",
+      "active_parent_library_id": "TEXT",
+      "active_source": "TEXT",
+      "citation_key_updated_at": "TEXT",
+      "current_citation_key": "TEXT",
+      "drift_reason": "TEXT",
+      "drift_state": "TEXT",
+      "file_key": "TEXT",
+      "initial_citation_key": "TEXT",
+      "item_id": "TEXT",
+      "origin_evidence_json": "TEXT",
+      "origin_parent_identity": "TEXT",
+      "origin_parent_item_key": "TEXT",
+      "origin_parent_library_id": "TEXT",
+      "parent_updated_at": "TEXT",
+      "reserved_at": "TEXT",
+      "source": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "active_evidence_json": [
+        "'{}'"
+      ],
+      "origin_evidence_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "active_evidence_json",
+      "active_parent_identity",
+      "active_parent_item_key",
+      "active_parent_library_id",
+      "active_source",
+      "citation_key_updated_at",
+      "current_citation_key",
+      "drift_state",
+      "file_key",
+      "initial_citation_key",
+      "origin_evidence_json",
+      "origin_parent_identity",
+      "origin_parent_item_key",
+      "origin_parent_library_id",
+      "parent_updated_at",
+      "reserved_at",
+      "source",
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "current_citation_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "file_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_files": {
+    "affinities": {
+      "citekey": "TEXT",
+      "conditional_writer": "TEXT",
+      "enabled_at": "TEXT",
+      "evidence_json": "TEXT",
+      "item_id": "TEXT",
+      "source": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "evidence_json": [
+        "'{}'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "citekey",
+      "conditional_writer",
+      "enabled_at",
+      "evidence_json",
+      "source",
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "citekey",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_raws": {
+    "affinities": {
+      "bound_at": "TEXT",
+      "citekey": "TEXT",
+      "file_sha256": "TEXT",
+      "item_id": "TEXT",
+      "path": "TEXT",
+      "snapshot_id": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "snapshot_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "raw_snapshots",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "bound_at",
+      "citekey",
+      "file_sha256",
+      "item_id",
+      "path"
+    ],
+    "primary_key": [
+      "snapshot_id"
+    ],
+    "rowid_alias": "snapshot_id",
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_reading_notes": {
+    "affinities": {
+      "body_sha256": "TEXT",
+      "body_version_id": "INTEGER",
+      "citekey": "TEXT",
+      "created_at": "TEXT",
+      "extra_error": "TEXT",
+      "extra_status": "TEXT",
+      "fulltext_url": "TEXT",
+      "item_id": "TEXT",
+      "path": "TEXT",
+      "payload_sha256": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT",
+      "zotero_key": "TEXT"
+    },
+    "checks": [
+      [
+        "extra_status",
+        "in",
+        "(",
+        "'pending'",
+        ",",
+        "'written'",
+        ",",
+        "'failed'",
+        ")"
+      ],
+      [
+        "status",
+        "in",
+        "(",
+        "'exported'",
+        ",",
+        "'missing'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "extra_error": [
+        "''"
+      ],
+      "extra_status": [
+        "'pending'"
+      ],
+      "fulltext_url": [
+        "''"
+      ],
+      "status": [
+        "'exported'"
+      ],
+      "zotero_key": [
+        "''"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "body_sha256",
+      "citekey",
+      "created_at",
+      "extra_error",
+      "extra_status",
+      "fulltext_url",
+      "path",
+      "payload_sha256",
+      "status",
+      "updated_at",
+      "zotero_key"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "literature_selections": {
+    "affinities": {
+      "curator_run_id": "TEXT",
+      "item_id": "TEXT",
+      "score": "REAL",
+      "selected_at": "TEXT",
+      "threshold": "REAL"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "curator_run_id",
+      "score",
+      "selected_at",
+      "threshold"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_derivatives": {
+    "affinities": {
+      "derived_key": "TEXT",
+      "detail_json": "TEXT",
+      "original_key": "TEXT",
+      "purpose": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "derived_key",
+            "key"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "media_objects",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "original_key",
+            "key"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "media_objects",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "derived_key",
+      "detail_json",
+      "original_key",
+      "purpose"
+    ],
+    "primary_key": [
+      "derived_key",
+      "original_key",
+      "purpose"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "derived_key",
+            "binary"
+          ],
+          [
+            "original_key",
+            "binary"
+          ],
+          [
+            "purpose",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_document_generations": {
+    "affinities": {
+      "cleanup_error": "TEXT",
+      "cleanup_state": "TEXT",
+      "created_at": "TEXT",
+      "document_bytes": "INTEGER",
+      "document_hash": "TEXT",
+      "expected_current_hash": "TEXT",
+      "generation": "INTEGER",
+      "item_id": "TEXT",
+      "metadata_json": "TEXT",
+      "planned_output_hash": "TEXT",
+      "provenance_json": "TEXT",
+      "raw_snapshot_id": "INTEGER",
+      "source_url": "TEXT",
+      "staging_device": "INTEGER",
+      "staging_inode": "INTEGER",
+      "staging_path": "TEXT",
+      "state": "TEXT"
+    },
+    "checks": [
+      [
+        "state",
+        "in",
+        "(",
+        "'pending'",
+        ",",
+        "'committed'",
+        ")"
+      ]
+    ],
+    "defaults": {
+      "cleanup_error": [
+        "''"
+      ],
+      "cleanup_state": [
+        "'pending'"
+      ],
+      "created_at": [
+        "current_timestamp"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "cleanup_error",
+      "cleanup_state",
+      "created_at",
+      "document_bytes",
+      "document_hash",
+      "generation",
+      "item_id",
+      "metadata_json",
+      "provenance_json",
+      "source_url",
+      "staging_device",
+      "staging_inode",
+      "staging_path",
+      "state"
+    ],
+    "primary_key": [
+      "generation",
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        [
+          "state",
+          "=",
+          "'pending'"
+        ]
+      ],
+      [
+        [
+          [
+            "generation",
+            "binary"
+          ],
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_document_receipts": {
+    "affinities": {
+      "created_at": "TEXT",
+      "document_hash": "TEXT",
+      "generation": "INTEGER",
+      "id": "INTEGER",
+      "item_id": "TEXT",
+      "planned_output_hash": "TEXT",
+      "raw_snapshot_id": "INTEGER",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "created_at": [
+        "current_timestamp"
+      ],
+      "generation": [
+        "1"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "created_at",
+      "document_hash",
+      "generation",
+      "item_id",
+      "status"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": []
+  },
+  "media_objects": {
+    "affinities": {
+      "bytes": "INTEGER",
+      "cleanup_generation": "INTEGER",
+      "cleanup_request_id": "TEXT",
+      "created_at": "TEXT",
+      "deleted_at": "TEXT",
+      "ext": "TEXT",
+      "height": "INTEGER",
+      "key": "TEXT",
+      "namespace": "TEXT",
+      "public_url": "TEXT",
+      "sha256": "TEXT",
+      "stored_sha256": "TEXT",
+      "transcoded_from": "TEXT",
+      "verified_at": "TEXT",
+      "width": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {
+      "cleanup_generation": [
+        "0"
+      ],
+      "height": [
+        "0"
+      ],
+      "transcoded_from": [
+        "''"
+      ],
+      "width": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "bytes",
+      "cleanup_generation",
+      "created_at",
+      "ext",
+      "height",
+      "namespace",
+      "public_url",
+      "sha256",
+      "stored_sha256",
+      "transcoded_from",
+      "width"
+    ],
+    "primary_key": [
+      "key"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "namespace",
+            "binary"
+          ],
+          [
+            "stored_sha256",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_pending": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "created_at": "TEXT",
+      "id": "INTEGER",
+      "last_error": "TEXT",
+      "namespace": "TEXT",
+      "next_attempt_at": "TEXT",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "payload_bytes": "INTEGER",
+      "payload_sha256": "TEXT",
+      "source_ref": "TEXT",
+      "staging_device": "INTEGER",
+      "staging_inode": "INTEGER",
+      "staging_owned": "INTEGER",
+      "staging_path": "TEXT",
+      "state": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "attempts": [
+        "0"
+      ],
+      "last_error": [
+        "''"
+      ],
+      "namespace": [
+        "'literature'"
+      ],
+      "payload_bytes": [
+        "0"
+      ],
+      "payload_sha256": [
+        "''"
+      ],
+      "staging_device": [
+        "0"
+      ],
+      "staging_inode": [
+        "0"
+      ],
+      "staging_owned": [
+        "0"
+      ],
+      "state": [
+        "'pending'"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "attempts",
+      "created_at",
+      "last_error",
+      "namespace",
+      "owner_id",
+      "owner_kind",
+      "payload_bytes",
+      "payload_sha256",
+      "source_ref",
+      "staging_device",
+      "staging_inode",
+      "staging_owned",
+      "staging_path",
+      "state"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "owner_id",
+            "binary"
+          ],
+          [
+            "owner_kind",
+            "binary"
+          ],
+          [
+            "source_ref",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_raw_activation_intents": {
+    "affinities": {
+      "candidate_hash": "TEXT",
+      "citekey": "TEXT",
+      "expected_snapshot_id": "INTEGER",
+      "id": "TEXT",
+      "item_id": "TEXT",
+      "old_authority_json": "TEXT",
+      "old_mapping_json": "TEXT",
+      "preimage_json": "TEXT",
+      "quarantine_path": "TEXT",
+      "receipt_id": "TEXT",
+      "snapshot_id": "INTEGER",
+      "state": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "candidate_hash",
+      "citekey",
+      "item_id",
+      "old_authority_json",
+      "old_mapping_json",
+      "state"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_receipts": {
+    "affinities": {
+      "bytes_total": "INTEGER",
+      "created_at": "TEXT",
+      "detail_json": "TEXT",
+      "failed": "INTEGER",
+      "id": "INTEGER",
+      "images_total": "INTEGER",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "raw_snapshot_id": "INTEGER",
+      "reused": "INTEGER",
+      "skipped": "INTEGER",
+      "status": "TEXT",
+      "uploaded": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {
+      "bytes_total": [
+        "0"
+      ],
+      "detail_json": [
+        "'{}'"
+      ],
+      "failed": [
+        "0"
+      ],
+      "images_total": [
+        "0"
+      ],
+      "reused": [
+        "0"
+      ],
+      "skipped": [
+        "0"
+      ],
+      "uploaded": [
+        "0"
+      ]
+    },
+    "foreign_keys": [],
+    "not_null": [
+      "bytes_total",
+      "created_at",
+      "detail_json",
+      "failed",
+      "images_total",
+      "owner_id",
+      "owner_kind",
+      "reused",
+      "skipped",
+      "status",
+      "uploaded"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": []
+  },
+  "media_source_current": {
+    "affinities": {
+      "namespace": "TEXT",
+      "object_key": "TEXT",
+      "observed_at": "TEXT",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "source_ref": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "namespace",
+      "object_key",
+      "observed_at",
+      "owner_id",
+      "owner_kind",
+      "source_ref"
+    ],
+    "primary_key": [
+      "namespace",
+      "owner_id",
+      "owner_kind",
+      "source_ref"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "namespace",
+            "binary"
+          ],
+          [
+            "owner_id",
+            "binary"
+          ],
+          [
+            "owner_kind",
+            "binary"
+          ],
+          [
+            "source_ref",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_source_revisions": {
+    "affinities": {
+      "namespace": "TEXT",
+      "object_key": "TEXT",
+      "observed_at": "TEXT",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "source_ref": "TEXT",
+      "source_revision": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "namespace",
+      "object_key",
+      "observed_at",
+      "owner_id",
+      "owner_kind",
+      "source_ref",
+      "source_revision"
+    ],
+    "primary_key": [
+      "namespace",
+      "owner_id",
+      "owner_kind",
+      "source_ref",
+      "source_revision"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "namespace",
+            "binary"
+          ],
+          [
+            "owner_id",
+            "binary"
+          ],
+          [
+            "owner_kind",
+            "binary"
+          ],
+          [
+            "source_ref",
+            "binary"
+          ],
+          [
+            "source_revision",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_upload_intents": {
+    "affinities": {
+      "created_at": "TEXT",
+      "object_json": "TEXT",
+      "object_key": "TEXT",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "payload": "BLOB",
+      "source_ref": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "created_at",
+      "object_json",
+      "object_key",
+      "owner_id",
+      "owner_kind",
+      "payload",
+      "source_ref"
+    ],
+    "primary_key": [
+      "object_key",
+      "owner_id",
+      "owner_kind",
+      "source_ref"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "object_key",
+            "binary"
+          ],
+          [
+            "owner_id",
+            "binary"
+          ],
+          [
+            "owner_kind",
+            "binary"
+          ],
+          [
+            "source_ref",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "media_usages": {
+    "affinities": {
+      "first_seen_at": "TEXT",
+      "object_key": "TEXT",
+      "owner_id": "TEXT",
+      "owner_kind": "TEXT",
+      "source_ref": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "first_seen_at",
+      "object_key",
+      "owner_id",
+      "owner_kind",
+      "source_ref"
+    ],
+    "primary_key": [
+      "object_key",
+      "owner_id",
+      "owner_kind",
+      "source_ref"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "object_key",
+            "binary"
+          ],
+          [
+            "owner_id",
+            "binary"
+          ],
+          [
+            "owner_kind",
+            "binary"
+          ],
+          [
+            "source_ref",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "model_configs": {
+    "affinities": {
+      "config_json": "TEXT",
+      "kit_id": "TEXT",
+      "role": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "config_json"
+    ],
+    "primary_key": [
+      "kit_id",
+      "role"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "kit_id",
+            "binary"
+          ],
+          [
+            "role",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "news_notes": {
+    "affinities": {
+      "item_id": "TEXT",
+      "path": "TEXT",
+      "updated_at": "TEXT",
+      "vault": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "path",
+      "updated_at",
+      "vault"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "newsletter_outbox": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "command_id": "TEXT",
+      "draft_id": "TEXT",
+      "error": "TEXT",
+      "expected_file_hash": "TEXT",
+      "item_id": "TEXT",
+      "revision_id": "TEXT",
+      "status": "TEXT",
+      "target_date": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "attempts": [
+        "0"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "command_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "commands",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "item_id",
+      "status",
+      "target_date"
+    ],
+    "primary_key": [
+      "command_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "command_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "observation_news_labels": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "draft_id": "TEXT",
+      "error": "TEXT",
+      "label": "TEXT",
+      "observation_id": "INTEGER",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "observation_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "entry_observations",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "draft_id",
+      "status"
+    ],
+    "primary_key": [
+      "observation_id"
+    ],
+    "rowid_alias": "observation_id",
+    "unique": []
+  },
+  "observation_paper_labels": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "curator_run_id": "TEXT",
+      "error": "TEXT",
+      "label": "TEXT",
+      "observation_id": "INTEGER",
+      "projection_version": "INTEGER",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "projection_version": [
+        "0"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "observation_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "entry_observations",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "curator_run_id",
+      "projection_version",
+      "status"
+    ],
+    "primary_key": [
+      "observation_id"
+    ],
+    "rowid_alias": "observation_id",
+    "unique": []
+  },
+  "observation_projection": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "decision_attempts": "INTEGER",
+      "decision_available_at": "TEXT",
+      "decision_error": "TEXT",
+      "decision_status": "TEXT",
+      "decision_value": "TEXT",
+      "desired_published": "INTEGER",
+      "desired_read": "INTEGER",
+      "desired_starred": "INTEGER",
+      "error": "TEXT",
+      "observation_id": "INTEGER",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "decision_attempts": [
+        "0"
+      ],
+      "desired_published": [
+        "0"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "observation_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "entry_observations",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "decision_attempts",
+      "desired_published",
+      "desired_read",
+      "desired_starred",
+      "status"
+    ],
+    "primary_key": [
+      "observation_id"
+    ],
+    "rowid_alias": "observation_id",
+    "unique": []
+  },
+  "pipeline_stage_runs": {
+    "affinities": {
+      "item_id": "TEXT",
+      "job_id": "TEXT",
+      "result_json": "TEXT",
+      "stage": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "item_id",
+      "job_id",
+      "stage",
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "item_id",
+      "job_id",
+      "stage"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "job_id",
+            "binary"
+          ],
+          [
+            "stage",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "private_raw_sources": {
+    "affinities": {
+      "item_id": "TEXT",
+      "relative_path": "TEXT",
+      "sha256": "TEXT",
+      "size_bytes": "INTEGER",
+      "snapshot_id": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      },
+      {
+        "columns": [
+          [
+            "snapshot_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "raw_snapshots",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "item_id",
+      "relative_path",
+      "sha256",
+      "size_bytes"
+    ],
+    "primary_key": [
+      "snapshot_id"
+    ],
+    "rowid_alias": "snapshot_id",
+    "unique": []
+  },
+  "processing_jobs": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "batch_id": "TEXT",
+      "created_at": "TEXT",
+      "decision_generation": "INTEGER",
+      "editor_target": "TEXT",
+      "error": "TEXT",
+      "id": "TEXT",
+      "idempotency_key": "TEXT",
+      "intent_json": "TEXT",
+      "item_id": "TEXT",
+      "magpie_block_reason": "TEXT",
+      "origin": "TEXT",
+      "result_json": "TEXT",
+      "stage": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "attempts": [
+        "0"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "created_at",
+      "idempotency_key",
+      "item_id",
+      "stage",
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "idempotency_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "prompt_versions": {
+    "affinities": {
+      "content": "TEXT",
+      "created_at": "TEXT",
+      "id": "TEXT",
+      "kit_id": "TEXT",
+      "role": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "content",
+      "created_at",
+      "kit_id",
+      "role"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "raw_snapshots": {
+    "affinities": {
+      "created_at": "TEXT",
+      "id": "INTEGER",
+      "item_id": "TEXT",
+      "path": "TEXT",
+      "provenance": "TEXT",
+      "retrieved_at": "TEXT",
+      "source_hash": "TEXT",
+      "vault_exported_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "provenance": [
+        "''"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "created_at",
+      "item_id",
+      "path",
+      "provenance",
+      "retrieved_at",
+      "source_hash"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "source_hash",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "reconciliation_bootstrap": {
+    "affinities": {
+      "completed_at": "TEXT",
+      "feed_id": "TEXT",
+      "started_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "feed_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "feeds",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "started_at"
+    ],
+    "primary_key": [
+      "feed_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "feed_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "reconciliation_cursors": {
+    "affinities": {
+      "completed_at": "TEXT",
+      "cursor": "TEXT",
+      "folder": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [],
+    "primary_key": [
+      "folder"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "folder",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "schema_meta": {
+    "affinities": {
+      "key": "TEXT",
+      "value": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [],
+    "not_null": [
+      "value"
+    ],
+    "primary_key": [
+      "key"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "stage_state": {
+    "affinities": {
+      "error": "TEXT",
+      "item_id": "TEXT",
+      "link": "TEXT",
+      "stage": "TEXT",
+      "status": "TEXT",
+      "updated_at": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "status",
+      "updated_at"
+    ],
+    "primary_key": [
+      "item_id",
+      "stage"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ],
+          [
+            "stage",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "star_events": {
+    "affinities": {
+      "action_source": "TEXT",
+      "created_at": "TEXT",
+      "id": "INTEGER",
+      "idempotency_key": "TEXT",
+      "item_id": "TEXT",
+      "starred": "INTEGER"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "action_source",
+      "created_at",
+      "item_id",
+      "starred"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": "id",
+    "unique": [
+      [
+        [
+          [
+            "idempotency_key",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "unstar_cleanup": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "error": "TEXT",
+      "id": "TEXT",
+      "item_id": "TEXT",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "attempts": [
+        "0"
+      ],
+      "status": [
+        "'pending'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "item_id",
+      "status"
+    ],
+    "primary_key": [
+      "id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "zotero_links": {
+    "affinities": {
+      "adoption_source": "TEXT",
+      "adoption_status": "TEXT",
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "error": "TEXT",
+      "item_id": "TEXT",
+      "item_key": "TEXT",
+      "note_key": "TEXT",
+      "status": "TEXT",
+      "sync_scope": "TEXT",
+      "synced_hash": "TEXT"
+    },
+    "checks": [],
+    "defaults": {
+      "attempts": [
+        "0"
+      ],
+      "sync_scope": [
+        "'parent-and-note'"
+      ]
+    },
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "item_key",
+      "note_key",
+      "status",
+      "sync_scope"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "note_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "item_key",
+            "binary"
+          ]
+        ],
+        null
+      ],
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  },
+  "zotero_resolution": {
+    "affinities": {
+      "attempts": "INTEGER",
+      "available_at": "TEXT",
+      "item_id": "TEXT",
+      "status": "TEXT"
+    },
+    "checks": [],
+    "defaults": {},
+    "foreign_keys": [
+      {
+        "columns": [
+          [
+            "item_id",
+            "id"
+          ]
+        ],
+        "delete": "no action",
+        "match": "none",
+        "table": "items",
+        "update": "no action"
+      }
+    ],
+    "not_null": [
+      "attempts",
+      "available_at",
+      "status"
+    ],
+    "primary_key": [
+      "item_id"
+    ],
+    "rowid_alias": null,
+    "unique": [
+      [
+        [
+          [
+            "item_id",
+            "binary"
+          ]
+        ],
+        null
+      ]
+    ]
+  }
+}

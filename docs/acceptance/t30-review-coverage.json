@@ -1,0 +1,1982 @@
+{
+  "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
+  "candidate": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+  "source": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+  "state": "Exact e86fe2e original-base manifest:112 paths. Sol/high R25 correction is clean/remote matched with intent journal/replay, fetch lifetime protection and startup reset gate. Account runtime stopped at existing AppConfig bundle metadata force-unwrap; fresh paired R26 review required. No full/iOS/live provider/UI acceptance.",
+  "groups": {
+    "account-core": 7,
+    "account-delegates": 16,
+    "account-tests": 16,
+    "cloudkit-transport": 2,
+    "consumer-tests": 4,
+    "consumers": 27,
+    "evidence": 1,
+    "harness": 12,
+    "storage": 18,
+    "storage-tests": 9
+  },
+  "evidence": {
+    "full_native_plan_source": "068485607fad30ec848c63606c162e8f23a5b54f",
+    "full_native_tests": 786,
+    "native_result": "Root previously read xcresult 786 passed/0 failed/0 skipped. Current root independently read action JSON:1200 outputs/10663 lines/zero disk-I/O or vnode-unlink.",
+    "normal_build": "Root independently verified deep strict signature and isolated bundle identifier; not app runtime proof.",
+    "ios_build": "Root read BUILD SUCCEEDED in final generic simulator build log; no simulator runtime.",
+    "sql_focused_source": "c13cea11f89034dbd5cf5d6055c5b7a1680d3252",
+    "sql_focused": "Coordinator independently read191passed/0failed/0skipped in focused xcresult10-44-35; e46 not covered.",
+    "later_full_native_plan_source": "5013c9128e619003c635c2e941a9c1cc31e85099",
+    "later_full_native_tests": 791,
+    "later_native_result": "Coordinator independently read791passed/0failed/0skipped in11-07-52xcresult. Exported action has1206outputs/10697lines, zero disk-I/O/vnode matches. No later normal build or unfinished-fix proof.",
+    "latest_focused_candidate": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+    "latest_focused_result": "Coordinator independently read12-40-25xcresult:203passed/0failed/0skipped, total203, resultPassed. Owner reports combined working correction source before commit; no independently reproduced final-source full plan or artifact proof.",
+    "latest_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_12-40-25-+0800.xcresult",
+    "r17_partial_candidate": "a85ac897758debe408b5a08e616fc97836966a2d",
+    "r17_partial_focused_result": "Root independently read15-25-17xcresult:208passed/0failed/0skipped,total208,resultPassed; owner identifies combined checkpoint source. Full/build/iOS not rerun.",
+    "r17_partial_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_15-25-17-+0800.xcresult",
+    "r17_connected_source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
+    "r17_connected_head": "51d169e477d96bf103c5dd98a673786a50bd363c",
+    "r17_connected_focused_result": "Root independently read15-57-10xcresult:217passed/0failed/0skipped,total217,resultPassed. Owner red/green includes status/article COMMIT rollback, cached state, status creation/index failure, actual callback driver/synthetic checkpoint and admission wait. No real server token/full page atomicity/liveSync/fullbuild claim.",
+    "r17_connected_focused_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_15-57-10-+0800.xcresult",
+    "provider_compensation_full_result": {
+      "reported_source": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+      "source_boundary": "Owner associates this run with the compensation edits before commit. Root did not verify that test source copy equals committed 835cda3.",
+      "xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_19-24-18-+0800.xcresult",
+      "independent_summary_read": "827 passed, 0 failed, 0 skipped; 1076 device-level passes; result Passed; generic main-thread runtime warning remains. Summary read with xcresulttool, no test rerun.",
+      "acceptance_limit": "Historical test evidence; does not clear R24 defects or subsequent worker source."
+    },
+    "provider_compensation_r25": {
+      "reported_source": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "source_boundary": "Owner reports current correction source; root inspected xcresult summaries/tree but did not rerun tests or prove private test-source-copy equality.",
+      "first_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_20-14-35-+0800.xcresult",
+      "first_summary": {
+        "passed": 149,
+        "failed": 0,
+        "skipped": 0,
+        "runtime_warnings": 0
+      },
+      "later_xcresult": ".build/acceptance-tests/Logs/Test/Test-NetNewsWire-2026.10.28_20-20-17-+0800.xcresult",
+      "later_summary": {
+        "passed": 150,
+        "failed": 0,
+        "skipped": 0,
+        "runtime_warnings": 0,
+        "sync_database_subset_passed": 10
+      },
+      "subset_proof": "Root read test tree:all10SyncStatusTableTests passed, including fallback error/requeue and gate serialization. This does not prove the full cross-database failure schedule.",
+      "limits": "Focused result read only; no full build/iOS/live provider/sync/UI acceptance."
+    },
+    "r25_current_checkpoint": {
+      "source": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+      "sync_database": "13 passed,0 failed,0 skipped",
+      "articles_database": "2 passed,0 failed,0 skipped",
+      "swift_parse": "20 files parsed",
+      "account_runtime": "Compile completed, runtime stopped before tests at existing RSCore/AppConfig.swift:13 force-unwrap of missing SwiftPM bundle metadata; no Account runtime count claimed.",
+      "full_platform": "Not run",
+      "report": "docs/acceptance/t30-r25-correction.md",
+      "limits": "Owner evidence; no live providers/CloudKit/full/iOS/UI/migration acceptance."
+    }
+  },
+  "files": [
+    {
+      "path": "Mac/MainWindow/Sidebar/SidebarViewController+ContextualMenus.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "31b45fe2159c6fb7783c284fd4c898afa7de3d62",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Mac/MainWindow/Sidebar/SidebarViewController.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "0d32cf197c589875170f3c6e007c821822693972",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Mac/MainWindow/Timeline/TimelineViewController+ContextualMenus.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "b1bcf4da7c6ac450cda88f320cfe45da8d366c36",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Mac/MainWindow/Timeline/TimelineViewController.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "af7a7d6740bbf1f986f621687574a0c001e320d1",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "b19e68decbc141f4559cb85a6342da2c8f890eed",
+        "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+        "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
+      },
+      "change": "A"
+    },
+    {
+      "path": "Mac/Scripting/Article+Scriptability.swift",
+      "group": "consumers",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "0360c4fa68e8dcf28b456400e755748eda9e06b8",
+      "change": "A"
+    },
+    {
+      "path": "Mac/Scripting/Feed+Scriptability.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "b9563b1ec69f1721a975322781764a4dba90cd08",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Mac/Scripting/Folder+Scriptability.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "1fa255111e397e3bcad1714d8193fc15e7603cb1",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Account.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "a5907b51d556bb08d0c0f9f43a191c64d5ab1a4e",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "3c85e0c4da27404cf0cc0aacb58c9762c4ca849e",
+        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+        "earlier": {
+          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+          "blob": "88d4df18f098f3b3601dfc630e45759cc0883fa1",
+          "standards": "Changed since pinned review; correction review pending after consolidated verification",
+          "spec": "Changed since pinned review; correction review pending after consolidated verification",
+          "earlier": {
+            "blob": "88c26244ba016a0bcbbe22a088aab46751ddeb2a",
+            "standards": "Pending fresh bounded review at current pin",
+            "spec": "Pending fresh bounded review at current pin"
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/AccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "415057384283d09cae62747b9bb4aa867484411b",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
+      "prior_review": {
+        "blob": "415057384283d09cae62747b9bb4aa867484411b",
+        "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+        "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/AccountManager.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "18a35606b81f25b3cc819d4d21d9db5cbbc7ae13",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/ArticleFetcher.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "59a3d89d5aa429c51cb75e0eedecac0e5e52a61e",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "f8e12965138a64152a74088cea63ec701854b075",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "cab3673c9b694a8f44f851e6e32f72e4cadcfc58",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "f26331cbc1c30fea762b84f949c87bba448dbfca",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "edc5574b9d37682c19205a54250816331f75d932",
+            "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
+            "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+            "earlier": {
+              "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+              "blob": "8761d6b04b4f90d7639fabc9510d52d1d4f2dcd2",
+              "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+              "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending.",
+              "earlier": {
+                "blob": "be2c319578fb5f4ff74c48a5096b660538e2778d",
+                "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+                "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+              }
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZone.swift",
+      "group": "account-delegates",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "previous_path": null,
+      "blob": "b14e40d4b96cef791cb904a313755bf42d4c85a5",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZoneDelegate.swift",
+      "group": "account-delegates",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "f01b664d60648f90dcde60643eda6ef9b1d13cf6",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
+      "group": "account-delegates",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "previous_path": null,
+      "blob": "b24563661ba97947e02e45b1ece9ea07aeb0f88f",
+      "change": "A",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "b572f56c9b29498b6c5d5e88fc5a0212ba8220a2",
+        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance."
+      }
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZoneDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "2c3e1d22e061d06085a0486d906afdd61ef202e6",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "90eb0904ef5df6259980e4d95c90f558711b78dc",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+        "earlier": {
+          "blob": "af869d08291731fab4a145f2dfc58dc444440718",
+          "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "earlier": {
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "20ef47f74ae66347995eb9ffce5f76e784fc2dee",
+            "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+            "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending."
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitReceiveStatusOperation.swift",
+      "group": "account-delegates",
+      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
+      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "previous_path": null,
+      "blob": "a98b904a8fb64dac693ad5bb3c6fc7ff64097fec",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitRemoteNotificationOperation.swift",
+      "group": "account-delegates",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "57d382b7bcc9a0c86c689991f4c6a1aa5ce16311",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/CloudKit/CloudKitSendStatusOperation.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "88cf2eb4d2c002205f3d1619ca78be37087377e3",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "b5c0f20fb150c92d7a568bbbe915ae7fcf0906bc",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+        "earlier": {
+          "blob": "698f0ff5b647ba006d311684820f66f4f320704e",
+          "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+          "earlier": {
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "92230c5bca0d8435d8ccf78acf27c7eaa53ff9a6",
+            "standards": "R14 changed hunks/blob reviewed;2P1callback+queue context,1P2pending-read errors. Connected coverage incomplete; corrections pending.",
+            "spec": "R14 changed hunks/blob reviewed;1P1callback context,2P2queue+send cancellation. Connected coverage incomplete; corrections pending."
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Container.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
+      "prior_review": {
+        "blob": "128a615c687194958c31b09ae102700b1ba3b7db",
+        "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+        "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feed.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
+      "prior_review": {
+        "blob": "362591de0fbec7533322ddc9dfd6b4054cdf6ba8",
+        "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+        "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/FeedSettings.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
+      "prior_review": {
+        "blob": "59681e0545e1e8ffb2dcc667a696a1508764a07c",
+        "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+        "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "5f08399d34c2991abd81b0b3b943bf1c3fad666a",
+      "standards": "Changed at partial R17a85ac89; new correction review pending. Focused208 result is not full acceptance.",
+      "spec": "Partial R17: real delete COMMIT regression passes; other transaction callbacks/positive callback recovery/admission red remain incomplete. Fresh review pending.",
+      "prior_review": {
+        "blob": "9fd42d8e1d63c5f1f97b2995c8475086761a5c66",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "64631bf9ae502de6c182c9a0f3143610389eb569",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "fb1a6bfd421c8178efb8241842769fec1b5c0f04",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "7fa86490e264975b2eabf45a3f5caa484cf1a3ae",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "313192ee005a7f15d93a7f30a0f94ea2b4b4317f",
+            "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+            "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+            "earlier": {
+              "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+              "blob": "6b0fcd3efb08eff0eae5272f3e1e4b9ddfc70434",
+              "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+              "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+              "earlier": {
+                "blob": "80e1df7c717de8675ab8f927c33e91f0b9705c34",
+                "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+                "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+              }
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "2284f13578d0ad15fe3a94af540f521b311eec63",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "0f6c6f21aaf2d1ebabdf48421a9087c486458636",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "f7131042a83ac48f971193640d8052689d72c3d1",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "ec94d7a6fbb4b451e35b32e28426cd83dd6728a8",
+            "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+            "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+            "earlier": {
+              "blob": "88c582333e4aad8a02ba6df8b700334037eef79e",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/Folder.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
+      "standards": "R12 seven core changed-hunk sets inspected;2P2 OPML pending-owner deletion/retry; corrections pending validation/review; provider seams separate",
+      "spec": "R12 seven core changed-hunk sets inspected;2P2 retained Account settings/progress; corrections pending validation/review; provider seams separate",
+      "prior_review": {
+        "blob": "fe534b27d083a5145aeca2246454334c2cfd9e65",
+        "standards": "R7 complete7core hunk sets/principal seams;1P2 pending save; service delegate seams incomplete; correction pending",
+        "spec": "R7 complete7core hunk sets/principal seams;2P2 maintenance drain; service delegate seams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
+      "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+      "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+      "prior_review": {
+        "blob": "7c63e91b07d1f11b83c1509c5084e24b456bbea5",
+        "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+        "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "e4dc9d654cca46b639341e3a0f8ab8b35609eb65",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "2ede00cfa99d0a832c5759ed542111eb994f50d6",
+        "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+        "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+        "earlier": {
+          "blob": "30f4714f7d7eac6e70d9c8a484ca710c9672a922",
+          "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+          "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "e38a0bce23458ba74cb8b71db75d6a7883690ad6",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "a82e171af7b3a5afaef4093be2aaaf1b9d6d1b20",
+        "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+        "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+        "earlier": {
+          "blob": "a82e171af7b3a5afaef4093be2aaaf1b9d6d1b20",
+          "standards": "Changed after7accb68 review; pending fresh correction review and current runtime proof",
+          "spec": "Changed after7accb68 review; pending fresh correction review and current runtime proof"
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "ccd5efe22119a27f19a307025f01cf330a081265",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "a796c4da389a09da7424e9a3d1ca8270e9ddf45d",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "7b005ee9815455f42b011a6068ba07fccefead94",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "0c741ea00f0d4807570b20f7286b0df93e4997b0",
+            "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+            "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+            "earlier": {
+              "blob": "5c9114a57700677d1460024559467d0ade7d85a2",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "4373c3cd48f5766fa88d46a6a97e7b5ef48718c1",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "03cba5fb48eee8aeb1a754d29141483d424e72db",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "59bf251a87245d308d27f982e1f51c1cbc5dc70e",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "f850f32ae0ca7ca024cd60aff87f6d66c017df1b",
+            "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+            "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+            "earlier": {
+              "blob": "e5eb8fc12abecd0a9d901cd68709609ea016bbfa",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/OPMLFile.swift",
+      "previous_path": null,
+      "group": "account-core",
+      "blob": "5c65d2ffebfc85295e5699805dd7f354e460f13a",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
+      "prior_review": {
+        "blob": "1b21691031dcedf18403b1f7034b429f93ac4e7c",
+        "standards": "Pending fresh bounded review at current pin",
+        "spec": "Pending fresh bounded review at current pin"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+      "previous_path": null,
+      "group": "account-delegates",
+      "blob": "78caa4fdef81a1581967d7f207bd150382367d34",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "d792bea3eacab2a56a38c277a563c348e32d8e54",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "9c583febbe5972c607caec5532679c881f3fd14d",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "9a0b41b58d4e8c04ac209fda01311d0b47e52e24",
+            "standards": "R15 partial provider scope:1P2Feedbin acknowledgement. FullFeedly/ReaderAPI and connected-seam coverage incomplete; not a pass.",
+            "spec": "R15 all8changed-hunk sets/blobs reviewed:2P2local overlap+Feedbin acknowledgement. Exhaustive connected provider coverage incomplete.",
+            "earlier": {
+              "blob": "ecc46f66af09b6bd56857fa0200277965f9f7340",
+              "standards": "R8 all9hunksets inspected;1source-derivedP2 overlappingrefreshpermit; CloudKit/providerseams incomplete; correction pending",
+              "spec": "R8 all9hunksets inspected;1source-derivedP2 matchingrefreshcompletion; CloudKit/providerseams incomplete; correction pending"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Sources/Account/SingleArticleFetcher.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "873e42b8147329f9222de68667a14c7b57423b1e",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "182e4b412cb8cc79d75c4761065d72e4b7171cc2",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "182e4b412cb8cc79d75c4761065d72e4b7171cc2",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "bd6e1f86211924c510833a352f4a0762d13f0967",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "1e45da5297a4f8248aa745e4d67f1bebf63ef61b",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "4736ed87de702d28dec0053eafbc4963732a152c",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "9050d2eda6596463abcde385d716e00d46272727",
+            "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+            "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+            "earlier": {
+              "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+              "blob": "2417245ecd5ed39a8012e541230e43c3bcf830ae",
+              "standards": "Changed since pinned review; correction review pending after consolidated verification",
+              "spec": "Changed since pinned review; correction review pending after consolidated verification",
+              "earlier": {
+                "blob": "9db5fa390446adfffb4afa191b0d0130fca9d0f3",
+                "standards": "Pending fresh bounded review at current pin",
+                "spec": "Pending fresh bounded review at current pin"
+              }
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/AccountOPMLLoadTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "60b7efd4f93e23060eabd19a0ea99a97e36bf300",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "60b7efd4f93e23060eabd19a0ea99a97e36bf300",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/FeedSettingsDatabaseTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "blob": "99d6b24046020d26235e6086370e4d60d5f4bf6d",
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderContentsSyncTest.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "48de5b5a92642694f2d894e1bc0c73de41f86ef1",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "48de5b5a92642694f2d894e1bc0c73de41f86ef1",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderSyncTest.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "a262ba47a872b1c21370bf4297a86b945692e6aa",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "a262ba47a872b1c21370bf4297a86b945692e6aa",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinSyncTest.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "4084fb045957b3c9cef07e202e28898893688a8f",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "4084fb045957b3c9cef07e202e28898893688a8f",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/FeedbinFeedNameTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "14ac50768a45748a3ea3f7bce4ea8fbfd2f7a190",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "14ac50768a45748a3ea3f7bce4ea8fbfd2f7a190",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedbin/FeedbinStatusSendTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "14cddd87958b785a1ce5362c60cd62513e4772f8",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "14cddd87958b785a1ce5362c60cd62513e4772f8",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyFeedNameTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "325a0e0e981eabbd1057750b75486d97e0ec5eec",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "325a0e0e981eabbd1057750b75486d97e0ec5eec",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyFolderReconciliationTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "fd2f4edcb18327759fd1299d47ebaea4c2b750db",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "fd2f4edcb18327759fd1299d47ebaea4c2b750db",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/Feedly/FeedlyReauthorizationTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "7a9717e29ad6338d9fe6ffbd0fa12df104c306c2",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "7a9717e29ad6338d9fe6ffbd0fa12df104c306c2",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/NewsBlur/NewsBlurFeedNameTests.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "ad23fadd56443b0fe8d56b022600bfe946f68d28",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "ad23fadd56443b0fe8d56b022600bfe946f68d28",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/StatusOutboxRecoveryTests.swift",
+      "group": "account-tests",
+      "standards": "New at e86fe2e; fresh correction review pending.",
+      "spec": "New at e86fe2e; fresh correction review pending.",
+      "blob": "49f57f547958688edf43ff293dd96f1c218c8af6",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "Modules/Account/Tests/AccountTests/TestAccountManager.swift",
+      "previous_path": null,
+      "group": "account-tests",
+      "blob": "73d4578f2c87000c72090dd1b73b396b0803ba71",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "73d4578f2c87000c72090dd1b73b396b0803ba71",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Package.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "3bd20ac4973a27c58b6f7a566a58497a0c856b06",
+      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "da799c68d2f22a964a91f3eb37e801b8c4e629fc",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "ab5ac6d28ece54312890fb95c7b0641fb93a482e",
+        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+        "earlier": {
+          "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+          "blob": "e168acb9223357e161a2cc326311bbde6f5a72a7",
+          "standards": "Changed since pinned review; correction review pending after consolidated verification",
+          "spec": "Changed since pinned review; correction review pending after consolidated verification",
+          "earlier": {
+            "blob": "7e43c1a962d8610638ff64e640929b896b5ed3c9",
+            "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+            "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "e0d5bb90b8af377e183e451eea3f6534fc2c4800",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "c74569a1ca53d164dacfa69f8ddb356bd27bf573",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+        "earlier": {
+          "blob": "1d75493a2f4085bdf6ede14e6a32ad2c739b13b5",
+          "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+          "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+          "earlier": {
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "9f96b7ef6f3bccd795774bc6e81f3fa048def343",
+            "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+            "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+            "earlier": {
+              "blob": "74674c0f5eefd1c93f119e3d72aeb375a55337ac",
+              "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+              "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/AuthorsSchemaMigration.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "1972f90f12b3ffee94d2bc7d89b5c902a060bc3a",
+      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "prior_review": {
+        "blob": "1972f90f12b3ffee94d2bc7d89b5c902a060bc3a",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "85993b0db6b1e569b56e8bc064882cecd6b3466d",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "prior_review": {
+        "blob": "db34db2fa7f8db207734b00b54577b5c503137ad",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "24477eb433620fa7ebffd2d0069c6c8cc70b5894",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "prior_review": {
+        "blob": "02c6ebe196d4a38028a3b1363cc47b6600ef9e2c",
+        "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+        "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "f4601fb7fa598ca512ede52e5b63e5e69347c2f8",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "50bb71b769842b658583d5fa3999bff4297d1726",
+        "standards": "Changed since pinned review; correction review pending after consolidated verification",
+        "spec": "Changed since pinned review; correction review pending after consolidated verification",
+        "earlier": {
+          "blob": "16054d41072c55b4472b5537285e02ef8820d587",
+          "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+          "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared"
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "effff0510e1a09ac39350e78936df3cccbdda29b",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusDivergenceTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "fead8badbedb1252f18089da3a75d526dfb4e293",
+      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "change": "A"
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusOutboxJournalTests.swift",
+      "group": "account-tests",
+      "standards": "New at e86fe2e; fresh correction review pending.",
+      "spec": "New at e86fe2e; fresh correction review pending.",
+      "blob": "c9f72237343a8e1f7cd3c0079bd6d87a8a6d539d",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/TodayQueriesTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "8dcd22a2d37817a3259e42e990d1e59347b6dfa6",
+      "standards": "R10 complete10path changed-hunk review/connectedqueue+Account+Feedbin;1 inherited SQLfailure P2, correction source-only pending native/regression/recheck",
+      "spec": "R10 complete10path cancellation/lifetime scoped review;0 P1/P2; SQLfailure safety and other consumer/provider seams not cleared",
+      "change": "A"
+    },
+    {
+      "path": "Modules/CloudKitSync/Package.swift",
+      "group": "cloudkit-transport",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "6c467b26ac5c7d006806e2a12e2d59934ec0f240",
+      "change": "A"
+    },
+    {
+      "path": "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+      "group": "cloudkit-transport",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "previous_path": null,
+      "blob": "862cd8b947cf5cef80a5fed641adcce2f3fb0140",
+      "change": "A",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "23e084075e206c6e89ef704e417a0e583bc11728",
+        "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+        "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance."
+      }
+    },
+    {
+      "path": "Modules/Images/Sources/Images/ImageMetadataDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "2c0b8cf06d744db7f2f1fa8c6e2838f1ec9e7205",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "prior_review": {
+        "blob": "2c0b8cf06d744db7f2f1fa8c6e2838f1ec9e7205",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "5572ce1948673b9cae34ff616fb535ccbc51b358",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "prior_review": {
+        "blob": "93dd7777deb6f0442816ff419c1a0803227d10b1",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabase/DatabaseWork.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "abf1dd6255cfb43e63b8cafd9c5da195ea25e804",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "prior_review": {
+        "blob": "abf1dd6255cfb43e63b8cafd9c5da195ea25e804",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabase/FMDatabase+Extras.swift",
+      "group": "storage",
+      "standards": "New to complete manifest; independent review coverage must be reconciled.",
+      "spec": "New to complete manifest; no acceptance inferred from path or blob verification.",
+      "blob": "0cf56a25a707110ad9d7086eee21d39803043c30",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabaseObjC/FMDatabase.m",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "4a7b18f93997a2537bc2f1842a43afa037c8c502",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "prior_review": {
+        "blob": "4a7b18f93997a2537bc2f1842a43afa037c8c502",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Sources/RSDatabaseObjC/FMResultSet.h",
+      "previous_path": null,
+      "group": "storage",
+      "standards": "New path; fresh review pending",
+      "spec": "New path; fresh review pending",
+      "blob": "f42b49d60be49ff9feac4fdff1c8f2a4ae0ff6b5",
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseCloseTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "9f503cd92a002061612b20621561c6c1b0073e9b",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "prior_review": {
+        "blob": "9f503cd92a002061612b20621561c6c1b0073e9b",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseQueueShutdownTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "blob": "9024aa6a9404c920b5e4e51db79004ada01a468d",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "prior_review": {
+        "blob": "9024aa6a9404c920b5e4e51db79004ada01a468d",
+        "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+        "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseUpdateFailureTests.swift",
+      "group": "storage-tests",
+      "standards": "New to complete manifest; independent review coverage must be reconciled.",
+      "spec": "New to complete manifest; no acceptance inferred from path or blob verification.",
+      "blob": "179a1d906d054501fff7b9569350af36dd83f25e",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "Modules/RSWeb/Sources/RSWeb/DownloadSession.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "e95220aae5ffee520308feb8b453d21e6167471d",
+      "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+      "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSWeb/Sources/RSWeb/Downloader.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "79cbe7c9eace4fbc5915f8036924dba569909a93",
+      "standards": "Changed since pinned review; correction review pending after consolidated verification",
+      "spec": "Changed since pinned review; correction review pending after consolidated verification",
+      "prior_review": {
+        "blob": "a4139cca3c3484759eaefb8caefabe011510e57f",
+        "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+        "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/RSWeb/Sources/RSWeb/WebServices/TestingURLProtocol.swift",
+      "group": "storage",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "previous_path": null,
+      "blob": "d99c965b87962439bac321a03ee0fff1f15ccec6",
+      "change": "A",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "99efcba1867c1e045f47c61f157de2dfa885145b",
+        "standards": "New to ledger at65be895; independent bounded review pending.",
+        "spec": "New to ledger at65be895; independent bounded review pending."
+      }
+    },
+    {
+      "path": "Modules/RSWeb/Tests/RSWebTests/DownloaderIsolationTests.swift",
+      "previous_path": null,
+      "group": "storage-tests",
+      "standards": "New path; fresh review pending",
+      "spec": "New path; fresh review pending",
+      "blob": "c604b7b27f5c057c50fc12501edd1ea9cc46037d",
+      "change": "A"
+    },
+    {
+      "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+      "previous_path": null,
+      "group": "storage",
+      "blob": "d8fd94fc6897d64abcc171c5772effdf9348d01c",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "1be07228b834f1941e974f3b7bca23742fc1b9e0",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "915fdc1c7d2da04940c9b9ef0bd5a96a97019dac",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "78237f7f77ead658085fa74e9bd10ef092b4350c",
+            "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+            "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+            "earlier": {
+              "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+              "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
+              "standards": "R11 complete10path changed-hunk review and connected lifetime seams;1 Downloader testscope P2; older threadingguideline/admissionmutex decision noted; provider/error coverage pending",
+              "spec": "R11 complete10path boundedlifetime review;0P1/P2; exhaustive providercallbacks and consumercallers not cleared",
+              "earlier": {
+                "blob": "0629aa2c288b3cc235cb48d73339bc4ff67896fa",
+                "standards": "R9 fourteen hunksets/principalstorage seams inspected;1P2 success-shaped rejection; providercallback ownership incomplete; correction pending",
+                "spec": "R9 fourteen hunksets/principalstorage seams inspected;1P2 status-write rejection indistinguishable; providercallback ownership incomplete; correction pending"
+              }
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "Modules/SyncDatabase/Sources/SyncDatabase/SyncStatusTable.swift",
+      "group": "storage",
+      "standards": "New to complete manifest; independent review coverage must be reconciled.",
+      "spec": "New to complete manifest; no acceptance inferred from path or blob verification.",
+      "blob": "e0074c5d4fe619fc4f7e15fc33c283dadcbe6df6",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+      "group": "storage-tests",
+      "standards": "Changed at e86fe2e; fresh R26 review pending.",
+      "spec": "Changed at e86fe2e; current durable-intent/gate behavior pending fresh review.",
+      "previous_path": null,
+      "blob": "a2c2641500f47067d2153d8464b06414906993e1",
+      "prior_review": {
+        "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+        "blob": "6a1e4cd87035ec8c0525ca9b9bb6992b000feef3",
+        "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+        "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+        "earlier": {
+          "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+          "blob": "07cbb004bee86993a19478abfb5931111d38f7b6",
+          "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+          "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+          "earlier": {
+            "blob": "89e865d27ef76c6bcd353cee64a947074f9ba7bd",
+            "standards": "New to ledger at65be895; independent bounded review pending.",
+            "spec": "New to ledger at65be895; independent bounded review pending."
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "NetNewsWire.xcodeproj/project.pbxproj",
+      "group": "harness",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "752a6162db22a7837f78cb58a67ba2b0b768c0ff",
+      "change": "A"
+    },
+    {
+      "path": "Shared/AccountStats/AccountStatsViewModel.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "51d7ae5480f7591852ecc18df183bfd7234f566c",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Activity/ActivityManager.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "6eaaf42368ad8a11444df785f94e7bdbaaa855db",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Commands/MarkStatusCommand.swift",
+      "group": "consumers",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "98361d4d801d16458649139d74a5618bb80566bc",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Dinosaurs/DinosaursViewModel.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "2e8634ebd87fc729114b7b8a4c23302c51afc63e",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Extensions/ArticleUtilities.swift",
+      "group": "consumers",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "036f1041fd47aa4606f8ab765b0842b54cf8ac70",
+      "change": "A"
+    },
+    {
+      "path": "Shared/SmartFeeds/SmartFeed.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "a476e6c32d156881c14213cb3778a58ee03f3cb6",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/SmartFeeds/SmartFeedDelegate.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "f972868f288cbc301ba734e7e4bc1240a3a91847",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/SmartFeeds/StarredFeedDelegate.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "b796a141fff3c6ff96d620416e964a96b8fa7f0f",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/SmartFeeds/TodayFeedDelegate.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "59e0b2b656a8945e80369bec078e24c5f77b0650",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/SmartFeeds/UnreadFeed.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "1935d489899cd32e91b426a5500a3df725ee0fff",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Timeline/FetchRequestOperation.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "8b926c8e05b48e83be14634a36d6ed4944081e01",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "4f98a3355da72fb71e780ef774246858dd86d094",
+        "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+        "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
+      },
+      "change": "A"
+    },
+    {
+      "path": "Shared/Timeline/FetchRequestQueue.swift",
+      "group": "consumers",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "cf32236403211ef7622619861f5c106d1763ec0f",
+      "change": "A"
+    },
+    {
+      "path": "Shared/Widget/WidgetDataEncoder.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "b56de27ffe84df40aafda5bc1c62facbfb78b812",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "4f6f48242b498745a845e9c48d3936314653176c",
+        "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+        "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
+      },
+      "change": "A"
+    },
+    {
+      "path": "Shared/Widget/WidgetSnapshotStore.swift",
+      "group": "consumers",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "6c5b0d9b5e5f04544f4f5bcd222243a6ea24499d",
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWire-iOSTests/WidgetDataEncoderTests.swift",
+      "group": "consumer-tests",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "b55665a9efded32adf3bb5bdb2100718bdf95c95",
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/FetchRequestOperationTests.swift",
+      "group": "consumer-tests",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "3b45062837b9670d06441fa2ca1dd38555b696b5",
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/MarkStatusCommandTests.swift",
+      "group": "consumer-tests",
+      "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+      "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+      "previous_path": null,
+      "blob": "00741a24a7373d8be6305bff1c00c153862a981d",
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "aebaa83bbb0f5cdf3f909c852c62d5cfbe574c05",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "aebaa83bbb0f5cdf3f909c852c62d5cfbe574c05",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/ScriptingTests.swift",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "249595c3ce4cec07bdae87009018dd473052cc69",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "249595c3ce4cec07bdae87009018dd473052cc69",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "dea802e9542afcac15875d8d589a3195ce31623c",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "dea802e9542afcac15875d8d589a3195ce31623c",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "888d60247e0fafbd89a714bc39ad67e4e67415b7",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "888d60247e0fafbd89a714bc39ad67e4e67415b7",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "b2f340c9232ff5cb57c10a3b8c6df3b6588f8886",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "b2f340c9232ff5cb57c10a3b8c6df3b6588f8886",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "241eb8a7adc0d2be59f23f3aa8ded70b9ee83e23",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "241eb8a7adc0d2be59f23f3aa8ded70b9ee83e23",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "3e69a2f920cb1fe595dadf262a4aade473874d4d",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "3e69a2f920cb1fe595dadf262a4aade473874d4d",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.txt",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "ce8548918228275c90568c3ac2db6a1a18178f60",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "ce8548918228275c90568c3ac2db6a1a18178f60",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "Tests/NetNewsWireTests/WidgetSnapshotStoreTests.swift",
+      "group": "consumer-tests",
+      "standards": "New to ledger at65be895; independent bounded review pending.",
+      "spec": "New to ledger at65be895; independent bounded review pending.",
+      "previous_path": null,
+      "blob": "56195c4527d82730db94e31d4aebd88f9f9d2b1f",
+      "change": "A"
+    },
+    {
+      "path": "buildscripts/acceptance.sh",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "35148b7e29cb5a1af4bd7257b0ee2b5e97152c09",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "35148b7e29cb5a1af4bd7257b0ee2b5e97152c09",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "buildscripts/test_acceptance.py",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "3b0557ec904c2c30fd0e6243f352353a09031d40",
+      "standards": "Pending fresh bounded review at current pin",
+      "spec": "Pending fresh bounded review at current pin",
+      "prior_review": {
+        "blob": "3b0557ec904c2c30fd0e6243f352353a09031d40",
+        "standards": "pending bounded scope review",
+        "spec": "pending bounded scope review"
+      },
+      "change": "A"
+    },
+    {
+      "path": "docs/acceptance/t30-native-fixture-lifetime.md",
+      "previous_path": null,
+      "group": "harness",
+      "blob": "1e892c6c695a97f38650188877a0dc821cf1f12d",
+      "standards": "R25 all11correction paths/changed hunks reviewed:3source-derivedP2 durability/stale response/reset schedules. Changes requested; no native rerun.",
+      "spec": "R25 all11correction paths/changed hunks reviewed:1source-derivedP1 durable intent and1P2 acknowledged-mark stale response. No whole-T30 acceptance.",
+      "prior_review": {
+        "candidate": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+        "blob": "eff390bd62b606a52f4fc23c5ebf8103b81df734",
+        "standards": "Blob differs from prior ledger at 835cda3; prior verdict retained only for its original blob; current correction coverage pending reconciliation.",
+        "spec": "Blob differs from prior ledger at 835cda3; source identity verified, current connected behavior and acceptance remain unproven.",
+        "earlier": {
+          "blob": "ee45108278386718a939055417415a68824b6332",
+          "standards": "Changed at connected R17source49d80d0/evidence51d169e; R18 paired correction review pending.",
+          "spec": "Owner217focused passes/root result read; real commit/cache/callback/admission proof reported, current source recheck pending. No full/native artifact acceptance.",
+          "earlier": {
+            "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+            "blob": "155f4be60be55a575fccae95aaa805ae8c55ba2c",
+            "standards": "Changed since pinned review; correction review pending after consolidated verification",
+            "spec": "Changed since pinned review; correction review pending after consolidated verification",
+            "earlier": {
+              "blob": "f463bb746bdd1adb03f986115d2cdd3db684c8d4",
+              "standards": "Pending fresh bounded review at current pin",
+              "spec": "Pending fresh bounded review at current pin"
+            }
+          }
+        }
+      },
+      "change": "A"
+    },
+    {
+      "path": "docs/acceptance/t30-r25-correction.md",
+      "group": "evidence",
+      "standards": "New at e86fe2e; fresh correction review pending.",
+      "spec": "New at e86fe2e; fresh correction review pending.",
+      "blob": "5c970529af98714ebc9e3d85ea5d75d70f01f194",
+      "change": "A",
+      "previous_path": null
+    },
+    {
+      "path": "iOS/MainFeed/MainFeedCollectionViewController.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "aef4caa681391bd9c1e632ae1f783b6241682aad",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "iOS/MainTimeline/MainTimelineViewController.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "704f7f292c47a64eff52a36b6ef9d55afb0f6b8b",
+      "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+      "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification.",
+      "change": "A"
+    },
+    {
+      "path": "iOS/SceneCoordinator.swift",
+      "previous_path": null,
+      "group": "consumers",
+      "blob": "d6dbc1f8a1e330ce65f28513a4709bf82c32c5a5",
+      "standards": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "spec": "Changed at65be895; fresh bounded correction review required. Prior coverage retained by blob only.",
+      "prior_review": {
+        "candidate": "e46b1b4d03b55204f2c379c26444266168c9776d",
+        "blob": "1f471439524dbe554ac5bd35f9ce89d152bdc26c",
+        "standards": "R13 all22changed-hunk sets reviewed:1P2false-success status UI/undo; correction pending.",
+        "spec": "R13 all22changed-hunk sets reviewed:3P2status/timeline/widget; correction pending. No runtime verification."
+      },
+      "change": "A"
+    }
+  ],
+  "current_branch_head": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+  "native_resource": "This ledger grants no native resource. Resource scheduling and uncommitted worker source are coordinated separately.",
+  "review_reports": {
+    "consumer_r13": "docs/acceptance/t30-consumer-review-r13.md",
+    "cloudkit_r14": "docs/acceptance/t30-cloudkit-review-r14.md",
+    "provider_r15": "docs/acceptance/t30-provider-review-r15.md",
+    "page_delete_r17": "docs/acceptance/t30-page-delete-review-r17.md",
+    "admission_assessment": "docs/acceptance/t30-admission-assessment.md",
+    "committed_writes_r18": "docs/acceptance/t30-committed-writes-review-r18.md",
+    "shared_helper_r19": "docs/acceptance/t30-shared-helper-review-r19.md",
+    "provider_compensation_r24": "docs/acceptance/t30-provider-compensation-review-r24.md",
+    "provider_correction_r25": "docs/acceptance/t30-provider-correction-review-r25.md"
+  },
+  "previous_candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+  "review_scopes": {
+    "cloudkit_page_delete": {
+      "base": "e46b1b4d03b55204f2c379c26444266168c9776d",
+      "candidate": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+      "paths": [
+        "Modules/CloudKitSync/Package.swift",
+        "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZoneDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZoneDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitSendStatusOperation.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift"
+      ],
+      "state": "R17 complete changed-hunk coverage8/8 at65be895. Standards0 material Standards findings and separate1SpecP1; Spec2P1. Changes requested; regression and fresh recheck required. Connected runtime/callback/commit gaps explicit."
+    },
+    "transaction_page_durability": {
+      "base": "65be895bf0bb8534eba3ef9e10973fa03a978185",
+      "candidate": "51d169e477d96bf103c5dd98a673786a50bd363c",
+      "source": "49d80d051e9f199f290191bc4d2b986bee1e9d26",
+      "paths": [
+        "Modules/Account/Sources/Account/Account.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitReceiveStatusOperation.swift",
+        "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
+        "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+        "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+        "Modules/Account/Tests/AccountTests/FeedSettingsDatabaseTests.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
+        "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
+        "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
+        "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+        "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
+        "Tests/NetNewsWireTests/MarkStatusCommandTests.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "state": "Ready for paired R18:19paths671additions229deletions; source-only review, actual native and wider source gates remain separate."
+    },
+    "shared_sql_helpers_r19": {
+      "base": "51d169e477d96bf103c5dd98a673786a50bd363c",
+      "candidate": "9ab2069afc779bb8a1cdf6b858c40e45164db017",
+      "paths": [
+        "Modules/RSDatabase/Sources/RSDatabase/FMDatabase+Extras.swift",
+        "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseUpdateFailureTests.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncStatusTable.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "state": "R19 Standards complete: no Standards findings;1SpecP1 remains in SyncStatusTable.insertStatuses BEGIN/COMMIT rollback path. Owner correction and behavioral validation required."
+    },
+    "provider_compensation_r25": {
+      "base": "835cda39ad2d9d24946c231dc40d0e6e9ffa9bf7",
+      "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "paths": [
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+        "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+        "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+        "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+        "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+        "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+        "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift",
+        "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+        "docs/acceptance/t30-native-fixture-lifetime.md"
+      ],
+      "hunks": 53,
+      "standards": {
+        "verdict": "changes_requested",
+        "changed_paths_read": 11,
+        "p2": 3,
+        "runtime_reproduced": false
+      },
+      "spec": {
+        "verdict": "changes_requested",
+        "changed_paths_read": 11,
+        "p1": 1,
+        "p2": 1,
+        "runtime_reproduced": false
+      },
+      "contract": "R24 outbox durability and provider refresh/send/gate coverage; report error visibility separately from durable repair.",
+      "review_report": "docs/acceptance/t30-provider-correction-review-r25.md"
+    },
+    "r25_current_checkpoint": {
+      "base": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+      "candidate": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+      "paths": [
+        "Modules/Account/Sources/Account/Account.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZoneDelegate.swift",
+        "Modules/Account/Sources/Account/CloudKit/CloudKitSendStatusOperation.swift",
+        "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+        "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+        "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+        "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+        "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+        "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+        "Modules/Account/Tests/AccountTests/StatusOutboxRecoveryTests.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+        "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+        "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusOutboxJournalTests.swift",
+        "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+        "Modules/RSWeb/Sources/RSWeb/WebServices/TestingURLProtocol.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+        "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift",
+        "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+        "docs/acceptance/t30-r25-correction.md"
+      ],
+      "hunks": 106,
+      "implementation": "Sol/high owner reported focused SyncDatabase13 and ArticlesDatabase2 passes; Account runtime stopped before tests due existing AppConfig bundle metadata force-unwrap. Fresh paired review pending."
+    }
+  },
+  "manifest_verification": {
+    "date": "2026-10-28",
+    "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
+    "candidate": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+    "path_count": 112,
+    "method": "Exact original-base three-dot path/blob manifest; excludes later dirty source.",
+    "added_to_ledger": [
+      "Modules/Account/Tests/AccountTests/StatusOutboxRecoveryTests.swift",
+      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusOutboxJournalTests.swift",
+      "docs/acceptance/t30-r25-correction.md"
+    ],
+    "removed_from_ledger": [
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift"
+    ],
+    "changed_blob_paths": [
+      "Mac/MainWindow/Sidebar/SidebarViewController+ContextualMenus.swift",
+      "Mac/MainWindow/Sidebar/SidebarViewController.swift",
+      "Mac/MainWindow/Timeline/TimelineViewController+ContextualMenus.swift",
+      "Mac/MainWindow/Timeline/TimelineViewController.swift",
+      "Mac/Scripting/Article+Scriptability.swift",
+      "Mac/Scripting/Feed+Scriptability.swift",
+      "Mac/Scripting/Folder+Scriptability.swift",
+      "Modules/Account/Sources/Account/Account.swift",
+      "Modules/Account/Sources/Account/AccountDelegate.swift",
+      "Modules/Account/Sources/Account/AccountManager.swift",
+      "Modules/Account/Sources/Account/ArticleFetcher.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZone.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountZoneDelegate.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZone.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitArticlesZoneDelegate.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitReceiveStatusOperation.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitRemoteNotificationOperation.swift",
+      "Modules/Account/Sources/Account/CloudKit/CloudKitSendStatusOperation.swift",
+      "Modules/Account/Sources/Account/Container.swift",
+      "Modules/Account/Sources/Account/Feed.swift",
+      "Modules/Account/Sources/Account/FeedSettings.swift",
+      "Modules/Account/Sources/Account/FeedSettingsDatabase.swift",
+      "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Folder.swift",
+      "Modules/Account/Sources/Account/LocalAccount/InitialFeedDownloader.swift",
+      "Modules/Account/Sources/Account/LocalAccount/LocalAccountDelegate.swift",
+      "Modules/Account/Sources/Account/LocalAccount/LocalAccountRefresher.swift",
+      "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "Modules/Account/Sources/Account/OPMLFile.swift",
+      "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+      "Modules/Account/Sources/Account/SingleArticleFetcher.swift",
+      "Modules/Account/Tests/AccountTests/AccountCredentialsTest.swift",
+      "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+      "Modules/Account/Tests/AccountTests/AccountOPMLLoadTests.swift",
+      "Modules/Account/Tests/AccountTests/FeedSettingsDatabaseTests.swift",
+      "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderContentsSyncTest.swift",
+      "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinFolderSyncTest.swift",
+      "Modules/Account/Tests/AccountTests/Feedbin/AccountFeedbinSyncTest.swift",
+      "Modules/Account/Tests/AccountTests/Feedbin/FeedbinFeedNameTests.swift",
+      "Modules/Account/Tests/AccountTests/Feedbin/FeedbinStatusSendTests.swift",
+      "Modules/Account/Tests/AccountTests/Feedly/FeedlyFeedNameTests.swift",
+      "Modules/Account/Tests/AccountTests/Feedly/FeedlyFolderReconciliationTests.swift",
+      "Modules/Account/Tests/AccountTests/Feedly/FeedlyReauthorizationTests.swift",
+      "Modules/Account/Tests/AccountTests/NewsBlur/NewsBlurFeedNameTests.swift",
+      "Modules/Account/Tests/AccountTests/TestAccountManager.swift",
+      "Modules/ArticlesDatabase/Package.swift",
+      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesDatabase.swift",
+      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/ArticlesTable.swift",
+      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/AuthorsSchemaMigration.swift",
+      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/SearchTable.swift",
+      "Modules/ArticlesDatabase/Sources/ArticlesDatabase/StatusesTable.swift",
+      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/AdmissionCancellationTests.swift",
+      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/ArticleUpdateTests.swift",
+      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/StatusDivergenceTests.swift",
+      "Modules/ArticlesDatabase/Tests/ArticlesDatabaseTests/TodayQueriesTests.swift",
+      "Modules/CloudKitSync/Package.swift",
+      "Modules/CloudKitSync/Sources/CloudKitSync/CloudKitZone.swift",
+      "Modules/Images/Sources/Images/ImageMetadataDatabase.swift",
+      "Modules/RSDatabase/Sources/RSDatabase/DatabaseQueue.swift",
+      "Modules/RSDatabase/Sources/RSDatabase/DatabaseWork.swift",
+      "Modules/RSDatabase/Sources/RSDatabase/FMDatabase+Extras.swift",
+      "Modules/RSDatabase/Sources/RSDatabaseObjC/FMDatabase.m",
+      "Modules/RSDatabase/Sources/RSDatabaseObjC/FMResultSet.h",
+      "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseCloseTests.swift",
+      "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseQueueShutdownTests.swift",
+      "Modules/RSDatabase/Tests/RSDatabaseTests/DatabaseUpdateFailureTests.swift",
+      "Modules/RSWeb/Sources/RSWeb/DownloadSession.swift",
+      "Modules/RSWeb/Sources/RSWeb/Downloader.swift",
+      "Modules/RSWeb/Sources/RSWeb/WebServices/TestingURLProtocol.swift",
+      "Modules/RSWeb/Tests/RSWebTests/DownloaderIsolationTests.swift",
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncStatusTable.swift",
+      "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+      "NetNewsWire.xcodeproj/project.pbxproj",
+      "Shared/AccountStats/AccountStatsViewModel.swift",
+      "Shared/Activity/ActivityManager.swift",
+      "Shared/Commands/MarkStatusCommand.swift",
+      "Shared/Dinosaurs/DinosaursViewModel.swift",
+      "Shared/Extensions/ArticleUtilities.swift",
+      "Shared/SmartFeeds/SmartFeed.swift",
+      "Shared/SmartFeeds/SmartFeedDelegate.swift",
+      "Shared/SmartFeeds/StarredFeedDelegate.swift",
+      "Shared/SmartFeeds/TodayFeedDelegate.swift",
+      "Shared/SmartFeeds/UnreadFeed.swift",
+      "Shared/Timeline/FetchRequestOperation.swift",
+      "Shared/Timeline/FetchRequestQueue.swift",
+      "Shared/Widget/WidgetDataEncoder.swift",
+      "Shared/Widget/WidgetSnapshotStore.swift",
+      "Tests/NetNewsWire-iOSTests/WidgetDataEncoderTests.swift",
+      "Tests/NetNewsWireTests/FetchRequestOperationTests.swift",
+      "Tests/NetNewsWireTests/MarkStatusCommandTests.swift",
+      "Tests/NetNewsWireTests/ScriptingTests/AppleScriptXCTestCase.swift",
+      "Tests/NetNewsWireTests/ScriptingTests/ScriptingTests.swift",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testFeedExists.txt",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testGenericScript.txt",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testGetURL.txt",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameAndUrlOfEveryFeed.txt",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfAuthors.txt",
+      "Tests/NetNewsWireTests/ScriptingTests/scripts/testNameOfEveryFolder.txt",
+      "Tests/NetNewsWireTests/WidgetSnapshotStoreTests.swift",
+      "buildscripts/acceptance.sh",
+      "buildscripts/test_acceptance.py",
+      "docs/acceptance/t30-native-fixture-lifetime.md",
+      "iOS/MainFeed/MainFeedCollectionViewController.swift",
+      "iOS/MainTimeline/MainTimelineViewController.swift",
+      "iOS/SceneCoordinator.swift"
+    ],
+    "coverage_limit": "Path identity does not establish changed-hunk/connected/runtime acceptance."
+  },
+  "prior_manifest_verification": {
+    "date": "2026-10-28",
+    "base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2",
+    "candidate": "4850b7cf9027c85d4b16f83b3fde352ddd309ef9",
+    "path_count": 110,
+    "method": "Exact original-base three-dot name/status manifest and candidate blob resolution; excludes future worker changes.",
+    "added_to_ledger": [
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabaseError.swift"
+    ],
+    "changed_blob_paths": [
+      "Modules/Account/Sources/Account/CloudKit/CloudKitAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedbin/FeedbinAccountDelegate.swift",
+      "Modules/Account/Sources/Account/Feedly/FeedlyAccountDelegate.swift",
+      "Modules/Account/Sources/Account/NewsBlur/Internals/NewsBlurAccountDelegate+Internal.swift",
+      "Modules/Account/Sources/Account/NewsBlur/NewsBlurAccountDelegate.swift",
+      "Modules/Account/Sources/Account/ReaderAPI/ReaderAPIAccountDelegate.swift",
+      "Modules/Account/Tests/AccountTests/AccountFixtureLifetimeTests.swift",
+      "Modules/SyncDatabase/Sources/SyncDatabase/SyncDatabase.swift",
+      "Modules/SyncDatabase/Tests/SyncDatabaseTests/SyncStatusTableTests.swift",
+      "docs/acceptance/t30-native-fixture-lifetime.md"
+    ],
+    "removed_from_ledger": [],
+    "coverage_limit": "Source identity only; current correction and remaining original-base coverage not accepted."
+  },
+  "implementation_owner": {
+    "provider": "codex",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "high",
+    "thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t30-sol-high-handoff-20261028-r1",
+    "current_checkpoint": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+    "new_worktree_created": false
+  }
+}

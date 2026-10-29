@@ -1,0 +1,58 @@
+import json
+from pathlib import Path
+import subprocess
+import shutil
+import tempfile
+import unittest
+
+
+class ChannelTest(unittest.TestCase):
+    def test_rejects_bad_requests_and_strips_ambient_flags(self):
+        project = Path(__file__).resolve().parents[1]
+        python = project / '.prepared/python/bin/python3'
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            backend = root / 'backend'
+            backend.mkdir()
+            (backend / '__init__.py').write_text('')
+            (backend / 'schema.py').write_text('class UnsupportedSchemaError(Exception): pass\n')
+            (backend / 'server.py').write_text('''\
+import os
+class Application:
+    def __init__(self, *args, **kwargs):
+        assert not any(k.startswith("INFORMATION_OS_") for k in os.environ)
+    def handle(self, method, path, query, body):
+        if path == "/api/jobs": return {"jobs": ["x" * 1310720]}
+        return {"processors": 1}
+''')
+            script = root / 'stdio_service.py'
+            shutil.copy2(project / 'stdio_service.py', script)
+            token = 'a' * 32
+            messages = [{'token': token}, {'token': 'wrong', 'method': 'GET', 'path': '/api/jobs'},
+                        {'id': 'bad', 'token': token, 'method': 'GET', 'path': '/api/jobs'},
+                        {'id': 1, 'token': token, 'method': 'GET', 'path': '/invalid'},
+                        {'id': 2, 'token': token, 'method': 'GET', 'path': '/api/jobs'}]
+            result = subprocess.run([str(python), str(script), str(root / 'data')],
+                                    input=''.join(json.dumps(x) + '\n' for x in messages), text=True,
+                                    capture_output=True, timeout=15, check=True,
+                                    env={'PYTHONPATH': str(root), 'PYTHONDONTWRITEBYTECODE': '1', 'INFORMATION_OS_RAW_VAULT': str(root / 'outside')})
+            replies = [json.loads(line) for line in result.stdout.splitlines()]
+            self.assertEqual(replies, [{'status': 'ready'}, {'error': 'unauthorized'},
+                                       {'error': 'invalid request id'}, {'id': 1, 'error': 'invalid operation'},
+                                       {'id': 2, 'error': 'response too large'}])
+            self.assertFalse((root / 'outside').exists())
+
+    def test_oversized_input_fails_without_diagnostics(self):
+        project = Path(__file__).resolve().parents[1]
+        python = project / '.prepared/python/bin/python3'
+        with tempfile.TemporaryDirectory() as root:
+            process = subprocess.run([str(python), str(project / 'stdio_service.py'), root],
+                                     input='x' * 1310721 + '\n', text=True, capture_output=True,
+                                     timeout=15, env={'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'})
+            self.assertNotEqual(process.returncode, 0)
+            self.assertEqual(process.stdout, '')
+            self.assertEqual(process.stderr, '')
+
+
+if __name__ == '__main__':
+    unittest.main()

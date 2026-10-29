@@ -1,0 +1,687 @@
+[
+  {
+    "key": "00",
+    "title": "Native clean-profile build and launch baseline",
+    "blocked_by": [],
+    "capabilities": [
+      "NNW-BASE"
+    ],
+    "what": "A developer can reproducibly build and launch the native reader against an isolated acceptance profile without altering an installed NNW profile.",
+    "acceptance": [
+      "Provide a bounded reproducible macOS build/test entry using installed Xcode; avoid mandatory private upstream secrets or interactive setup for local acceptance.",
+      "Native app launch has its own development identity/profile; existing accounts and data in installed NNW remain untouched.",
+      "Existing package tests and applicable build/typecheck evidence are recorded, with original failures distinguished from new ones.",
+      "Document signing/CloudKit entitlement and simulator prerequisites without inventing a team ID; do not weaken release security to obtain a green local build."
+    ],
+    "status": "accepted",
+    "body_file": "docs/tickets/00-native-clean-profile-build-and-launch-baseline.md"
+  },
+  {
+    "key": "01",
+    "title": "Lossless IO snapshot, manifest and independent restore",
+    "blocked_by": [],
+    "capabilities": [
+      "A2",
+      "F3",
+      "F7"
+    ],
+    "what": "An owner can create a consistent IO database-and-assets snapshot and restore it into an empty destination with a verifiable manifest before a native cutover.",
+    "acceptance": [
+      "Use SQLite backup semantics for WAL/live-source consistency; source originals are never modified or removed.",
+      "An executable public snapshot/verify/restore interface preserves every table/row and required asset with version, identity, integrity/count/hash evidence; it rejects incomplete or tampered input.",
+      "Interrupted/repeated restore is safe and an existing destination is never silently overwritten.",
+      "Synthetic fixtures exercise real source schema and complete round-trip restore; first ticket must not read personal body content, credentials or operate production writes.",
+      "Record unsupported legacy forms explicitly rather than dropping them."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/01-lossless-io-snapshot-manifest-and-independent-restore.md"
+  },
+  {
+    "key": "02",
+    "title": "App-managed IO engine with native health and shutdown",
+    "blocked_by": [],
+    "capabilities": [
+      "A1",
+      "F6"
+    ],
+    "what": "The native app starts and stops a private IO processing component and shows its real availability without requiring a separately deployed personal backend.",
+    "acceptance": [
+      "Use existing IO observable contracts and sanitized reusable source where possible; no unrelated FreshRSS runtime requirement.",
+      "Provide authenticated private command/read communication, app-managed data locations and lifecycle/error recovery.",
+      "Native status differentiates launching, ready, failed and stopped; merely displaying a stub is insufficient.",
+      "No personal paths, account identifiers, keys or acceptance-only gates are embedded in public shipping code.",
+      "Packaging declares Python/native dependencies and licensing; an actual installed-bundle smoke check proves runtime discovery."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/02-app-managed-io-engine-with-native-health-and-shutdown.md"
+  },
+  {
+    "key": "03",
+    "title": "BYO AI and Magpie prompt-model configuration",
+    "blocked_by": [
+      "02"
+    ],
+    "capabilities": [
+      "C2",
+      "C6"
+    ],
+    "what": "A reader configures a service and creates reusable Curator/Editor prompts that explicitly bind a model or gateway target.",
+    "acceptance": [
+      "Native Settings store secrets securely and validate nonsecret endpoint/target configuration; directory refresh performs no inference.",
+      "Prompt create/edit/copy/rename/delete and references are functional; Curator and Editor are independently composable.",
+      "Each prompt binds its service/target; no hidden inheritance, mandatory Kit pairing or per-feed model override.",
+      "Invalid target/authentication/output errors remain distinct and never become zero scores or silent alternate providers.",
+      "Magpie requested target and actual/reported model provenance remain separate; sharing instructions excludes secrets.",
+      "Prompt history can be browsed and a prior version restored as a new current version; supported input placeholders and legacy aliases remain valid, while unknown placeholders fail before a model request.",
+      "Saving instructions and their service/target binding is coherent: failed saves preserve the prior configuration; unchanged text does not grow history, and Restore Text retains the visible execution binding and historical runs."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/03-byo-ai-and-magpie-prompt-model-configuration.md"
+  },
+  {
+    "key": "04",
+    "title": "NNW article identity bridge and configurable feed policies",
+    "blocked_by": [
+      "03"
+    ],
+    "capabilities": [
+      "A1",
+      "A2",
+      "A3",
+      "A4"
+    ],
+    "what": "A native subscription can be mapped to IO observations and configured for media, prompts, threshold and automation, including batch source settings.",
+    "acceptance": [
+      "NNW articles/account/feed identities map to stable IO canonical content without changing read/star semantics.",
+      "Five media policies, disabled/normal/Important behavior and current scope rules are retained and configurable; a new feed does not start history processing.",
+      "One content can retain prompt-context results without duplicating shared human decisions; historical context is preserved.",
+      "Shared setting changes disclose affected sources; job snapshots stay coherent and historical rerun requires explicit preview.",
+      "An article appears in the native list with actual bridge data, not a separate reader."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/04-nnw-article-identity-bridge-and-configurable-feed-policies.md"
+  },
+  {
+    "key": "05",
+    "title": "News acquisition and Curator in native article detail",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "B1",
+      "B2",
+      "C1"
+    ],
+    "what": "A news article obtains validated body text and displays a real Curator result in NoNews, with access failures recoverable.",
+    "acceptance": [
+      "Existing full-text-before-scoring and same-material binding are preserved.",
+      "Access barriers, runtime absence, timeouts and fallback/manual-required routes remain distinct.",
+      "Score/title/reason and user prompt output are validated and visible; missing evidence is not a low score.",
+      "Fixtures prove material identity and no unauthorized browser/session use; actual native rendering is exercised."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/05-news-acquisition-and-curator-in-native-article-detail.md"
+  },
+  {
+    "key": "06",
+    "title": "Verified paper abstracts and Curator",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "B3",
+      "C1"
+    ],
+    "what": "A paper displays identity-validated abstract-based Curator output or an honest missing/candidate/error state.",
+    "acceptance": [
+      "Publisher/arXiv/catalog routes retain existing identity/completeness/provenance validation and available/candidate/missing distinctions.",
+      "No full-text fallback silently replaces a missing abstract for scoring; title-only and correction rules retain source behavior.",
+      "Native Abstract and Curator layers show the right material and result.",
+      "Regression fixtures include mismatched DOI/title, truncated abstract and valid identity."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/06-verified-paper-abstracts-and-curator.md"
+  },
+  {
+    "key": "07",
+    "title": "Paper full text, fidelity and eligible acquisition",
+    "blocked_by": [
+      "06"
+    ],
+    "capabilities": [
+      "B4",
+      "B5"
+    ],
+    "what": "An eligible paper obtains verified full text/PDF/converted content and can be read with equations, figures and references in NoNews.",
+    "acceptance": [
+      "Preserve manual/new-threshold/Important eligibility and Reject precedence; old scores do not silently restart history.",
+      "HTML/PDF/OCR routing, material distinctions, coverage verification and explicit manual-required behavior remain.",
+      "Native full-text rendering supports formulas/tables/images/footnotes and honest conversion failures.",
+      "Input authorization and validated-body checks remain for manual reruns as well as automation."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/07-paper-full-text-fidelity-and-eligible-acquisition.md"
+  },
+  {
+    "key": "08",
+    "title": "Newsletter acquisition and native reading",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "B6"
+    ],
+    "what": "An input newsletter issue retains full text and ordered links and can be processed/read as one content item.",
+    "acceptance": [
+      "Complete feed issue vs webpage fallback behavior matches IO.",
+      "Thin snapshots do not authorize downstream AI; no automatic link-to-independent-item fanout is invented.",
+      "Material provenance and useful error states are shown in the shared native detail."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/08-newsletter-acquisition-and-native-reading.md"
+  },
+  {
+    "key": "09",
+    "title": "Podcast description-to-transcript workflow",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "B7"
+    ],
+    "what": "A podcast is screened from valid description material, then obtains an eligible transcript for processing and native reading.",
+    "acceptance": [
+      "Official show notes and existing RSS fallback preserve current screening rules.",
+      "Transcript acquisition follows selection/Important and material gates; missing/short/manual-required states remain explicit.",
+      "No automatic ASR or media download is added to claim parity.",
+      "Native layers distinguish description, transcript and source audio link."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/09-podcast-description-to-transcript-workflow.md"
+  },
+  {
+    "key": "10",
+    "title": "Video description-to-captions workflow",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "B8"
+    ],
+    "what": "A video retains description-based judgment and eligible explicit transcript/caption reading inside the native article.",
+    "acceptance": [
+      "Explicit transcript URLs and validated supported API captions preserve current behavior.",
+      "Unsupported/missing subtitles are manual-required, not an empty successful transcript.",
+      "No new yt-dlp, video understanding or ASR dependency is invented.",
+      "Native article exposes actual materials/source link and failures."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/10-video-description-to-captions-workflow.md"
+  },
+  {
+    "key": "11",
+    "title": "Automatic and manual Editor with immutable draft versions",
+    "blocked_by": [
+      "05",
+      "06",
+      "08",
+      "09",
+      "10"
+    ],
+    "capabilities": [
+      "C4",
+      "C5",
+      "F2",
+      "F3"
+    ],
+    "what": "A reader receives an Editor draft via configured automation or explicit action and can rerun, inspect and compare versions.",
+    "acceptance": [
+      "Preserve threshold/Important/manual eligibility, source snapshots, current validation and actual model/material provenance.",
+      "Output contract remains media-appropriate; failed retries preserve previous successful drafts.",
+      "Native Draft detail supports versions, compare, explicit regenerate and protected-version deletion rules.",
+      "No new draft test-run feature or conversational editor is introduced."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/11-automatic-and-manual-editor-with-immutable-draft-versions.md"
+  },
+  {
+    "key": "12",
+    "title": "Integrated native Curator, Draft and material reading",
+    "blocked_by": [
+      "11",
+      "07"
+    ],
+    "capabilities": [
+      "D1",
+      "D2",
+      "D4"
+    ],
+    "what": "A reader uses a single NNW detail with Curator/Draft/material tabs and native keyboard/window behavior.",
+    "acceptance": [
+      "First available evaluation opens Curator; use current IO prompt-result presentation without forced extra metadata.",
+      "Preserve Abstract for papers, Fulltext/Original distinctions and unavailable-material/error states.",
+      "Keep IO list content and requested sorting; do not add rejected Draft list preview.",
+      "Responsive native column layout, themes/font sizes, web-content safety and keyboard focus remain coherent.",
+      "No new Continue deeper gate or mandatory fold hierarchy."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/12-integrated-native-curator-draft-and-material-reading.md"
+  },
+  {
+    "key": "13",
+    "title": "Yep/Nope decisions, undo and configurable side effects",
+    "blocked_by": [
+      "04"
+    ],
+    "capabilities": [
+      "D5",
+      "D7",
+      "F2"
+    ],
+    "what": "A reader can decide without AI prerequisites, undo, and safely stop or continue processing according to explicit settings.",
+    "acceptance": [
+      "Yep stays; Nope advances only within current results and handles end-of-list; Star/read are independent.",
+      "Preserve command intent/audit and duplicate observations; do not train recommendations.",
+      "Nope invalidates pending/late work authorization; cleanup preference is surfaced without weakening protected-reference checks.",
+      "Undo/restoration has real public behavior and native keyboard/buttons/gestures with accessible labels.",
+      "Integration linkage is configurable; a decision alone is never reported as external success."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/13-yep-nope-decisions-undo-and-configurable-side-effects.md"
+  },
+  {
+    "key": "14",
+    "title": "IO filters, dates and Quick views in NNW",
+    "blocked_by": [
+      "12",
+      "13"
+    ],
+    "capabilities": [
+      "D3"
+    ],
+    "what": "A reader combines existing IO filters, sees/removes conditions and saves/reuses Quick views in the same native reader.",
+    "acceptance": [
+      "Preserve AI/human/read/Star/publication conditions, date controls and native search scope.",
+      "English Your decision values All/Undecided/Yep/Nope; save/apply/delete Quick views persists.",
+      "Do not create custom Smart Feed editor or expand Quick view scope beyond agreed IO behavior.",
+      "Query and result counts match the actual full scope, with unsupported advanced predicates preserved rather than flattened."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/14-io-filters-dates-and-quick-views-in-nnw.md"
+  },
+  {
+    "key": "15",
+    "title": "Full-result batch preview and processing",
+    "blocked_by": [
+      "11",
+      "13",
+      "14"
+    ],
+    "capabilities": [
+      "D6"
+    ],
+    "what": "A power user previews and commits batch decisions/reprocessing against selected articles or complete filtered results.",
+    "acceptance": [
+      "Preview pins successful decisions, query scope, policy distribution and phase estimates without enqueueing work.",
+      "Commit skips reviewed/duplicate/ineligible items and refuses changed routing until re-previewed.",
+      "Accept AI, process current results and explicit historical reprocessing retain distinct collection semantics.",
+      "Native selection, progress, undo/cancel and error reporting are functional."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/15-full-result-batch-preview-and-processing.md"
+  },
+  {
+    "key": "16",
+    "title": "Configurable Zotero collection and existing-work protection",
+    "blocked_by": [
+      "11",
+      "13"
+    ],
+    "capabilities": [
+      "E1",
+      "E2"
+    ],
+    "what": "A reader collects supported media into a configured Zotero target with existing ownership safeguards and verified status.",
+    "acceptance": [
+      "Preserve explicit intent eligibility; auto high score and Accept AI alone do not become collection commands.",
+      "Correct media parents/attachments/notes and identity resolution retain current behavior.",
+      "Never overwrite user notes/annotations or claim a near-title record; external target and optional Yep linkage are configurable.",
+      "Native status separates decision, queued/failed collection and readback-confirmed success.",
+      "Fixtures prove idempotency/ownership; live isolated readback evidence is reported separately."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/16-configurable-zotero-collection-and-existing-work-protection.md"
+  },
+  {
+    "key": "17",
+    "title": "Obsidian personal reading copies and helper continuity",
+    "blocked_by": [
+      "07",
+      "16"
+    ],
+    "capabilities": [
+      "E3"
+    ],
+    "what": "A reader explicitly creates/opens an Obsidian working copy without overwriting personal edits and can keep the existing Zotero helper path.",
+    "acceptance": [
+      "Configured vault/paths replace personal hardcodes; existing native action/helper compatibility remains.",
+      "Missing body creates no empty note; repeat exports protect user modifications; explicit rebuild handles missing files.",
+      "Navigation-only badges do not auto-create files; Zotero full-text linkage is verified where applicable.",
+      "Native action and helper round-trip are tested at the public integration boundary."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/17-obsidian-personal-reading-copies-and-helper-continuity.md"
+  },
+  {
+    "key": "18",
+    "title": "Issue adoption, usage and external receipt reconciliation",
+    "blocked_by": [
+      "11",
+      "17"
+    ],
+    "capabilities": [
+      "E4",
+      "E5",
+      "E6"
+    ],
+    "what": "An editor adopts a specific News/Paper draft into a configured existing issue and can verify usage across existing external workflows.",
+    "acceptance": [
+      "Preserve eligible existing issue selection and draft/image/type gates; do not create issues implicitly or equate adoption with public publishing.",
+      "Intent/receipt pins canonical content/version/issue identity, avoids duplicate blocks and requires explicit hash-checked replacement.",
+      "External macros/spool/catch-up update the shared ledger without importing private body text into status records.",
+      "Native status shows pending/verified/unknown appropriately; new drafts never silently overwrite adopted versions."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/18-issue-adoption-usage-and-external-receipt-reconciliation.md"
+  },
+  {
+    "key": "19",
+    "title": "Readable images, configured upload and repair",
+    "blocked_by": [
+      "11"
+    ],
+    "capabilities": [
+      "B9"
+    ],
+    "what": "A reader sees material/draft images and can recover failed local resolution or configured uploads.",
+    "acceptance": [
+      "Local image lookup and optional upload/staging/receipt retain provenance and trust boundaries.",
+      "Private source assets are not automatically published; public image targets are explicit settings.",
+      "Native content displays useful missing-image state and repair action; retries are idempotent."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/19-readable-images-configured-upload-and-repair.md"
+  },
+  {
+    "key": "20",
+    "title": "Native Activity, attention and processing controls",
+    "blocked_by": [
+      "02",
+      "11"
+    ],
+    "capabilities": [
+      "F4",
+      "F5",
+      "F6"
+    ],
+    "what": "A user views real jobs, failures and history and can change processing capacity or retry/cancel at the correct scope.",
+    "acceptance": [
+      "Preserve Jobs/Needs attention/History, failure grouping, same-cause retry, dismiss and resolved-history semantics.",
+      "Worker limits/current scope are configurable; cancel queued does not falsely claim to kill running work.",
+      "Health/worker presence is not reported as end-to-end integration success; 400-row windows are not global totals.",
+      "Service errors do not interrupt ordinary NNW reading or leak request bodies/secrets."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/20-native-activity-attention-and-processing-controls.md"
+  },
+  {
+    "key": "21",
+    "title": "IO lifecycle, version ownership and recoverable cleanup",
+    "blocked_by": [
+      "01",
+      "13",
+      "19"
+    ],
+    "capabilities": [
+      "D7",
+      "F3",
+      "F7"
+    ],
+    "what": "An owner uses existing IO retention/recovery behavior safely alongside NNW cache cleanup and can configure personal cleanup preferences.",
+    "acceptance": [
+      "Existing database/file-authority boundaries, immutable versions and checksum checks remain; NNW article eviction cannot silently delete IO evidence.",
+      "Preserve seven-day reject recovery and Select rescue when enabled, protected references and independent backup-readback requirements.",
+      "Storage settings explain scope; cleanup leaves required identity/audit/tombstones, and external copies are not blindly deleted.",
+      "Restore/failed-cleanup/late-write scenarios are verifiable through public operations."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/21-io-lifecycle-version-ownership-and-recoverable-cleanup.md"
+  },
+  {
+    "key": "22",
+    "title": "Historical catalog, scopes and advanced maintenance",
+    "blocked_by": [
+      "04",
+      "21"
+    ],
+    "capabilities": [
+      "A5",
+      "F7"
+    ],
+    "what": "An advanced user can continue the current history discovery, import, reconciliation and repair workflows from supported configurable tools.",
+    "acceptance": [
+      "Preserve journal/arXiv/conference discovery, scope/time-window/import and dedup capabilities without claiming unimplemented coverage.",
+      "Personal source/time/vault constants become settings; unsupported forms are explicit.",
+      "Advanced native command/tool entry executes actual operations with preview/progress/restore evidence.",
+      "Normal reading is not forced through maintenance setup; no capability is dropped because it is advanced."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/22-historical-catalog-scopes-and-advanced-maintenance.md"
+  },
+  {
+    "key": "23",
+    "title": "Configurable classification and source value statistics",
+    "blocked_by": [
+      "04",
+      "13"
+    ],
+    "capabilities": [
+      "C3",
+      "F1"
+    ],
+    "what": "A user can configure valid topic/classification vocabularies and inspect existing source value metrics from native settings/Inspector.",
+    "acceptance": [
+      "Preserve Paper label validation and News classification capabilities without forcing personal research categories.",
+      "Source 30/90/all-time reviewed/selected/star/value-density metrics preserve distinct-content counting and IO formulas.",
+      "NNW Star semantics and user labels stay intact; statistics do not auto-unsubscribe, rank or train recommendations.",
+      "Native source settings/Inspector expose useful results with empty and unavailable states."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/23-configurable-classification-and-source-value-statistics.md"
+  },
+  {
+    "key": "24",
+    "title": "Persistent two-client IO sync and offline convergence",
+    "blocked_by": [
+      "04",
+      "13",
+      "21"
+    ],
+    "capabilities": [
+      "SYNC"
+    ],
+    "what": "Two separately stored clients synchronize IO settings, decisions and result references with durable retry and deterministic merge behavior.",
+    "acceptance": [
+      "Use stable content/context identities; preserve versions/intents/receipts and protected assets without secret synchronization in ordinary records.",
+      "Offline outbox, acknowledgments, conflicts, deletions/tombstones and duplicate delivery converge and survive restart.",
+      "Reject precedence and adopted-version protection survive delayed remote operations; do not duplicate paid work on replay.",
+      "Tests exercise actual persistent public adapters; fake transport tests are labeled separately from cloud verification."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/24-persistent-two-client-io-sync-and-offline-convergence.md"
+  },
+  {
+    "key": "25",
+    "title": "NNW-compatible CloudKit transport and macOS sync UI",
+    "blocked_by": [
+      "24",
+      "20"
+    ],
+    "capabilities": [
+      "SYNC"
+    ],
+    "what": "A configured owner synchronizes IO data between native Mac clients with a supported transport and can understand account/offline failures.",
+    "acceptance": [
+      "Inspect/reuse suitable NNW CloudKit sync seams; custom IO state must not piggyback unsupported third-party RSS fields.",
+      "App entitlements/container/signing requirements and privacy are explicit; keep original account/read/star sync operational.",
+      "Native Settings show enabling/state/error/retry, not a switch backed only by local storage.",
+      "Transport works with real authorized accounts for acceptance; signed-out/local accounts have honest non-synced status.",
+      "Actual draft/material availability and asset transfers are verified, not metadata-only claims."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/25-nnw-compatible-cloudkit-transport-and-macos-sync-ui.md"
+  },
+  {
+    "key": "26",
+    "title": "iOS consumption and synchronized IO decision continuity",
+    "blocked_by": [
+      "25",
+      "12"
+    ],
+    "capabilities": [
+      "SYNC",
+      "NNW-BASE"
+    ],
+    "what": "An iPhone running the shared app can resume synchronized Curator/Draft/material reading and judgments while preserving NNW mobile behavior.",
+    "acceptance": [
+      "Shared sync records/settings/results and Yep/Nope are consumed with real account boundary handling.",
+      "iOS build remains green; native navigation, safe areas, text scaling and accessibility match Apple conventions.",
+      "Missing/offline assets are explicit; no device pretends that reading metadata proves complete content transfer.",
+      "Two-client/device continuity and original read/star sync are evidenced; unavailable physical-account checks remain pending."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/26-ios-consumption-and-synchronized-io-decision-continuity.md"
+  },
+  {
+    "key": "27",
+    "title": "Full personal database migration and native cutover",
+    "blocked_by": [
+      "01",
+      "12",
+      "16",
+      "17",
+      "18",
+      "21",
+      "22",
+      "23",
+      "25"
+    ],
+    "capabilities": [
+      "MIGRATION",
+      "F7"
+    ],
+    "what": "The existing owner imports the entire verified IO database/assets/configuration, maps sources and resumes the complete workflow in NoNews.",
+    "acceptance": [
+      "Native importer previews the complete snapshot and destination/source mappings, validates version/integrity/space and reports every retained/unmapped asset.",
+      "All rows, histories, versions, decisions, settings, bindings, jobs, collection/adoption/receipts and legacy references are accounted for; no sample-only substitute.",
+      "Historical import is passive: no model runs, collection or adoption replay without explicit post-import action.",
+      "Full private-data reconciliation and independent restore evidence are local/redacted; source system remains intact and rollback demonstrable.",
+      "Resumed native workflow is exercised against actual authorized services without overwriting existing personal work."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/27-full-personal-database-migration-and-native-cutover.md"
+  },
+  {
+    "key": "28",
+    "title": "First-use setup and coherent configurable settings",
+    "blocked_by": [
+      "03",
+      "04",
+      "14",
+      "16",
+      "20",
+      "21",
+      "23"
+    ],
+    "capabilities": [
+      "ONBOARDING"
+    ],
+    "what": "A new user independently connects AI, creates/reuses prompts and configures sources/integrations through understandable native settings.",
+    "acceptance": [
+      "Basic reading works without any AI; no terminal/deployment dependency or mandatory conversational onboarding.",
+      "Group personal preferences by task; clear defaults/impact/scope, copy choices and unavailable state recovery retain all powers.",
+      "Direct-model and Magpie users see accurate connection/target provenance; no prompt trial-run or silent paid health call.",
+      "Observed first-use task script records misunderstandings and fixes material friction, rather than just asserting fields exist."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/28-first-use-setup-and-coherent-configurable-settings.md"
+  },
+  {
+    "key": "29",
+    "title": "NNW-native Liquid Glass and accessible UX finish",
+    "blocked_by": [
+      "12",
+      "14",
+      "15",
+      "18",
+      "20",
+      "25",
+      "28"
+    ],
+    "capabilities": [
+      "UX"
+    ],
+    "what": "The complete native reading and configuration journey is visually and behaviorally consistent with NNW and Apple HIG.",
+    "acceptance": [
+      "Use standard AppKit/UIKit controls, semantic colors/SF Symbols and native Liquid Glass where supported; readable content avoids decorative glass.",
+      "Verify light/dark, narrow/wide windows, keyboard focus/shortcuts, VoiceOver and Reduce Motion/Transparency; supported older OS has native fallback.",
+      "One batched Impeccable inspection, one correction batch and at most one confirmation per target; fix material task-blocking/native violations.",
+      "Capture fresh native evidence tied to commit/device/appearance and actual behavior; source-only review is not visual acceptance.",
+      "No extra Draft previews, forced integration-after-reading gate or new workspaces appear as visual scope creep."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/29-nnw-native-liquid-glass-and-accessible-ux-finish.md"
+  },
+  {
+    "key": "30",
+    "title": "Full parity acceptance, migration/sync readback and release handoff",
+    "blocked_by": [
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "26",
+      "27",
+      "28",
+      "29"
+    ],
+    "capabilities": [
+      "ALL"
+    ],
+    "what": "The owner can use all prior IO abilities in NoNews and a new user can independently configure the product, backed by final parity evidence.",
+    "acceptance": [
+      "Every active capability and newly discovered active source behavior has an accepted ticket plus meaningful test/runtime evidence; retired items are honestly separated.",
+      "Run full appropriate macOS/iOS builds and tests, integration/migration/sync live readback and independently aggregated Standards/Spec reviews.",
+      "No material code/UX/accessibility/data-integrity issue remains; private final evidence is locally accessible with redacted public summary.",
+      "Each completed ticket has commit and remote ref, review base/HEAD and test outcome; goal is not completed while live prerequisites remain pending.",
+      "Clean abandoned changes and deliver runnable app, migration/rollback guide and known limitations without award claims."
+    ],
+    "status": "planned",
+    "body_file": "docs/tickets/30-full-parity-acceptance-migration-sync-readback-and-release-handoff.md"
+  }
+]

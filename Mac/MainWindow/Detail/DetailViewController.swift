@@ -90,19 +90,57 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		self.init(nibName: "DetailView", bundle: nil)
 	}
 
-	override func viewDidLoad() {
+		override func viewDidLoad() {
 		currentWebViewController = regularWebViewController
+		NotificationCenter.default.addObserver(self, selector: #selector(nativeEngineDidChange), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
 		updateMouseoverLinkOverlay()
+	}
+
+	@objc private func nativeEngineDidChange() {
+		guard ProcessingEngine.shared.state == .ready else {
+			regularWebViewController.setNativeSourceBinding(nil)
+			searchWebViewController?.setNativeSourceBinding(nil)
+			return
+		}
+		guard let article = currentWebViewController.article else { return }
+		ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak self] binding in
+			guard let self, ProcessingEngine.shared.state == .ready,
+				let current = self.currentWebViewController.article,
+				current.accountID == article.accountID, current.feedID == article.feedID,
+				current.articleID == article.articleID else { return }
+			self.currentWebViewController.setNativeSourceBinding(binding)
+		}
 	}
 
 	// MARK: - API
 
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
+		let controller = webViewController(for: mode)
+		controller.setNativeSourceBinding(nil)
 		switch mode {
 		case .regular:
 			detailStateForRegular = state
 		case .search:
 			detailStateForSearch = state
+		}
+		if case let .article(article, _) = state {
+			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
+				guard let controller, ProcessingEngine.shared.state == .ready, let current = controller.article,
+					current.accountID == article.accountID, current.feedID == article.feedID,
+					current.articleID == article.articleID else {
+					return
+				}
+				controller.setNativeSourceBinding(binding)
+			}
+		} else if case let .extracted(article, _, _) = state {
+			ProcessingEngine.shared.nativeObservation(accountID: article.accountID, feedID: article.feedID, articleID: article.articleID) { [weak controller] binding in
+				guard let controller, ProcessingEngine.shared.state == .ready, let current = controller.article,
+					current.accountID == article.accountID, current.feedID == article.feedID,
+					current.articleID == article.articleID else {
+					return
+				}
+				controller.setNativeSourceBinding(binding)
+			}
 		}
 	}
 

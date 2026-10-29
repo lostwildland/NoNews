@@ -1,0 +1,615 @@
+{
+  "repo": "lostwildland/NoNews",
+  "tickets": {
+    "00": {
+      "url": "https://github.com/lostwildland/NoNews/issues/2",
+      "number": 2,
+      "id": 6062367552,
+      "title": "Native clean-profile build and launch baseline",
+      "status": "closed",
+      "native_parent": true,
+      "native_blockers": [],
+      "implementation_branch": "t3/t00-native-acceptance-build",
+      "last_reported_head": "2de470e84603e9fa41ed998e42257ea096a5dc9e",
+      "implementation_state": "accepted and integrated; issue closed",
+      "accepted_implementation_head": "2de470e84603e9fa41ed998e42257ea096a5dc9e",
+      "integration_head": "7a8a5b9",
+      "review_evidence": "docs/acceptance/t00-review-r3.md"
+    },
+    "01": {
+      "url": "https://github.com/lostwildland/NoNews/issues/3",
+      "number": 3,
+      "id": 6062369875,
+      "title": "Lossless IO snapshot, manifest and independent restore",
+      "status": "closed",
+      "native_parent": true,
+      "native_blockers": [],
+      "implementation_branch": "t3/io-snapshot-restore",
+      "last_reported_head": "24675be3f146162aad6c48851780331da8bc2f1e",
+      "implementation_state": "Reaccepted current-schema snapshot interface after R27/R28 independent correction reviews; 53 public tests pass. Personal migration and cutover remain separate.",
+      "review_evidence": "docs/acceptance/t01-schema-review-r28.md",
+      "accepted_implementation_head": "24675be3f146162aad6c48851780331da8bc2f1e",
+      "integration_head": "1f4f5d9",
+      "followup_branch": "feature/nonews-io-parity",
+      "followup_base": "2e3edb06c79e73664f1e62958346a72134fdc820",
+      "followup_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
+      "accepted_followup_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
+      "followup_integration_head": "d9c18afa8fc14de92d67508db675c30cf3d8da5c",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 39,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "02": {
+      "url": "https://github.com/lostwildland/NoNews/issues/4",
+      "number": 4,
+      "id": 6062371466,
+      "title": "App-managed IO engine with native health and shutdown",
+      "status": "closed",
+      "native_parent": true,
+      "native_blockers": [],
+      "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
+      "implementation_branch": "t3/managed-io-engine",
+      "last_reported_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
+      "implementation_state": "Accepted and integrated developer engine API/macOS lifecycle foundation; issue4 closed after resolution6458171742. Source920efef/evidence567cc9e, sourcegate clear, current Python62pass/1skip, CI747, installedharness11 and nativeReady\u2192Stopped\u2192Ready. Knownfixturediagnostics trackedT30; fullparity/release/device/sync/migration separate.",
+      "review_evidence": "docs/acceptance/t02-accepted-engine.md",
+      "accepted_implementation_head": "920efefd61fb993a850241719a4d99e5691023b6",
+      "accepted_evidence_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
+      "integration_head": "e3c6b152214ff4897d5c122c86fed0846c540736",
+      "resolution_comment": "https://github.com/lostwildland/NoNews/issues/4#issuecomment-6458171742",
+      "pull_request": "https://github.com/lostwildland/NoNews/pull/33",
+      "pull_request_state": "merged",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "03": {
+      "url": "https://github.com/lostwildland/NoNews/issues/5",
+      "number": 5,
+      "id": 6062374087,
+      "title": "BYO AI and Magpie prompt-model configuration",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "02"
+      ],
+      "dependency_acceptance": "e3c6b152214ff4897d5c122c86fed0846c540736",
+      "implementation_state": "T03 reviewed candidate b96c67e passed the single complete code review with no actionable P1/P2 findings; integrated as 250a3a9. Focused Python suites (10 passed), Python compile, Swift parse, native configuration checks, and diff checks passed. Full app/UI/VoiceOver/Keychain/provider/CloudKit/runtime release gates remain open.",
+      "implementation_branch": "t3/byo-ai-magpie-prompts",
+      "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f7edab35",
+      "implementation_base": "a7136a8c3a08eb161011a3de5fe0cb4903e3bc0b",
+      "last_reported_head": "b96c67e690bdbe457164d3a340c9d9fd0795e2de",
+      "implementation_thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t03-sol-high-handoff-20261028-r1",
+      "review_evidence": "docs/acceptance/t03-current-candidate.md",
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      },
+      "prior_review_evidence": [
+        "docs/acceptance/t03-configuration-backend-review-r1.md",
+        "docs/acceptance/t03-configuration-correction-review-r2.md"
+      ],
+      "additional_review_evidence": [
+        "docs/acceptance/t03-ui-acknowledgement-review-r4.md",
+        "docs/acceptance/t03-preview-binding-review-r3.md",
+        "docs/acceptance/t03-current-source-review-r10.md",
+        "docs/acceptance/t03-receipt-identity-probe.md"
+      ],
+      "native_interaction_audit": "docs/acceptance/t03-native-interaction-source-audit.md",
+      "review_coverage": "docs/acceptance/t03-review-coverage.json",
+      "cooperative_review": "docs/acceptance/t03-cooperative-review-r5.md",
+      "previous_implementation_threads": [
+        "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-full-parity-t03-20261028-r1"
+      ],
+      "implementation_model": "gpt-6.1-sol",
+      "implementation_reasoning_effort": "high",
+      "owner_handoff": "User-requested model change; prior Terra task stopped and inactive before Sol launch; existing worktree and unfinished source preserved."
+    },
+    "04": {
+      "url": "https://github.com/lostwildland/NoNews/issues/6",
+      "number": 6,
+      "id": 6062376634,
+      "title": "NNW article identity bridge and configurable feed policies",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "03"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 15,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      },
+      "source_policy_audit": "docs/research/io-feed-policy-source-audit.md",
+      "implementation_state": "Accepted T04 code candidate 8040262 after the single complete review of 250a3a9..8040262. Focused native/stdio/configuration/migration validation passed 19 tests with 1 optional skip; Python compile, Swift 6 parse, diff checks, and populated legacy foreign-key migration passed. Full prepared runtime, live provider/Keychain/CloudKit, signed UI, and end-to-end worker validation remain open; iOS handoff remains T26 scope.",
+      "implementation_branch": "feature/nonews-io-parity",
+      "accepted_implementation_head": "8040262",
+      "review_evidence": "docs/acceptance/t04-current-candidate.md"
+    },
+    "05": {
+      "url": "https://github.com/lostwildland/NoNews/issues/7",
+      "number": 7,
+      "id": 6062379713,
+      "title": "News acquisition and Curator in native article detail",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 12,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "06": {
+      "url": "https://github.com/lostwildland/NoNews/issues/8",
+      "number": 8,
+      "id": 6062381766,
+      "title": "Verified paper abstracts and Curator",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "07": {
+      "url": "https://github.com/lostwildland/NoNews/issues/9",
+      "number": 9,
+      "id": 6062384478,
+      "title": "Paper full text, fidelity and eligible acquisition",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "06"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 12,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "08": {
+      "url": "https://github.com/lostwildland/NoNews/issues/10",
+      "number": 10,
+      "id": 6062386665,
+      "title": "Newsletter acquisition and native reading",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ]
+    },
+    "09": {
+      "url": "https://github.com/lostwildland/NoNews/issues/11",
+      "number": 11,
+      "id": 6062389538,
+      "title": "Podcast description-to-transcript workflow",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ]
+    },
+    "10": {
+      "url": "https://github.com/lostwildland/NoNews/issues/12",
+      "number": 12,
+      "id": 6062392368,
+      "title": "Video description-to-captions workflow",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ]
+    },
+    "11": {
+      "url": "https://github.com/lostwildland/NoNews/issues/13",
+      "number": 13,
+      "id": 6062394917,
+      "title": "Automatic and manual Editor with immutable draft versions",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "05",
+        "06",
+        "08",
+        "09",
+        "10"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 3,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "12": {
+      "url": "https://github.com/lostwildland/NoNews/issues/14",
+      "number": 14,
+      "id": 6062399464,
+      "title": "Integrated native Curator, Draft and material reading",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "11",
+        "07"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "13": {
+      "url": "https://github.com/lostwildland/NoNews/issues/15",
+      "number": 15,
+      "id": 6062402545,
+      "title": "Yep/Nope decisions, undo and configurable side effects",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04"
+      ]
+    },
+    "14": {
+      "url": "https://github.com/lostwildland/NoNews/issues/16",
+      "number": 16,
+      "id": 6062405011,
+      "title": "IO filters, dates and Quick views in NNW",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "12",
+        "13"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 2,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "15": {
+      "url": "https://github.com/lostwildland/NoNews/issues/17",
+      "number": 17,
+      "id": 6062409259,
+      "title": "Full-result batch preview and processing",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "11",
+        "13",
+        "14"
+      ]
+    },
+    "16": {
+      "url": "https://github.com/lostwildland/NoNews/issues/18",
+      "number": 18,
+      "id": 6062413374,
+      "title": "Configurable Zotero collection and existing-work protection",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "11",
+        "13"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 15,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "17": {
+      "url": "https://github.com/lostwildland/NoNews/issues/19",
+      "number": 19,
+      "id": 6062416993,
+      "title": "Obsidian personal reading copies and helper continuity",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "07",
+        "16"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 69,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "18": {
+      "url": "https://github.com/lostwildland/NoNews/issues/20",
+      "number": 20,
+      "id": 6062420271,
+      "title": "Issue adoption, usage and external receipt reconciliation",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "11",
+        "17"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 11,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "19": {
+      "url": "https://github.com/lostwildland/NoNews/issues/21",
+      "number": 21,
+      "id": 6062423200,
+      "title": "Readable images, configured upload and repair",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "11"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 5,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "20": {
+      "url": "https://github.com/lostwildland/NoNews/issues/22",
+      "number": 22,
+      "id": 6062425518,
+      "title": "Native Activity, attention and processing controls",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "02",
+        "11"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 9,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "21": {
+      "url": "https://github.com/lostwildland/NoNews/issues/23",
+      "number": 23,
+      "id": 6062427877,
+      "title": "IO lifecycle, version ownership and recoverable cleanup",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "01",
+        "13",
+        "19"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 56,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "22": {
+      "url": "https://github.com/lostwildland/NoNews/issues/24",
+      "number": 24,
+      "id": 6062430985,
+      "title": "Historical catalog, scopes and advanced maintenance",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04",
+        "21"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 83,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "23": {
+      "url": "https://github.com/lostwildland/NoNews/issues/25",
+      "number": 25,
+      "id": 6062433635,
+      "title": "Configurable classification and source value statistics",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04",
+        "13"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "24": {
+      "url": "https://github.com/lostwildland/NoNews/issues/26",
+      "number": 26,
+      "id": 6062435996,
+      "title": "Persistent two-client IO sync and offline convergence",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "04",
+        "13",
+        "21"
+      ]
+    },
+    "25": {
+      "url": "https://github.com/lostwildland/NoNews/issues/27",
+      "number": 27,
+      "id": 6062439190,
+      "title": "NNW-compatible CloudKit transport and macOS sync UI",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "24",
+        "20"
+      ]
+    },
+    "26": {
+      "url": "https://github.com/lostwildland/NoNews/issues/28",
+      "number": 28,
+      "id": 6062441763,
+      "title": "iOS consumption and synchronized IO decision continuity",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "25",
+        "12"
+      ]
+    },
+    "27": {
+      "url": "https://github.com/lostwildland/NoNews/issues/29",
+      "number": 29,
+      "id": 6062445034,
+      "title": "Full personal database migration and native cutover",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "01",
+        "12",
+        "16",
+        "17",
+        "18",
+        "21",
+        "22",
+        "23",
+        "25"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 80,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "28": {
+      "url": "https://github.com/lostwildland/NoNews/issues/30",
+      "number": 30,
+      "id": 6062451382,
+      "title": "First-use setup and coherent configurable settings",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "03",
+        "04",
+        "14",
+        "16",
+        "20",
+        "21",
+        "23"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 4,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "29": {
+      "url": "https://github.com/lostwildland/NoNews/issues/31",
+      "number": 31,
+      "id": 6062456797,
+      "title": "NNW-native Liquid Glass and accessible UX finish",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "12",
+        "14",
+        "15",
+        "18",
+        "20",
+        "25",
+        "28"
+      ],
+      "script_source_audit": {
+        "inventory": "docs/research/io-script-entrypoints.json",
+        "scope": "docs/research/io-script-ticket-coverage.md",
+        "bound_entries": 1,
+        "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
+      }
+    },
+    "30": {
+      "url": "https://github.com/lostwildland/NoNews/issues/32",
+      "number": 32,
+      "id": 6062462350,
+      "title": "Full parity acceptance, migration/sync readback and release handoff",
+      "status": "open",
+      "native_parent": true,
+      "native_blockers": [
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10",
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "17",
+        "18",
+        "19",
+        "20",
+        "21",
+        "22",
+        "23",
+        "26",
+        "27",
+        "28",
+        "29"
+      ],
+      "implementation_state": "Sol/high R25 checkpoint e86fe2e clean/remote matched; complete112-path ledger. Intent journal/replay, fetch lifetime protection and startup reset gate added. SyncDatabase13 and ArticlesDatabase2 passed; Account runtime stopped at existing AppConfig bundle metadata force-unwrap, so no Account runtime count. Fresh paired review and full/iOS/live/UI acceptance open.",
+      "implementation_branch": "t3/native-fixture-lifetime",
+      "last_reported_head": "e86fe2e56b6fa44dd001137a7b100636a9fb7892",
+      "review_evidence": "docs/acceptance/t30-current-candidate.md",
+      "review_coverage": "docs/acceptance/t30-review-coverage.json",
+      "additional_review_evidence": [
+        "docs/acceptance/t30-cloudkit-review-r14.md",
+        "docs/acceptance/t30-provider-review-r15.md",
+        "docs/acceptance/t30-account-core-review-r12.md",
+        "docs/acceptance/t30-provider-compensation-review-r24.md",
+        "docs/acceptance/t30-provider-correction-review-r25.md",
+        "docs/acceptance/t30-r25-correction.md"
+      ],
+      "previous_implementation_threads": [
+        "thread:delegated-task:command%3Amcp%3A5334bca8-6b5e-41fd-84da-2093ead29d99%3Adelegate-task%3Anonews-t30-native-fixture-lifetime-20261028-r1"
+      ],
+      "implementation_thread": "thread:delegated-task:command%3Amcp%3Af2faf15f-f287-442b-91ad-0a628c0d5be6%3Adelegate-task%3Anonews-t30-sol-high-handoff-20261028-r1",
+      "implementation_model": "gpt-6.1-sol",
+      "implementation_reasoning_effort": "high",
+      "owner_handoff": "User-requested model change; prior Terra task stopped and inactive before Sol launch; existing worktree and unfinished source preserved.",
+      "implementation_worktree": "/Users/extension/.t3/worktrees/no-news/t3-f5bca9ed",
+      "implementation_base": "2782c51bae6f68a91baa6b86c88cc0c5fe5a1cb2"
+    }
+  },
+  "spec": {
+    "url": "https://github.com/lostwildland/NoNews/issues/1",
+    "number": 1,
+    "id": 6062366406
+  }
+}

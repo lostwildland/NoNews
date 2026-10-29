@@ -39,6 +39,8 @@ let appName = "NetNewsWire"
 	private var refreshTimer: AccountRefreshTimer?
 	private var lastRefreshInterval = AppDefaults.refreshInterval
 
+	private var nativeArticleDrainActive = false
+
 	private var shuttingDown = false {
 		didSet {
 			if shuttingDown {
@@ -164,6 +166,13 @@ let appName = "NetNewsWire"
 	}
 
 	func applicationDidFinishLaunching(_ note: Notification) {
+		_ = nativeInstallationNamespace()
+		ProcessingEngine.shared.start()
+		if let menu = debugMenuItem.submenu, menu.items.first(where: { $0.action == #selector(retryFailedNativeArticles(_:)) }) == nil {
+			let retryItem = NSMenuItem(title: "Retry Failed Native Articles", action: #selector(retryFailedNativeArticles(_:)), keyEquivalent: "")
+			retryItem.target = self
+			menu.addItem(retryItem)
+		}
 
 		WebViewConfiguration.resolveBrowserUserAgent()
 		Task {
@@ -218,6 +227,8 @@ let appName = "NetNewsWire"
 		}
 
 		NotificationCenter.default.addObserver(self, selector: #selector(feedSettingDidChange(_:)), name: .feedSettingDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(nativeProcessingEngineDidChange(_:)), name: ProcessingEngine.didChange, object: ProcessingEngine.shared)
 		NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { _ in
 			MainActor.assumeIsolated {
 				self.userDefaultsDidChange()
@@ -352,7 +363,20 @@ let appName = "NetNewsWire"
 		return true
 	}
 
+	func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+		switch ProcessingEngine.shared.state {
+		case .starting, .ready, .stopping:
+			ProcessingEngine.shared.stop {
+				Task { @MainActor in sender.reply(toApplicationShouldTerminate: true) }
+			}
+			return .terminateLater
+		case .stopped, .failed:
+			return .terminateNow
+		}
+	}
+
 	func applicationWillTerminate(_ notification: Notification) {
+		ProcessingEngine.shared.stop()
 		shuttingDown = true
 		saveState()
 
@@ -378,6 +402,132 @@ let appName = "NetNewsWire"
 
 	@objc func handleUnreadCountDisplaySettingDidChange(_ notification: Notification) {
 		updateDockBadge()
+	}
+
+	private func nativeInstallationNamespace() -> String {
+		let key = "NoNews.NativeSource.InstallationNamespace"
+		if let saved = UserDefaults.standard.string(forKey: key), !saved.isEmpty {
+			return saved
+		}
+		let generated = "mac-" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+		UserDefaults.standard.set(generated, forKey: key)
+		return generated
+	}
+
+
+	@objc func accountDidDownloadArticles(_ note: Notification) {
+		let articles = ((note.userInfo?[Account.UserInfoKey.newArticles] as? Set<Article>) ?? [])
+			.union((note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article>) ?? [])
+		guard !articles.isEmpty else { return }
+		let namespace = nativeInstallationNamespace()
+		let bodies = articles.map { article -> [String: Any] in
+			var body: [String: Any] = ["namespace": namespace, "accountID": article.accountID, "feedID": article.feedID,
+				"articleID": article.articleID, "uniqueID": article.uniqueID, "title": article.title ?? "",
+				"originalURL": article.rawLink ?? "", "feedURL": article.feed?.url ?? "", "allowUnresolved": true]
+			if let rawLink = article.rawLink, !rawLink.isEmpty {
+				body["identityType"] = "url"
+				body["identityValue"] = rawLink
+			}
+			if let date = article.datePublished { body["publishedAt"] = ISO8601DateFormatter().string(from: date) }
+			return body
+		}
+		enqueueNativeArticleBodies(bodies)
+		drainNativeArticleQueue()
+	}
+
+	private func enqueueNativeArticleBodies(_ bodies: [[String: Any]]) {
+		var queued: [[String: Any]] = []
+		if let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), let saved = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+			queued = saved
+		}
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		for body in bodies {
+			queued.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!) } }
+			queued.append(body)
+		}
+		saveNativeArticleQueue(queued)
+	}
+
+	private func drainNativeArticleQueue() {
+		guard !nativeArticleDrainActive, ProcessingEngine.shared.state == .ready else { return }
+		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
+			let data = text.data(using: .utf8), let saved = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]], !saved.isEmpty else { return }
+		nativeArticleDrainActive = true
+		func sendNext() {
+			guard ProcessingEngine.shared.state == .ready else { nativeArticleDrainActive = false; return }
+			guard let currentText = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
+				let currentData = currentText.data(using: .utf8), let current = try? JSONSerialization.jsonObject(with: currentData) as? [[String: Any]],
+				let body = current.first else { nativeArticleDrainActive = false; return }
+			let keys = ["namespace", "accountID", "feedID", "articleID"]
+			let failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
+			if failed.contains(where: { entry in keys.allSatisfy { key in entry[key] != nil && body[key] != nil && String(describing: entry[key]!) == String(describing: body[key]!) } }) {
+				self.removeNativeArticleFromQueue(body)
+				sendNext()
+				return
+			}
+			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
+				guard let self else { return }
+				if case .success = result {
+					self.removeNativeArticleFromQueue(body)
+					sendNext()
+					return
+				}
+				if case .failure(let error) = result {
+					self.recordNativeArticleFailure(body, error: String(describing: error))
+					self.nativeArticleDrainActive = false
+					return
+				}
+			}
+		}
+		sendNext()
+	}
+
+	private func removeNativeArticleFromQueue(_ body: [String: Any]) {
+		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), var queued = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		let matching = queued.filter { candidate in keys.allSatisfy { key in
+			candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!)
+		} }
+		if !matching.isEmpty {
+			queued.removeAll { candidate in keys.allSatisfy { key in
+				candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!)
+			} }
+			saveNativeArticleQueue(queued)
+		}
+	}
+
+
+	@IBAction func retryFailedNativeArticles(_ sender: Any? = nil) {
+		guard let failed = UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]], !failed.isEmpty else { return }
+		var queued = (UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles").flatMap { $0.data(using: .utf8) }.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] }) ?? []
+		let retries = failed.map { entry in entry.filter { $0.key != "failure" && $0.key != "failedAt" } }
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		for retry in retries {
+			queued.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && retry[key] != nil && String(describing: candidate[key]!) == String(describing: retry[key]!) } }
+			queued.append(retry)
+		}
+		saveNativeArticleQueue(queued)
+		UserDefaults.standard.removeObject(forKey: "NoNews.NativeSource.FailedArticles")
+		drainNativeArticleQueue()
+	}
+
+	private func recordNativeArticleFailure(_ body: [String: Any], error: String) {
+		var failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
+		var entry = body
+		entry["failure"] = error
+		entry["failedAt"] = ISO8601DateFormatter().string(from: Date())
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		failed.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!) } }
+		failed.append(entry)
+		UserDefaults.standard.set(failed, forKey: "NoNews.NativeSource.FailedArticles")
+	}
+	private func saveNativeArticleQueue(_ bodies: [[String: Any]]) {
+		guard let data = try? JSONSerialization.data(withJSONObject: bodies), let text = String(data: data, encoding: .utf8) else { return }
+		UserDefaults.standard.set(text, forKey: "NoNews.NativeSource.PendingArticles")
+	}
+
+	@objc func nativeProcessingEngineDidChange(_ note: Notification) {
+		drainNativeArticleQueue()
 	}
 
 	@objc func feedSettingDidChange(_ note: Notification) {
