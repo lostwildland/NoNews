@@ -43,6 +43,7 @@ final class DetailWebViewController: NSViewController {
 		DetailWindowState(isShowingExtractedArticle: isShowingExtractedArticle, windowScrollY: windowScrollY ?? 0)
 	}
 
+	private var nativeBindingGeneration = 0
 	private var nativeContextResults: [[String: Any]] = [] {
 		didSet { if isViewLoaded { reloadHTML() } }
 	}
@@ -63,6 +64,8 @@ final class DetailWebViewController: NSViewController {
 	}
 
 	func setNativeSourceBinding(_ binding: [String: Any]?) {
+		nativeBindingGeneration += 1
+		let generation = nativeBindingGeneration
 		nativeSourceBinding = binding
 		nativeContextResults = []
 		guard let contextID = (binding?["contexts"] as? [[String: Any]])?.count == 1 ? ((binding?["contexts"] as? [[String: Any]])?.first?["id"] as? String) : binding?["context_id"] as? String,
@@ -71,7 +74,7 @@ final class DetailWebViewController: NSViewController {
 		let feedID = article.feedID
 		let articleID = article.articleID
 		ProcessingEngine.shared.nativeContextResults(contextID: contextID) { [weak self] result in
-			guard let self, self.article?.accountID == accountID, self.article?.feedID == feedID, self.article?.articleID == articleID else { return }
+			guard let self, self.nativeBindingGeneration == generation, self.article?.accountID == accountID, self.article?.feedID == feedID, self.article?.articleID == articleID else { return }
 			if case .success(let value) = result { self.nativeContextResults = value["results"] as? [[String: Any]] ?? [] }
 		}
 	}

@@ -461,7 +461,8 @@ let appName = "NetNewsWire"
 			let keys = ["namespace", "accountID", "feedID", "articleID"]
 			let failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
 			if failed.contains(where: { entry in keys.allSatisfy { key in entry[key] != nil && body[key] != nil && String(describing: entry[key]!) == String(describing: body[key]!) } }) {
-				nativeArticleDrainActive = false
+				self.removeNativeArticleFromQueue(body)
+				sendNext()
 				return
 			}
 			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
@@ -515,6 +516,8 @@ let appName = "NetNewsWire"
 		var entry = body
 		entry["failure"] = error
 		entry["failedAt"] = ISO8601DateFormatter().string(from: Date())
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		failed.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!) } }
 		failed.append(entry)
 		UserDefaults.standard.set(failed, forKey: "NoNews.NativeSource.FailedArticles")
 	}
