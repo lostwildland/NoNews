@@ -64,6 +64,16 @@ final class DetailWebViewController: NSViewController {
 
 	func setNativeSourceBinding(_ binding: [String: Any]?) {
 		nativeSourceBinding = binding
+		nativeContextResults = []
+		guard let contextID = (binding?["contexts"] as? [[String: Any]])?.count == 1 ? ((binding?["contexts"] as? [[String: Any]])?.first?["id"] as? String) : binding?["context_id"] as? String,
+			let article else { return }
+		let accountID = article.accountID
+		let feedID = article.feedID
+		let articleID = article.articleID
+		ProcessingEngine.shared.nativeContextResults(contextID: contextID) { [weak self] result in
+			guard let self, self.article?.accountID == accountID, self.article?.feedID == feedID, self.article?.articleID == articleID else { return }
+			if case .success(let value) = result { self.nativeContextResults = value["results"] as? [[String: Any]] ?? [] }
+		}
 	}
 
 

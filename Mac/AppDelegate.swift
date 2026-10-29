@@ -440,7 +440,11 @@ let appName = "NetNewsWire"
 		if let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), let saved = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
 			queued = saved
 		}
-		queued.append(contentsOf: bodies)
+		let keys = ["namespace", "accountID", "feedID", "articleID"]
+		for body in bodies {
+			queued.removeAll { candidate in keys.allSatisfy { key in candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!) } }
+			queued.append(body)
+		}
 		saveNativeArticleQueue(queued)
 	}
 
@@ -474,10 +478,13 @@ let appName = "NetNewsWire"
 	private func removeNativeArticleFromQueue(_ body: [String: Any]) {
 		guard let text = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"), let data = text.data(using: .utf8), var queued = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
 		let keys = ["namespace", "accountID", "feedID", "articleID"]
-		if let index = queued.firstIndex(where: { candidate in keys.allSatisfy { key in
+		let matching = queued.filter { candidate in keys.allSatisfy { key in
 			candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!)
-		} }) {
-			queued.remove(at: index)
+		} }
+		if !matching.isEmpty {
+			queued.removeAll { candidate in keys.allSatisfy { key in
+				candidate[key] != nil && body[key] != nil && String(describing: candidate[key]!) == String(describing: body[key]!)
+			} }
 			saveNativeArticleQueue(queued)
 		}
 	}
