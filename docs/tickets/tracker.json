@@ -53,7 +53,7 @@
       "dependency_note": "T00 changes acceptance build tooling only; no required engine API or code dependency. Coordinate heavyweight build resource separately.",
       "implementation_branch": "t3/managed-io-engine",
       "last_reported_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
-      "implementation_state": "Accepted and integrated developer engine API/macOS lifecycle foundation; issue4 closed after resolution6458171742. Source920efef/evidence567cc9e, sourcegate clear, current Python62pass/1skip, CI747, installedharness11 and nativeReady→Stopped→Ready. Knownfixturediagnostics trackedT30; fullparity/release/device/sync/migration separate.",
+      "implementation_state": "Accepted and integrated developer engine API/macOS lifecycle foundation; issue4 closed after resolution6458171742. Source920efef/evidence567cc9e, sourcegate clear, current Python62pass/1skip, CI747, installedharness11 and nativeReady\u2192Stopped\u2192Ready. Knownfixturediagnostics trackedT30; fullparity/release/device/sync/migration separate.",
       "review_evidence": "docs/acceptance/t02-accepted-engine.md",
       "accepted_implementation_head": "920efefd61fb993a850241719a4d99e5691023b6",
       "accepted_evidence_head": "567cc9ece0bb34e330a650de56e21ef6832fbaae",
@@ -129,7 +129,10 @@
         "state": "Candidate source bindings; owning ticket must verify behavior/activation and record retained/supporting/historical disposition. No runtime or port acceptance."
       },
       "source_policy_audit": "docs/research/io-feed-policy-source-audit.md",
-      "preparation_state": "Code-only source contract audit and public scenario handoff; no implementation owner/worktree started. Blocked by acceptedT03API, not cleared by source preparation."
+      "implementation_state": "Accepted T04 code candidate 8040262 after the single complete review of 250a3a9..8040262. Focused native/stdio/configuration/migration validation passed 19 tests with 1 optional skip; Python compile, Swift 6 parse, diff checks, and populated legacy foreign-key migration passed. Full prepared runtime, live provider/Keychain/CloudKit, signed UI, and end-to-end worker validation remain open; iOS handoff remains T26 scope.",
+      "implementation_branch": "feature/nonews-io-parity",
+      "accepted_implementation_head": "8040262",
+      "review_evidence": "docs/acceptance/t04-current-candidate.md"
     },
     "05": {
       "url": "https://github.com/lostwildland/NoNews/issues/7",

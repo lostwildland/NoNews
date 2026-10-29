@@ -260,3 +260,11 @@
 
 - T03 candidate `b96c67e` passed the single complete code review against original base `a7136a8`; no actionable P1/P2 findings. The review covered all 24 changed paths, including empty-media live feed handling, stable prompt history ordering, credential lifecycle/deletion markers, migration preview/apply/recovery, server/stdio seams and native controller wiring.
 - Focused configuration/migration suites passed 10/10; Python compile, Swift 6 parse, `run_configuration_native_checks.sh`, and `git diff --check` passed. Integrated into the main branch as `250a3a9`. Full app/UI/VoiceOver/Keychain/provider/CloudKit/runtime release gates remain explicitly open. T03 source/native review clearance recorded; next ticket may begin.
+
+## T04 accepted — native identity bridge and configurable feed policies
+
+- T04 candidate `8040262` passed the single complete review against `250a3a9` with no actionable P1/P2 findings and was pushed on `feature/nonews-io-parity`.
+- Acceptance ledger: `docs/acceptance/t04-current-candidate.md`; tracker updated with accepted implementation head `8040262`.
+- Focused native/stdio/configuration/migration validation passed 19 tests with 1 optional skip. Python compilation, Swift 6 parsing, diff checks, and populated legacy context-result foreign-key migration passed.
+- Prepared runtime-dependent tests, full macOS/iOS builds, signed UI/HIG/VoiceOver validation, live Keychain/provider/CloudKit execution, and end-to-end native worker execution remain open. iOS lifecycle handoff and processing UI remain T26 scope.
+- Next ticket: T05, News acquisition and Curator in native article detail.
