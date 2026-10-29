@@ -458,6 +458,12 @@ let appName = "NetNewsWire"
 			guard let currentText = UserDefaults.standard.string(forKey: "NoNews.NativeSource.PendingArticles"),
 				let currentData = currentText.data(using: .utf8), let current = try? JSONSerialization.jsonObject(with: currentData) as? [[String: Any]],
 				let body = current.first else { nativeArticleDrainActive = false; return }
+			let keys = ["namespace", "accountID", "feedID", "articleID"]
+			let failed = (UserDefaults.standard.array(forKey: "NoNews.NativeSource.FailedArticles") as? [[String: Any]]) ?? []
+			if failed.contains(where: { entry in keys.allSatisfy { key in entry[key] != nil && body[key] != nil && String(describing: entry[key]!) == String(describing: body[key]!) } }) {
+				nativeArticleDrainActive = false
+				return
+			}
 			ProcessingEngine.shared.observeNativeArticle(body) { [weak self] result in
 				guard let self else { return }
 				if case .success = result {

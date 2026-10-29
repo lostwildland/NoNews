@@ -25,7 +25,7 @@ def _service_available(db, service_id):
         value = json.loads(row[0])
         checked = value.get("checkedAt")
         if not checked:
-            return service_id == "service"
+            return value.get("type") == "magpie"
         try:
             value["stale"] = bool(value.get("error")) or (datetime.now(timezone.utc) - datetime.fromisoformat(checked)).total_seconds() > 300
         except ValueError:
